@@ -1,0 +1,7 @@
+cmake_minimum_required(VERSION 3.22.1)
+project(qin_audio LANGUAGES CXX)
+set(CMAKE_CXX_STANDARD 17)
+find_package(oboe REQUIRED CONFIG)
+add_library(qin_audio SHARED piano_engine.cpp)
+target_link_libraries(qin_audio PRIVATE oboe::oboe android log)
+target_compile_options(qin_audio PRIVATE -Wall -Wextra)

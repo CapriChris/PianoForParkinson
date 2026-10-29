@@ -1,0 +1,476 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-you-are-my-sunshine-001",
+  "version": "2.1.0",
+  "localized_title": {
+    "zh-Hans": "你是我的阳光",
+    "en": "You Are My Sunshine"
+  },
+  "localized_description": {
+    "zh-Hans": "吉米·戴维斯、查尔斯·米切尔 · 单声部练习编配",
+    "en": "Jimmie Davis and Charles Mitchell · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 4,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    4,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12
+  ],
+  "notes": [
+    {
+      "note_index": -1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 10
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 10
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 16
+    }
+  ],
+  "source": {
+    "composer": "Jimmie Davis and Charles Mitchell",
+    "reference": "User-supplied white-key score and MIDI, 2026-10-26",
+    "adaptation": "White-key C-major version supplied by the user; both staves retained. MIDI note-offs precede written ends by five source ticks; score durations restored.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "pickup_ticks": 0,
+  "key_midis": [
+    67,
+    72,
+    74,
+    76,
+    77,
+    79,
+    81
+  ],
+  "score_source": {
+    "kind": "user_image",
+    "file": "supplied-you-are-my-sunshine-white-keys.png",
+    "reference": "User-supplied white-key score and MIDI, 2026-10-26",
+    "content_version": "2.1.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "midi_file": "You_Are_My_Sunshine_white_keys.mid",
+    "midi_sha256": "497300688984b13c39e58526a7686406180cc22f6a730d126d537bc16908e5a3",
+    "reference_tempo_bpm": 90,
+    "adaptation": "White-key C-major version supplied by the user; both staves retained. MIDI note-offs precede written ends by five source ticks; score durations restored.",
+    "sha256": "3bfea8be4740d7f195c58a586b3cdf51a0cf3ee7b72ef528517cc8bd9f731984"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_you_are_my_sunshine_60.ogg",
+    "sha256": "568ae47a3b015ded31c75bd603d65fb84a6c733eb5b7ab656d68c40fb8755544",
+    "tempo_bpm": 60,
+    "duration_ms": 68000,
+    "sample_frames": 1499400,
+    "base_tempo_bpm": 60,
+    "total_ticks": 272,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_you_are_my_sunshine_40.ogg",
+        "sha256": "655e435ff6da7d8875a45e5d5720959ce0e2bce8b6e38a3f14dd920572d571e1",
+        "tempo_bpm": 40,
+        "duration_ms": 102000,
+        "sample_frames": 2249100
+      },
+      "50": {
+        "path": "assets/audio/backing_you_are_my_sunshine_50.ogg",
+        "sha256": "ad3c8be05da13aca4d638aec414e8d237c9f799dd803d62ab176bf5033df20b3",
+        "tempo_bpm": 50,
+        "duration_ms": 81600,
+        "sample_frames": 1799280
+      },
+      "60": {
+        "path": "assets/audio/backing_you_are_my_sunshine_60.ogg",
+        "sha256": "568ae47a3b015ded31c75bd603d65fb84a6c733eb5b7ab656d68c40fb8755544",
+        "tempo_bpm": 60,
+        "duration_ms": 68000,
+        "sample_frames": 1499400
+      },
+      "70": {
+        "path": "assets/audio/backing_you_are_my_sunshine_70.ogg",
+        "sha256": "6e02037238a580fb0899ecf9b8c3cb7e04ad7d47f8349e925bb80850c4fe73b2",
+        "tempo_bpm": 70,
+        "duration_ms": 58286,
+        "sample_frames": 1285200
+      },
+      "80": {
+        "path": "assets/audio/backing_you_are_my_sunshine_80.ogg",
+        "sha256": "a9b8f0cf51c09696eabf7194715048b79011d13cda9d63c70cb597616f58c01b",
+        "tempo_bpm": 80,
+        "duration_ms": 51000,
+        "sample_frames": 1124550
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "kind": "user_image",
+      "file": "supplied-you-are-my-sunshine-white-keys.png",
+      "reference": "User-supplied white-key score and MIDI, 2026-10-26",
+      "content_version": "2.1.0",
+      "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+      "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+      "ticks_per_quarter": 4,
+      "playback_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ],
+      "midi_file": "You_Are_My_Sunshine_white_keys.mid",
+      "midi_sha256": "497300688984b13c39e58526a7686406180cc22f6a730d126d537bc16908e5a3",
+      "reference_tempo_bpm": 90,
+      "adaptation": "White-key C-major version supplied by the user; both staves retained. MIDI note-offs precede written ends by five source ticks; score durations restored."
+    },
+    "source_sha256": "3bfea8be4740d7f195c58a586b3cdf51a0cf3ee7b72ef528517cc8bd9f731984",
+    "score_hash": "41090eb7654b1cf8e1f8495927915e486f2f80169cd1d7ecd70008b1bc31f4a6",
+    "score_note_count": 109,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "cb3ed480b94c2dd8e59d28eb3b8ed2c657c799bb346bb48c0448ee18dda0e3c0"
+}

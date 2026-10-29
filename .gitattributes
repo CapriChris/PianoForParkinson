@@ -1,0 +1,4 @@
+# These files participate in database migration checksums. Keep their bytes
+# stable across Windows and other platforms.
+assets/config/schema.sql text eol=lf
+lib/data/database_safety.dart text eol=lf

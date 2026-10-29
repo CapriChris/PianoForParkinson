@@ -1,0 +1,284 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-twinkle-001",
+  "version": "1.3.0",
+  "localized_title": {
+    "zh-Hans": "小星星",
+    "en": "Twinkle, Twinkle, Little Star"
+  },
+  "localized_description": {
+    "zh-Hans": "法国传统旋律 · 单声部练习编配",
+    "en": "Traditional French melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 2,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    }
+  ],
+  "source": {
+    "composer": "Traditional French melody",
+    "reference": "https://noctavepiano.com/en/sheet-music/trad-ah-vous-dirai-je-maman/",
+    "adaptation": "Complete 42-note traditional melody in C; quarter and half notes; accompaniment omitted.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_twinkle_60.ogg",
+    "sha256": "52fde577e5540d420fd5dc8d1e808b12feb6a96ecdce209e9e0b6baec8526cc9",
+    "tempo_bpm": 60,
+    "duration_ms": 48000,
+    "sample_frames": 1058400,
+    "base_tempo_bpm": 60,
+    "total_ticks": 96,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_twinkle_40.ogg",
+        "sha256": "1ade910931b5fe6f4c550b835ca360537df7591cfc0a0fecc428b2c50b6eccc3",
+        "tempo_bpm": 40,
+        "duration_ms": 72000,
+        "sample_frames": 1587600
+      },
+      "50": {
+        "path": "assets/audio/backing_twinkle_50.ogg",
+        "sha256": "ca9bc1cdfea5beca766e597d68dc11418bcb4c1373389e6eb4a1e166a5755bb8",
+        "tempo_bpm": 50,
+        "duration_ms": 57600,
+        "sample_frames": 1270080
+      },
+      "60": {
+        "path": "assets/audio/backing_twinkle_60.ogg",
+        "sha256": "52fde577e5540d420fd5dc8d1e808b12feb6a96ecdce209e9e0b6baec8526cc9",
+        "tempo_bpm": 60,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      },
+      "70": {
+        "path": "assets/audio/backing_twinkle_70.ogg",
+        "sha256": "9cc77a55594bfbddd646fe3999d44d47934d1ce0b6c10ade9651d6a925d71850",
+        "tempo_bpm": 70,
+        "duration_ms": 41143,
+        "sample_frames": 907200
+      },
+      "80": {
+        "path": "assets/audio/backing_twinkle_80.ogg",
+        "sha256": "2d2d014fbb4fe7113f995c2703b303285cecd7ed66031f8a975647c6b7fb41c5",
+        "tempo_bpm": 80,
+        "duration_ms": 36000,
+        "sample_frames": 793800
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "file": "noctave-twinkle.mxl",
+      "reference": "https://noctavepiano.com/en/sheet-music/trad-ah-vous-dirai-je-maman/",
+      "download": "https://noctavepiano.com/partitions/trad-ah-vous-dirai-je-maman/trad-ah-vous-dirai-je-maman.mxl",
+      "arranger": "Noctave",
+      "rights": "CC0 1.0; source MusicXML retains the publisher rights statement.",
+      "selections": [
+        [
+          "P1",
+          "2",
+          0
+        ]
+      ],
+      "measures": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ],
+      "ticks_per_quarter": 2,
+      "tick_offset": 0,
+      "adaptation": "All twelve bars of the written left hand; whole and half-note basses retained without adding generic offbeat chords.",
+      "melody_check": "exact"
+    },
+    "source_sha256": "be713b283134680e81901607cf9fdf733ea4a149c51a85b4c28153648c3bd636",
+    "score_hash": "81f734fc2e491f534c1cb9319275c60a4d62c31f067ee4ab77c09925570eb407",
+    "score_note_count": 22,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "b0e438f5d38b533f428598792dd8427a6a2c8c82014191508f3da105895b8fd6"
+}

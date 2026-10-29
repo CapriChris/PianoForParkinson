@@ -1,0 +1,155 @@
+{
+  "content_id": "song-original-002",
+  "version": "1.0.0",
+  "category": "ORIGINAL_EXERCISE",
+  "localized_title": {
+    "zh-Hans": "上行与回声",
+    "en": "Rise and Echo"
+  },
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 1,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 2,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 1,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 0,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 2,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 3,
+      "duration_ms": 400
+    },
+    {
+      "note_index": 4,
+      "duration_ms": 400
+    }
+  ],
+  "tempo_bpm": 40,
+  "supported_tasks": [
+    "S1_GUIDED",
+    "S2_RHYTHM"
+  ],
+  "rights": {
+    "status": "DEVELOPMENT_ONLY",
+    "melody": "Project original exercise sequence, 2026-10-18",
+    "arrangement": "Project original",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; adaptations credited in piano_attribution.txt"
+  },
+  "assets": [
+    {
+      "asset_id": "note_0",
+      "path": "assets/audio/note_0.wav",
+      "sha256": "c88343e76ab9518a1a08fbcd192243cc4a5f56f96a1a0d9f61428b85a60059e7",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/C4v8.flac",
+      "source_sha256": "36fb0535a1f21fe1dfc367c361dedda73710144e8c4940b40e97e6e5f8a3c694",
+      "modifications": "Velocity 8; mono downmix; transpose +0 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_1",
+      "path": "assets/audio/note_1.wav",
+      "sha256": "6d0dcbe3b509b5704e67ac2f267e3d7b880894e0a856327203213cb5e7a67827",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/D%234v8.flac",
+      "source_sha256": "295179461449c598c44ad712977d47b41c0c25d9c782d349094e748dc06c0dfa",
+      "modifications": "Velocity 8; mono downmix; transpose -1 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_2",
+      "path": "assets/audio/note_2.wav",
+      "sha256": "28731d4e4ec840a145061570056eedf7d42be66d927aef1dd3f074e0843e1663",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/D%234v8.flac",
+      "source_sha256": "295179461449c598c44ad712977d47b41c0c25d9c782d349094e748dc06c0dfa",
+      "modifications": "Velocity 8; mono downmix; transpose +1 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_3",
+      "path": "assets/audio/note_3.wav",
+      "sha256": "2cd51be297a40fc08f8da8007046a709fda57a4236469a19b7b009481baabc60",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/F%234v8.flac",
+      "source_sha256": "be2dc339e8cec5f2f1da4ff583672dbc518bf5319547a08901b094617ac6998e",
+      "modifications": "Velocity 8; mono downmix; transpose -1 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_4",
+      "path": "assets/audio/note_4.wav",
+      "sha256": "c52c69aa25981d670f51f1d6b4f82a2bd716ab57ee7b441c49cf5dbd5969e960",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/F%234v8.flac",
+      "source_sha256": "be2dc339e8cec5f2f1da4ff583672dbc518bf5319547a08901b094617ac6998e",
+      "modifications": "Velocity 8; mono downmix; transpose +1 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_5",
+      "path": "assets/audio/note_5.wav",
+      "sha256": "ecaf204a38ea712b1bd1874facf6837ca89e506da36bfe29d35083d205bb259d",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/A4v8.flac",
+      "source_sha256": "59529694455698d7fd212cde8eec4029eaae8e5e6d454bb48bf36428eaa8009b",
+      "modifications": "Velocity 8; mono downmix; transpose +0 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    },
+    {
+      "asset_id": "note_6",
+      "path": "assets/audio/note_6.wav",
+      "sha256": "efa7e383faf4dd96aa63e1aefb395f17ecdfb9f6d88abfc5fe3674bc0da83c7f",
+      "mime_type": "audio/wav",
+      "duration_ms": 3000,
+      "license_id": "CC-BY-3.0",
+      "author": "Alexander Holm",
+      "title": "Salamander Grand Piano V3",
+      "source": "https://raw.githubusercontent.com/sfzinstruments/SalamanderGrandPiano/3382bf9496bba2486f5ab0de55a264d1dfc38404/Samples/C5v8.flac",
+      "source_sha256": "f663242a552aad54113f186a6dd90c907c81d1f6374887a23179814544f78d79",
+      "modifications": "Velocity 8; mono downmix; transpose -1 semitones; 44.1kHz PCM16; 3s crop; final 50ms fade; common gain normalization",
+      "ready_status": "DEVELOPMENT_ONLY"
+    }
+  ],
+  "content_hash": "6d16983b72d2165cb71f3236251205139c6a69e2d56122ddbdd2e05a82dd6acf"
+}

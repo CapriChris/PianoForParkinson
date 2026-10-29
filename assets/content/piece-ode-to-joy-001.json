@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-ode-to-joy-001",
+  "legacy_song_ids": [
+    "song-ode-to-joy-001"
+  ],
+  "version": "2.0.0",
+  "localized_title": {
+    "zh-Hans": "欢乐颂",
+    "en": "Ode to Joy"
+  },
+  "localized_description": {
+    "zh-Hans": "贝多芬 · 主题前两句 · 五键 · 8 小节",
+    "en": "Beethoven · Opening two phrases · Five keys · 8 bars"
+  },
+  "ticks_per_beat": 4,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "notes": [
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    }
+  ],
+  "source": {
+    "composer": "Ludwig van Beethoven",
+    "work": "Symphony No. 9, Op. 125, finale theme",
+    "score": "https://www.mutopiaproject.org/ftp/BeethovenLv/ode/ode-let.pdf",
+    "notation": "https://www.mutopiaproject.org/ftp/BeethovenLv/ode/ode.ly",
+    "adaptation": "Opening 8 bars of soprano melody transposed from G to C; original note durations retained. Peter Chubb typesetting, Mutopia-2009/08/05-528, public domain.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; see piano_attribution.txt"
+  },
+  "pickup_ticks": 0,
+  "key_midis": [
+    60,
+    62,
+    64,
+    65,
+    67
+  ],
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "score_source": {
+    "kind": "user_image",
+    "file": "supplied-ode-to-joy.png",
+    "reference": "https://musescore.com/user/191626/scores/182061",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ],
+    "sha256": "d13a3a1715729aa7f24e4f61660029fd95175f7975e684412e128f28a137544e"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_ode_to_joy_60.ogg",
+    "sha256": "cb3f492a5b09632b4772b5342b42d18cd37cf875a44c1d4c96feb177635079d4",
+    "tempo_bpm": 60,
+    "duration_ms": 64000,
+    "sample_frames": 1411200,
+    "base_tempo_bpm": 60,
+    "total_ticks": 256,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_ode_to_joy_40.ogg",
+        "sha256": "42faa9a01c46ed3d09047c9c671b6ea279334423dc4813e9e930a6e46c3dbf88",
+        "tempo_bpm": 40,
+        "duration_ms": 96000,
+        "sample_frames": 2116800
+      },
+      "50": {
+        "path": "assets/audio/backing_ode_to_joy_50.ogg",
+        "sha256": "82eb4e8abc6247d6a997fd62a0e217704d367fc4848b5a31ed4d7788f095cfc5",
+        "tempo_bpm": 50,
+        "duration_ms": 76800,
+        "sample_frames": 1693440
+      },
+      "60": {
+        "path": "assets/audio/backing_ode_to_joy_60.ogg",
+        "sha256": "cb3f492a5b09632b4772b5342b42d18cd37cf875a44c1d4c96feb177635079d4",
+        "tempo_bpm": 60,
+        "duration_ms": 64000,
+        "sample_frames": 1411200
+      },
+      "70": {
+        "path": "assets/audio/backing_ode_to_joy_70.ogg",
+        "sha256": "0064840b6244e08b071e6202f7dc1ec3fe4d7b9dfcaeedb22afa9ce1d1f7695d",
+        "tempo_bpm": 70,
+        "duration_ms": 54857,
+        "sample_frames": 1209600
+      },
+      "80": {
+        "path": "assets/audio/backing_ode_to_joy_80.ogg",
+        "sha256": "ac0047d3615f440e96fc0220c3a09ce96633d24e02082cd9cb88dfbfa756ab0a",
+        "tempo_bpm": 80,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "kind": "user_image",
+      "file": "supplied-ode-to-joy.png",
+      "reference": "https://musescore.com/user/191626/scores/182061",
+      "content_version": "2.0.0",
+      "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+      "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+      "ticks_per_quarter": 4,
+      "playback_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ]
+    },
+    "source_sha256": "d13a3a1715729aa7f24e4f61660029fd95175f7975e684412e128f28a137544e",
+    "score_hash": "25e5b16ebacec651e606185910e6e3d3e0a1414fffc892914be7588927484bc2",
+    "score_note_count": 51,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "8991eb632465d8fd182c46ce26e4de8b65a1420a755c605685935508bb09cb2a"
+}

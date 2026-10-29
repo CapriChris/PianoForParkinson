@@ -1,0 +1,302 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-you-are-my-sunshine-001",
+  "version": "1.3.0",
+  "localized_title": {
+    "zh-Hans": "你是我的阳光",
+    "en": "You Are My Sunshine"
+  },
+  "localized_description": {
+    "zh-Hans": "吉米·戴维斯、查尔斯·米切尔 · 单声部练习编配",
+    "en": "Jimmie Davis and Charles Mitchell · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 2,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    -3,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    }
+  ],
+  "source": {
+    "composer": "Jimmie Davis and Charles Mitchell",
+    "reference": "https://www.loganhone.com/Library/sheetmusic/aug152024_Community_Band_Songbook-Vocals.pdf#page=54",
+    "adaptation": "Chorus melody only, no lyrics, verses or accompaniment; transposed from the printed F-major staff to C major, with rests and a three-beat pickup retained; one-beat closing rest. Pitch correction checked against the printed staff and PangfunJ Studio MusicXML (https://pangfunjstudio.com/wp-content/uploads/2024/09/you-are-my-sunshine.mxl); the original reference pickup, rhythm and phrasing are retained.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "pickup_ticks": 6,
+  "accompaniment": {
+    "path": "assets/audio/backing_you_are_my_sunshine_60.ogg",
+    "sha256": "5d3792aec73b60719d2a77eb33ad84f11fc161933457687622e5eae4f6b5fd21",
+    "tempo_bpm": 60,
+    "duration_ms": 64000,
+    "sample_frames": 1411200,
+    "base_tempo_bpm": 60,
+    "total_ticks": 128,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_you_are_my_sunshine_40.ogg",
+        "sha256": "10aa480a1ad175a01751f8b83ee718fef5776e9ce820ab85853dde3d4253c5c4",
+        "tempo_bpm": 40,
+        "duration_ms": 96000,
+        "sample_frames": 2116800
+      },
+      "50": {
+        "path": "assets/audio/backing_you_are_my_sunshine_50.ogg",
+        "sha256": "41861e794256a45cb8ab6cddbf40ab968d2d81a0a3197682c754e617cb5a5536",
+        "tempo_bpm": 50,
+        "duration_ms": 76800,
+        "sample_frames": 1693440
+      },
+      "60": {
+        "path": "assets/audio/backing_you_are_my_sunshine_60.ogg",
+        "sha256": "5d3792aec73b60719d2a77eb33ad84f11fc161933457687622e5eae4f6b5fd21",
+        "tempo_bpm": 60,
+        "duration_ms": 64000,
+        "sample_frames": 1411200
+      },
+      "70": {
+        "path": "assets/audio/backing_you_are_my_sunshine_70.ogg",
+        "sha256": "7c2ff540aff911c2d1fdb0b1020491db3329ad751bb59ee397fc75e81f09c1e9",
+        "tempo_bpm": 70,
+        "duration_ms": 54857,
+        "sample_frames": 1209600
+      },
+      "80": {
+        "path": "assets/audio/backing_you_are_my_sunshine_80.ogg",
+        "sha256": "7c0d8568853a3bc5499fc12f25910c6772b5253f7a334babc4fcfefa76167551",
+        "tempo_bpm": 80,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "file": "pangfunj-sunshine.mxl",
+      "reference": "https://pangfunjstudio.com/sheet-music/youre-my-sunshine-jimmie-davis-and-charles-mitchell/",
+      "download": "https://pangfunjstudio.com/wp-content/uploads/2024/09/you-are-my-sunshine.mxl",
+      "arranger": "PangfunJ Studio",
+      "rights": "PERSONAL_LEARNING_ONLY: publisher disclosure permits personal learning and excludes resale; used for the current internal learning demo, not represented as an unrestricted redistribution license.",
+      "selections": [
+        [
+          "P1",
+          "2",
+          -12
+        ]
+      ],
+      "measures": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "ticks_per_quarter": 4,
+      "tick_offset": -2,
+      "adaptation": "First sixteen source bars only; written left-hand broken chords lowered one octave. Source 2/4 quarters become app half notes. Initial half-beat rest removed to match the app three-beat pickup; backing remains silent during that pickup. App closing rest and its extra low-G pickup variant are retained.",
+      "melody_check": "37 source notes align; app has one extra low-G pickup note"
+    },
+    "source_sha256": "a92648df0a1052d0b1726af76c42a9cbd8939dcd8e8d5bb8e14b187109aea32a",
+    "score_hash": "22d55baf0660f14a2c5c3913f31f85114cf784be3b7893a0746150b323a711da",
+    "score_note_count": 60,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "f1630beaa3cb7618ed021ff7fae35aac81a6f9ce195a2534c725f8eab0cc3ca9"
+}

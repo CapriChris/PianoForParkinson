@@ -1,0 +1,438 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-saints-001",
+  "version": "2.0.0",
+  "localized_title": {
+    "zh-Hans": "圣者进行曲",
+    "en": "When the Saints Go Marching In"
+  },
+  "localized_description": {
+    "zh-Hans": "美国传统民歌 · 单声部练习编配",
+    "en": "Traditional American melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 4,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 20
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 20
+    }
+  ],
+  "source": {
+    "composer": "Traditional American melody",
+    "reference": "https://ivorypiano.com/songs/when-the-saints-go-marching-in",
+    "adaptation": "Complete single-pass 32-note C-major melody, straight quarter-note rhythm; onsets and durations checked against the arranger's printed piano score and machine-readable melody. Opening phrase G lasts four beats; final cadence E C D C. Replaces the earlier short-note recorder adaptation.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "pickup_ticks": 12,
+  "key_midis": [
+    60,
+    62,
+    64,
+    65,
+    67
+  ],
+  "score_source": {
+    "kind": "user_image",
+    "file": "supplied-saints.png",
+    "reference": "https://musescore.com/user/30689505/scores/5468872",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17
+    ],
+    "sha256": "834d7c039538c29ed262a1d11e31ee2bf8dca5b61f1dc2766d5969bbc98f2dc8"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_saints_60.ogg",
+    "sha256": "fea3f49008c274c13843a0d5fe9d03c6e613025fccc313ea4e62b9591ac3e3bc",
+    "tempo_bpm": 60,
+    "duration_ms": 128000,
+    "sample_frames": 2822400,
+    "base_tempo_bpm": 60,
+    "total_ticks": 512,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_saints_40.ogg",
+        "sha256": "85741a0a88f2c754e53b1e8b33adbed30307a9dddaf6cdc5f690bb229fe6cf0d",
+        "tempo_bpm": 40,
+        "duration_ms": 192000,
+        "sample_frames": 4233600
+      },
+      "50": {
+        "path": "assets/audio/backing_saints_50.ogg",
+        "sha256": "3490b73b67fecf97d15426bb7cf1dd057c0bd73f9542ffac2900cc09bc7fa0d7",
+        "tempo_bpm": 50,
+        "duration_ms": 153600,
+        "sample_frames": 3386880
+      },
+      "60": {
+        "path": "assets/audio/backing_saints_60.ogg",
+        "sha256": "fea3f49008c274c13843a0d5fe9d03c6e613025fccc313ea4e62b9591ac3e3bc",
+        "tempo_bpm": 60,
+        "duration_ms": 128000,
+        "sample_frames": 2822400
+      },
+      "70": {
+        "path": "assets/audio/backing_saints_70.ogg",
+        "sha256": "df02ca9183ffb6784e40e7a96f8ffa010a7c80bde7098f770aab79f61c1c729a",
+        "tempo_bpm": 70,
+        "duration_ms": 109714,
+        "sample_frames": 2419200
+      },
+      "80": {
+        "path": "assets/audio/backing_saints_80.ogg",
+        "sha256": "1d1e315cdc1e9ae69847a0703f06abe3c7d512bfc8a7c8da24eac3da055ddc33",
+        "tempo_bpm": 80,
+        "duration_ms": 96000,
+        "sample_frames": 2116800
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "kind": "user_image",
+      "file": "supplied-saints.png",
+      "reference": "https://musescore.com/user/30689505/scores/5468872",
+      "content_version": "2.0.0",
+      "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+      "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+      "ticks_per_quarter": 4,
+      "playback_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17
+      ]
+    },
+    "source_sha256": "834d7c039538c29ed262a1d11e31ee2bf8dca5b61f1dc2766d5969bbc98f2dc8",
+    "score_hash": "4bf1ddbca0517050754e20073b8206ff69f43e131f533ac3409eb35ce962fdb0",
+    "score_note_count": 186,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "65e1aab5288ea30990ac340defd3aa6360241d197e1fa6a277dc3c33fc47d60f"
+}

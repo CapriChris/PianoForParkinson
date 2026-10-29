@@ -1,0 +1,463 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-frere-jacques-001",
+  "total_ticks": 128,
+  "ticks_per_beat": 4,
+  "source": {
+    "kind": "user_image",
+    "file": "supplied-frere-jacques.png",
+    "reference": "https://musescore.com/user/259021/scores/5856883",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      4,
+      4
+    ]
+  },
+  "source_sha256": "8a83db6ea77ce61b9ee60abf18a14dba2664c32a25d7e955c96908ac2e5b9601",
+  "treble_bars": [
+    "C4 D4 E4 C4",
+    "E4 F4 G4:2",
+    "G4:.75 A4:.25 G4:.5 F4:.5 E4 C4",
+    "C4 G4 C4:2"
+  ],
+  "bass_bars": [
+    "C3:2 E3:2",
+    "E3:2 G3:2",
+    "G3:2 E3:2",
+    "r G3:2 r"
+  ],
+  "bar_ticks": [
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16
+  ],
+  "melody_events": [
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 0,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 4,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 8,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 12,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 16,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 2
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 20,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 2
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 24,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 2
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 28,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 2
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 32,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 3
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 36,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 3
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 40,
+      "duration_ticks": 8,
+      "source_measure": "2",
+      "pass_measure": 3
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 48,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 4
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 52,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 4
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 56,
+      "duration_ticks": 8,
+      "source_measure": "2",
+      "pass_measure": 4
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 64,
+      "duration_ticks": 3,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 69,
+      "spelling": "A4",
+      "start_tick": 67,
+      "duration_ticks": 1,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 68,
+      "duration_ticks": 2,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 70,
+      "duration_ticks": 2,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 72,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 76,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 5
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 80,
+      "duration_ticks": 3,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 69,
+      "spelling": "A4",
+      "start_tick": 83,
+      "duration_ticks": 1,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 84,
+      "duration_ticks": 2,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 86,
+      "duration_ticks": 2,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 88,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 92,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 6
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 96,
+      "duration_ticks": 4,
+      "source_measure": "4",
+      "pass_measure": 7
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 100,
+      "duration_ticks": 4,
+      "source_measure": "4",
+      "pass_measure": 7
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 104,
+      "duration_ticks": 8,
+      "source_measure": "4",
+      "pass_measure": 7
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 112,
+      "duration_ticks": 4,
+      "source_measure": "4",
+      "pass_measure": 8
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 116,
+      "duration_ticks": 4,
+      "source_measure": "4",
+      "pass_measure": 8
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 120,
+      "duration_ticks": 8,
+      "source_measure": "4",
+      "pass_measure": 8
+    }
+  ],
+  "events": [
+    {
+      "midi": 48,
+      "start_tick": 0,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 1,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 8,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 1,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 16,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 2,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 24,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 2,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 32,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 40,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 48,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 4,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 56,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 4,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 64,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 5,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 72,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 5,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 80,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 6,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 88,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 6,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 100,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "4",
+      "pass_measure": 7,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 116,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "4",
+      "pass_measure": 8,
+      "staccato": false
+    }
+  ],
+  "score_hash": "4e607658d57ee65aa14c2207f2be1d92af35276494958766b2993867efd7d686"
+}

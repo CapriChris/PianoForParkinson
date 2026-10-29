@@ -1,0 +1,25 @@
+钢琴曲谱与伴奏来源 / Piano score and accompaniment sources
+
+2026-10-26: 六份曲谱图片由用户提供。保持原谱音高、时值、连音和反复顺序；高音谱表用于演奏与显示，低音谱表仅用于伴奏。未推断原编配的公开或商业再分发许可。
+User-supplied images, transcribed for this internal prototype. No redistribution license inferred.
+
+Audio: Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. See piano_attribution.txt. The score publishers did not record or endorse the generated audio.
+
+Ludwig van Beethoven; Ode to joy (Piano for kids)
+https://musescore.com/user/191626/scores/182061
+
+Traditional; Adapté par LILIKA (1860), as printed
+https://musescore.com/user/259021/scores/5856883
+
+Traditional; Twinkle, Twinkle, Little Star
+https://musescore.com/user/110059/scores/1525331
+
+Traditional; When The Saints Go Marching In
+https://musescore.com/user/30689505/scores/5468872
+
+Patty Hill & Mildred J. Hill, as printed
+https://musescore.com/user/32960140/scores/5847891
+
+Jimmie Davis / Charles Mitchell; You Are My Sunshine white keys
+2026-10-26: 用户另行提供白键版谱图及 You_Are_My_Sunshine_white_keys.mid；当前主旋律与低音声部均按该版本更新，并与 MIDI 核对。上一份 Nguyen Hoang Minh 的 F 大调谱图仅保留为工程历史来源。
+User-supplied C-major white-key score and MIDI replace the previous F-major transcription. No new redistribution license inferred.

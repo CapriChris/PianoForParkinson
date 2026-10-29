@@ -1,0 +1,1150 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-ode-to-joy-001",
+  "total_ticks": 256,
+  "ticks_per_beat": 4,
+  "source": {
+    "kind": "user_image",
+    "file": "supplied-ode-to-joy.png",
+    "reference": "https://musescore.com/user/191626/scores/182061",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16
+    ]
+  },
+  "source_sha256": "d13a3a1715729aa7f24e4f61660029fd95175f7975e684412e128f28a137544e",
+  "treble_bars": [
+    "E4 E4 F4 G4",
+    "G4 F4 E4 D4",
+    "C4 C4 D4 E4",
+    "E4:1.5 D4:.5 D4:2",
+    "E4 E4 F4 G4",
+    "G4 F4 E4 D4",
+    "C4 C4 D4 E4",
+    "D4:1.5 C4:.5 C4:2",
+    "D4 D4 E4 C4",
+    "D4 E4:.5 F4:.5 E4 C4",
+    "D4 E4:.5 F4:.5 E4 D4",
+    "C4 D4 r:2",
+    "E4 E4 F4 G4",
+    "G4 F4 E4 D4",
+    "C4 C4 D4 E4",
+    "D4:1.5 C4:.5 C4:2"
+  ],
+  "bass_bars": [
+    "C3+G3:4",
+    "B2+G3:4",
+    "E3+G3:2 D3 C3",
+    "G3:4",
+    "C3+G3:4",
+    "B2+G3:4",
+    "E3+G3:2 D3 C3",
+    "F3+G3:1.5 E3+G3:.5 E3+G3:2",
+    "B2+G3:2 C3+G3:2",
+    "B2+G3:2 C3+G3:2",
+    "B2+G3:2 G#3:2",
+    "A3 F#3 G3:2",
+    "C3+G3:4",
+    "B2+G3:4",
+    "E3+G3:2 D3 C3",
+    "F3+G3:1.5 E3+G3:.5 E3+G3:2"
+  ],
+  "bar_ticks": [
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16,
+    16
+  ],
+  "melody_events": [
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 0,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 4,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 8,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 12,
+      "duration_ticks": 4,
+      "source_measure": "1",
+      "pass_measure": 1
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 16,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 2
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 20,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 2
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 24,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 2
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 28,
+      "duration_ticks": 4,
+      "source_measure": "2",
+      "pass_measure": 2
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 32,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 3
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 36,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 3
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 40,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 3
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 44,
+      "duration_ticks": 4,
+      "source_measure": "3",
+      "pass_measure": 3
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 48,
+      "duration_ticks": 6,
+      "source_measure": "4",
+      "pass_measure": 4
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 54,
+      "duration_ticks": 2,
+      "source_measure": "4",
+      "pass_measure": 4
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 56,
+      "duration_ticks": 8,
+      "source_measure": "4",
+      "pass_measure": 4
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 64,
+      "duration_ticks": 4,
+      "source_measure": "5",
+      "pass_measure": 5
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 68,
+      "duration_ticks": 4,
+      "source_measure": "5",
+      "pass_measure": 5
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 72,
+      "duration_ticks": 4,
+      "source_measure": "5",
+      "pass_measure": 5
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 76,
+      "duration_ticks": 4,
+      "source_measure": "5",
+      "pass_measure": 5
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 80,
+      "duration_ticks": 4,
+      "source_measure": "6",
+      "pass_measure": 6
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 84,
+      "duration_ticks": 4,
+      "source_measure": "6",
+      "pass_measure": 6
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 88,
+      "duration_ticks": 4,
+      "source_measure": "6",
+      "pass_measure": 6
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 92,
+      "duration_ticks": 4,
+      "source_measure": "6",
+      "pass_measure": 6
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 96,
+      "duration_ticks": 4,
+      "source_measure": "7",
+      "pass_measure": 7
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 100,
+      "duration_ticks": 4,
+      "source_measure": "7",
+      "pass_measure": 7
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 104,
+      "duration_ticks": 4,
+      "source_measure": "7",
+      "pass_measure": 7
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 108,
+      "duration_ticks": 4,
+      "source_measure": "7",
+      "pass_measure": 7
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 112,
+      "duration_ticks": 6,
+      "source_measure": "8",
+      "pass_measure": 8
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 118,
+      "duration_ticks": 2,
+      "source_measure": "8",
+      "pass_measure": 8
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 120,
+      "duration_ticks": 8,
+      "source_measure": "8",
+      "pass_measure": 8
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 128,
+      "duration_ticks": 4,
+      "source_measure": "9",
+      "pass_measure": 9
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 132,
+      "duration_ticks": 4,
+      "source_measure": "9",
+      "pass_measure": 9
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 136,
+      "duration_ticks": 4,
+      "source_measure": "9",
+      "pass_measure": 9
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 140,
+      "duration_ticks": 4,
+      "source_measure": "9",
+      "pass_measure": 9
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 144,
+      "duration_ticks": 4,
+      "source_measure": "10",
+      "pass_measure": 10
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 148,
+      "duration_ticks": 2,
+      "source_measure": "10",
+      "pass_measure": 10
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 150,
+      "duration_ticks": 2,
+      "source_measure": "10",
+      "pass_measure": 10
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 152,
+      "duration_ticks": 4,
+      "source_measure": "10",
+      "pass_measure": 10
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 156,
+      "duration_ticks": 4,
+      "source_measure": "10",
+      "pass_measure": 10
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 160,
+      "duration_ticks": 4,
+      "source_measure": "11",
+      "pass_measure": 11
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 164,
+      "duration_ticks": 2,
+      "source_measure": "11",
+      "pass_measure": 11
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 166,
+      "duration_ticks": 2,
+      "source_measure": "11",
+      "pass_measure": 11
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 168,
+      "duration_ticks": 4,
+      "source_measure": "11",
+      "pass_measure": 11
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 172,
+      "duration_ticks": 4,
+      "source_measure": "11",
+      "pass_measure": 11
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 176,
+      "duration_ticks": 4,
+      "source_measure": "12",
+      "pass_measure": 12
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 180,
+      "duration_ticks": 4,
+      "source_measure": "12",
+      "pass_measure": 12
+    },
+    {
+      "midi": null,
+      "spelling": "r",
+      "start_tick": 184,
+      "duration_ticks": 8,
+      "source_measure": "12",
+      "pass_measure": 12
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 192,
+      "duration_ticks": 4,
+      "source_measure": "13",
+      "pass_measure": 13
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 196,
+      "duration_ticks": 4,
+      "source_measure": "13",
+      "pass_measure": 13
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 200,
+      "duration_ticks": 4,
+      "source_measure": "13",
+      "pass_measure": 13
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 204,
+      "duration_ticks": 4,
+      "source_measure": "13",
+      "pass_measure": 13
+    },
+    {
+      "midi": 67,
+      "spelling": "G4",
+      "start_tick": 208,
+      "duration_ticks": 4,
+      "source_measure": "14",
+      "pass_measure": 14
+    },
+    {
+      "midi": 65,
+      "spelling": "F4",
+      "start_tick": 212,
+      "duration_ticks": 4,
+      "source_measure": "14",
+      "pass_measure": 14
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 216,
+      "duration_ticks": 4,
+      "source_measure": "14",
+      "pass_measure": 14
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 220,
+      "duration_ticks": 4,
+      "source_measure": "14",
+      "pass_measure": 14
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 224,
+      "duration_ticks": 4,
+      "source_measure": "15",
+      "pass_measure": 15
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 228,
+      "duration_ticks": 4,
+      "source_measure": "15",
+      "pass_measure": 15
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 232,
+      "duration_ticks": 4,
+      "source_measure": "15",
+      "pass_measure": 15
+    },
+    {
+      "midi": 64,
+      "spelling": "E4",
+      "start_tick": 236,
+      "duration_ticks": 4,
+      "source_measure": "15",
+      "pass_measure": 15
+    },
+    {
+      "midi": 62,
+      "spelling": "D4",
+      "start_tick": 240,
+      "duration_ticks": 6,
+      "source_measure": "16",
+      "pass_measure": 16
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 246,
+      "duration_ticks": 2,
+      "source_measure": "16",
+      "pass_measure": 16
+    },
+    {
+      "midi": 60,
+      "spelling": "C4",
+      "start_tick": 248,
+      "duration_ticks": 8,
+      "source_measure": "16",
+      "pass_measure": 16
+    }
+  ],
+  "events": [
+    {
+      "midi": 48,
+      "start_tick": 0,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 1,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 0,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "1",
+      "pass_measure": 1,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 16,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 2,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 16,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "2",
+      "pass_measure": 2,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 32,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 32,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 50,
+      "start_tick": 40,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 44,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "3",
+      "pass_measure": 3,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 48,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "4",
+      "pass_measure": 4,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 64,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "5",
+      "pass_measure": 5,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 64,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "5",
+      "pass_measure": 5,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 80,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "6",
+      "pass_measure": 6,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 80,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "6",
+      "pass_measure": 6,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 96,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "7",
+      "pass_measure": 7,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 96,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "7",
+      "pass_measure": 7,
+      "staccato": false
+    },
+    {
+      "midi": 50,
+      "start_tick": 104,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "7",
+      "pass_measure": 7,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 108,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "7",
+      "pass_measure": 7,
+      "staccato": false
+    },
+    {
+      "midi": 53,
+      "start_tick": 112,
+      "duration_ticks": 6,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 112,
+      "duration_ticks": 6,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 118,
+      "duration_ticks": 2,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 118,
+      "duration_ticks": 2,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 120,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 120,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "8",
+      "pass_measure": 8,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 128,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "9",
+      "pass_measure": 9,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 128,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "9",
+      "pass_measure": 9,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 136,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "9",
+      "pass_measure": 9,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 136,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "9",
+      "pass_measure": 9,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 144,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "10",
+      "pass_measure": 10,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 144,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "10",
+      "pass_measure": 10,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 152,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "10",
+      "pass_measure": 10,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 152,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "10",
+      "pass_measure": 10,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 160,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "11",
+      "pass_measure": 11,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 160,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "11",
+      "pass_measure": 11,
+      "staccato": false
+    },
+    {
+      "midi": 56,
+      "start_tick": 168,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "11",
+      "pass_measure": 11,
+      "staccato": false
+    },
+    {
+      "midi": 57,
+      "start_tick": 176,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "12",
+      "pass_measure": 12,
+      "staccato": false
+    },
+    {
+      "midi": 54,
+      "start_tick": 180,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "12",
+      "pass_measure": 12,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 184,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "12",
+      "pass_measure": 12,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 192,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "13",
+      "pass_measure": 13,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 192,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "13",
+      "pass_measure": 13,
+      "staccato": false
+    },
+    {
+      "midi": 47,
+      "start_tick": 208,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "14",
+      "pass_measure": 14,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 208,
+      "duration_ticks": 16,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "14",
+      "pass_measure": 14,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 224,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "15",
+      "pass_measure": 15,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 224,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "15",
+      "pass_measure": 15,
+      "staccato": false
+    },
+    {
+      "midi": 50,
+      "start_tick": 232,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "15",
+      "pass_measure": 15,
+      "staccato": false
+    },
+    {
+      "midi": 48,
+      "start_tick": 236,
+      "duration_ticks": 4,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "15",
+      "pass_measure": 15,
+      "staccato": false
+    },
+    {
+      "midi": 53,
+      "start_tick": 240,
+      "duration_ticks": 6,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 240,
+      "duration_ticks": 6,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 246,
+      "duration_ticks": 2,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 246,
+      "duration_ticks": 2,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    },
+    {
+      "midi": 52,
+      "start_tick": 248,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    },
+    {
+      "midi": 55,
+      "start_tick": 248,
+      "duration_ticks": 8,
+      "source_part": "P1",
+      "source_staff": "2",
+      "source_voice": "1",
+      "source_measure": "16",
+      "pass_measure": 16,
+      "staccato": false
+    }
+  ],
+  "score_hash": "25e5b16ebacec651e606185910e6e3d3e0a1414fffc892914be7588927484bc2"
+}

@@ -1,0 +1,308 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-twinkle-001",
+  "version": "2.0.0",
+  "localized_title": {
+    "zh-Hans": "小星星",
+    "en": "Twinkle, Twinkle, Little Star"
+  },
+  "localized_description": {
+    "zh-Hans": "法国传统旋律 · 单声部练习编配",
+    "en": "Traditional French melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 4,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    }
+  ],
+  "source": {
+    "composer": "Traditional French melody",
+    "reference": "https://noctavepiano.com/en/sheet-music/trad-ah-vous-dirai-je-maman/",
+    "adaptation": "Complete 42-note traditional melody in C; quarter and half notes; accompaniment omitted.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "pickup_ticks": 0,
+  "key_midis": [
+    60,
+    62,
+    64,
+    65,
+    67,
+    69
+  ],
+  "score_source": {
+    "kind": "user_image",
+    "file": "supplied-twinkle.png",
+    "reference": "https://musescore.com/user/110059/scores/1525331",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12
+    ],
+    "sha256": "62395106825b48ab825698aecc8e0cb54adefc3db61bbd1e7ea91f945fb1e1bc"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_twinkle_60.ogg",
+    "sha256": "9da7a3704830a6d48ba0e27627a4c764e4456e11f04957450a63cb5f52f7be4f",
+    "tempo_bpm": 60,
+    "duration_ms": 48000,
+    "sample_frames": 1058400,
+    "base_tempo_bpm": 60,
+    "total_ticks": 192,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_twinkle_40.ogg",
+        "sha256": "2df7f4a98e8b534220f372ec14284cf329ba032080a1aba50dccda13b728afc9",
+        "tempo_bpm": 40,
+        "duration_ms": 72000,
+        "sample_frames": 1587600
+      },
+      "50": {
+        "path": "assets/audio/backing_twinkle_50.ogg",
+        "sha256": "20949ae7996cc20b26775ad62e9c92f90d3f88d05f611f28833b13c886d8f55b",
+        "tempo_bpm": 50,
+        "duration_ms": 57600,
+        "sample_frames": 1270080
+      },
+      "60": {
+        "path": "assets/audio/backing_twinkle_60.ogg",
+        "sha256": "9da7a3704830a6d48ba0e27627a4c764e4456e11f04957450a63cb5f52f7be4f",
+        "tempo_bpm": 60,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      },
+      "70": {
+        "path": "assets/audio/backing_twinkle_70.ogg",
+        "sha256": "13b7b473c51b32ecd14abcd739269e10eb749ab6c0ac6643f1ad686e2ef6f56b",
+        "tempo_bpm": 70,
+        "duration_ms": 41143,
+        "sample_frames": 907200
+      },
+      "80": {
+        "path": "assets/audio/backing_twinkle_80.ogg",
+        "sha256": "70019c25b9fc0270a2a56816807223b34ad643abda5461ff5bbcf7017230fc01",
+        "tempo_bpm": 80,
+        "duration_ms": 36000,
+        "sample_frames": 793800
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "kind": "user_image",
+      "file": "supplied-twinkle.png",
+      "reference": "https://musescore.com/user/110059/scores/1525331",
+      "content_version": "2.0.0",
+      "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+      "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+      "ticks_per_quarter": 4,
+      "playback_order": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "source_sha256": "62395106825b48ab825698aecc8e0cb54adefc3db61bbd1e7ea91f945fb1e1bc",
+    "score_hash": "cbbf8a6a8c2a9e6f7e6bd6ca6b4eeab9ce5fdea6fad0cd2f23b8cecd337361f6",
+    "score_note_count": 44,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "cfa875a8e0ab0d06b326923dc28651c6405e8acdddb19a8d7551e118c34e5876"
+}

@@ -1,0 +1,325 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-saints-001",
+  "version": "1.3.1",
+  "localized_title": {
+    "zh-Hans": "圣者进行曲",
+    "en": "When the Saints Go Marching In"
+  },
+  "localized_description": {
+    "zh-Hans": "美国传统民歌 · 单声部练习编配",
+    "en": "Traditional American melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 2,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "notes": [
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 6
+    },
+    {
+      "note_index": -1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    }
+  ],
+  "source": {
+    "composer": "Traditional American melody",
+    "reference": "https://ivorypiano.com/songs/when-the-saints-go-marching-in",
+    "adaptation": "Complete single-pass 32-note C-major melody, straight quarter-note rhythm; onsets and durations checked against the arranger's printed piano score and machine-readable melody. Opening phrase G lasts four beats; final cadence E C D C. Replaces the earlier short-note recorder adaptation.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_saints_60.ogg",
+    "sha256": "a3463f2e989404bb7d753088d0fc24b7e049d81495f9c6bcb19ba7a753c77ea4",
+    "tempo_bpm": 60,
+    "duration_ms": 64000,
+    "sample_frames": 1411200,
+    "base_tempo_bpm": 60,
+    "total_ticks": 128,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_saints_40.ogg",
+        "sha256": "35101c117fbcce54e78ee1427af3801f027b4f95c4a4f387305ad7a4040eadf5",
+        "tempo_bpm": 40,
+        "duration_ms": 96000,
+        "sample_frames": 2116800
+      },
+      "50": {
+        "path": "assets/audio/backing_saints_50.ogg",
+        "sha256": "58efe34e576c036d9faba1645287d76d24db27ea0de3b63574f184df8f6841c1",
+        "tempo_bpm": 50,
+        "duration_ms": 76800,
+        "sample_frames": 1693440
+      },
+      "60": {
+        "path": "assets/audio/backing_saints_60.ogg",
+        "sha256": "a3463f2e989404bb7d753088d0fc24b7e049d81495f9c6bcb19ba7a753c77ea4",
+        "tempo_bpm": 60,
+        "duration_ms": 64000,
+        "sample_frames": 1411200
+      },
+      "70": {
+        "path": "assets/audio/backing_saints_70.ogg",
+        "sha256": "c0bdf31c81d96f9dcb6a86045a2bb5ceee0588d54cd60799a30c8f94df246b2e",
+        "tempo_bpm": 70,
+        "duration_ms": 54857,
+        "sample_frames": 1209600
+      },
+      "80": {
+        "path": "assets/audio/backing_saints_80.ogg",
+        "sha256": "9a8af17b212872ac5935110a154990ca6794a7fc54de6c4b59aec704a1b06ba1",
+        "tempo_bpm": 80,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "file": "maestro-saints.musicxml",
+      "reference": "https://maestroscore.app/examples/",
+      "download": "https://maestroscore.app/esempi/when-the-saints.musicxml",
+      "arranger": "Maestro",
+      "rights": "Publisher permits use, modification and sharing of the arrangements.",
+      "selections": [
+        [
+          "P3",
+          "1",
+          -5
+        ],
+        [
+          "P4",
+          null,
+          7
+        ]
+      ],
+      "measures": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "ticks_per_quarter": 2,
+      "tick_offset": 0,
+      "adaptation": "Written jazz piano chord staff plus written walking double-bass part, both played with piano samples. F major to C major; concert bass raised an octave to keep it light. Horns, drums and piano pedal bass omitted. Selected voices contain quarter/whole notes, so no swing timing is added. After emulator recording review, six close semitone chord neighbors of the melody are temporarily omitted; walking bass and other chord voices are retained. This avoids same-register collisions without adding a lower voice whose harmonics can recreate the neighbor tone.",
+      "content_version": "1.3.1",
+      "omit_close_neighbors": true,
+      "melody_check": "exact"
+    },
+    "source_sha256": "affd6811dc65a6556c42356be0575166788a6453d4f573c94419361e3ca406d3",
+    "score_hash": "ab30d713e85cc957e3c26f5f4c05d639865350050fe9e05991c76f5edfbc34d1",
+    "score_note_count": 235,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt.",
+    "source_note_count": 241,
+    "voicing_adjustments": [
+      {
+        "start_tick": 6,
+        "reference_midi": 64,
+        "melody_midi": 65,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "1"
+      },
+      {
+        "start_tick": 22,
+        "reference_midi": 64,
+        "melody_midi": 65,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "3"
+      },
+      {
+        "start_tick": 38,
+        "reference_midi": 64,
+        "melody_midi": 65,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "5"
+      },
+      {
+        "start_tick": 66,
+        "reference_midi": 65,
+        "melody_midi": 64,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "9"
+      },
+      {
+        "start_tick": 68,
+        "reference_midi": 65,
+        "melody_midi": 64,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "9"
+      },
+      {
+        "start_tick": 100,
+        "reference_midi": 64,
+        "melody_midi": 65,
+        "action": "omit_neighbor_voice",
+        "source_part": "P3",
+        "source_measure": "13"
+      }
+    ]
+  },
+  "content_hash": "ae6afd30d818845c1fd37f817c103a377e13b54129eeae2df7789df5c137ef0d"
+}

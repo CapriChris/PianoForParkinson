@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "paths": [
+    "assets/content/piece-ode-to-joy-001.json",
+    "assets/content/piece-frere-jacques-001.json",
+    "assets/content/piece-twinkle-001.json",
+    "assets/content/piece-saints-001.json",
+    "assets/content/piece-happy-birthday-001.json",
+    "assets/content/piece-you-are-my-sunshine-001.json"
+  ]
+}

@@ -1,0 +1,414 @@
+{
+  "schema_version": 1,
+  "profile_id": "demo-cognitive",
+  "version": "demo-cognitive-2.0.0",
+  "source_document_version": "DD-1.0",
+  "review_status": "UNREVIEWED",
+  "review_record_id": null,
+  "effective_channel": "INTERNAL_DEMO",
+  "metric_version": "metrics-2.0.0",
+  "adaptive_version": "adaptive-rules-2.0.0",
+  "clock_source": "DART_RECEIPT",
+  "rng_algorithm": "rng-lcg32-1",
+  "default_locale_policy": "DEVICE_CHINESE_ELSE_ENGLISH",
+  "default_mode": "ASSIST",
+  "required_block_slots": 2,
+  "network_requests_enabled": false,
+  "training_upload_enabled": false,
+  "account_enabled": false,
+  "supported_locales": [
+    "zh-Hans",
+    "en"
+  ],
+  "layout": {
+    "compact_key_count": 5,
+    "wide_key_count": 7,
+    "wide_breakpoint_dp": 600,
+    "minimum_hit_target_dp": 60,
+    "key_gap_dp": 8,
+    "key_default_height_dp": 144,
+    "key_minimum_height_dp": 96,
+    "page_margin_compact_dp": 16,
+    "page_margin_wide_dp": 24,
+    "max_tested_text_scale_permille": 2000,
+    "key_notes": [
+      "C4",
+      "D4",
+      "E4",
+      "F4",
+      "G4",
+      "A4",
+      "B4"
+    ]
+  },
+  "input": {
+    "max_pointers": 4,
+    "slide_enabled": false,
+    "release_quiet_ms": 300,
+    "held_touch_hint_ms": 5000,
+    "held_touch_pause_ms": 10000,
+    "countdown_steps": 3,
+    "countdown_step_ms": 1000
+  },
+  "audio": {
+    "android_backend": "SOUNDPOOL",
+    "max_streams": 8,
+    "sample_rate_hz": 44100,
+    "pcm_bits": 16,
+    "channels": 1,
+    "max_sample_duration_ms": 4000,
+    "loop": 0,
+    "default_gain_permille": 850,
+    "maximum_gain_permille": 1000,
+    "default_speech_gain_permille": 1000,
+    "maximum_speech_gain_permille": 1000,
+    "assets_ready": false,
+    "tts_requires_local_voice": true,
+    "automatic_voice_download_enabled": false
+  },
+  "recording": {
+    "version": "input-recording-1.0.0",
+    "flush_interval_ms": 250,
+    "flush_event_count": 32,
+    "move_min_distance_dp": 2,
+    "move_max_interval_ms": 50,
+    "database_max_bytes": 268435456,
+    "minimum_free_bytes": 104857600,
+    "automatic_record_deletion": false,
+    "sqlite_busy_timeout_ms": 5000,
+    "sqlite_journal_mode": "WAL",
+    "sqlite_synchronous": "FULL"
+  },
+  "timing": {
+    "window_start_inclusive": true,
+    "window_end_inclusive": false,
+    "cue_anchor_source": "FRAME_CALLBACK_ESTIMATE",
+    "frame_callback_max_delay_ms": 100,
+    "startup_step_timeout_ms": 10000,
+    "trial_gap_ms": 700
+  },
+  "tasks": {
+    "G1_MEMORY": {
+      "task_version": "2.0.0",
+      "planned_trial_count_per_block": 3,
+      "pool": [
+        0,
+        1,
+        2
+      ],
+      "input_max_simultaneous": 1,
+      "maximum_level": 5,
+      "sequence_length_by_level": [
+        2,
+        3,
+        4,
+        5,
+        6
+      ],
+      "adjacent_repeat_allowed": true,
+      "demo_note_duration_ms": 400,
+      "demo_end_gap_ms": 600,
+      "response_per_position_timeout_ms": 5000,
+      "tail_observation_ms": 300,
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1,
+          "demo_onset_interval_ms": 900
+        },
+        "CHALLENGE": {
+          "initial_level": 2,
+          "demo_onset_interval_ms": 700
+        }
+      }
+    },
+    "G2_INHIBITION": {
+      "task_version": "2.0.0",
+      "planned_trial_count_per_block": 12,
+      "go_count": 9,
+      "no_go_count": 3,
+      "maximum_consecutive_no_go": 2,
+      "shuffle_retry_limit": 32,
+      "pool": [
+        0,
+        1,
+        2
+      ],
+      "input_max_simultaneous": 1,
+      "maximum_level": 5,
+      "full_window_required": true,
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1,
+          "response_window_ms_by_level": [
+            4000,
+            3500,
+            3000,
+            2500,
+            2000
+          ]
+        },
+        "CHALLENGE": {
+          "initial_level": 2,
+          "response_window_ms_by_level": [
+            3000,
+            2750,
+            2500,
+            2250,
+            2000
+          ]
+        }
+      }
+    },
+    "G3_SWITCH": {
+      "task_version": "2.0.0",
+      "planned_trial_count_per_block": 12,
+      "pool": [
+        0,
+        1,
+        2
+      ],
+      "input_max_simultaneous": 1,
+      "maximum_level": 5,
+      "run_length_by_level": [
+        6,
+        4,
+        3,
+        2,
+        1
+      ],
+      "first_rule": "POSITION",
+      "rule_header_ms": 1500,
+      "shape_position_must_differ": true,
+      "legal_pair_repetitions": 2,
+      "minimum_rt_samples_per_switch_group": 5,
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1,
+          "response_window_ms": 3500
+        },
+        "CHALLENGE": {
+          "initial_level": 2,
+          "response_window_ms": 2750
+        }
+      }
+    },
+    "S1_GUIDED": {
+      "task_version": "2.0.0",
+      "trial_count_source": "CONTENT_NOTE_COUNT",
+      "input_max_simultaneous": 1,
+      "maximum_level": 3,
+      "policy_hint_delay_ms_by_level": [
+        0,
+        2000,
+        4000
+      ],
+      "demo_onset_interval_ms": 900,
+      "demo_note_duration_ms": 400,
+      "demo_end_gap_ms": 600,
+      "response_deadline_enabled": false,
+      "help_offer_delay_ms": 10000,
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1
+        },
+        "CHALLENGE": {
+          "initial_level": 2
+        }
+      }
+    },
+    "S2_RHYTHM": {
+      "task_version": "2.0.0",
+      "trial_count_source": "CONTENT_NOTE_COUNT",
+      "input_max_simultaneous": 1,
+      "maximum_level": 4,
+      "bpm_by_level": [
+        40,
+        45,
+        50,
+        55
+      ],
+      "window_before_target_ms": 400,
+      "window_after_target_ms": 400,
+      "first_target_delay_ms": 1000,
+      "note_duration_ms": 400,
+      "beat_reference": "PLANNED_BEAT_REFERENCE",
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1
+        },
+        "CHALLENGE": {
+          "initial_level": 2
+        }
+      }
+    },
+    "M1_ALTERNATE": {
+      "task_version": "1.0.0",
+      "planned_trial_count_per_block": 12,
+      "pool": [
+        0,
+        1
+      ],
+      "input_max_simultaneous": 1,
+      "maximum_level": 4,
+      "bpm_by_level": [
+        40,
+        45,
+        50,
+        55
+      ],
+      "window_before_target_ms": 400,
+      "window_after_target_ms": 400,
+      "first_target_delay_ms": 1000,
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1
+        },
+        "CHALLENGE": {
+          "initial_level": 2
+        }
+      }
+    },
+    "M2_DUAL_ZONE": {
+      "task_version": "1.0.0",
+      "planned_trial_count_per_block": 12,
+      "minimum_width_dp": 600,
+      "minimum_verified_pointers": 2,
+      "pool": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "target_pairs": [
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          4
+        ],
+        [
+          2,
+          5
+        ]
+      ],
+      "input_max_simultaneous": 2,
+      "maximum_level": 4,
+      "response_window_ms": 3000,
+      "gap_tolerance_ms_by_level": [
+        1000,
+        800,
+        600,
+        400
+      ],
+      "modes": {
+        "ASSIST": {
+          "initial_level": 1
+        },
+        "CHALLENGE": {
+          "initial_level": 2
+        }
+      }
+    }
+  },
+  "adaptive": {
+    "high_streak_required": 2,
+    "high_streak_persists_across_sessions": false,
+    "maximum_level_step": 1,
+    "low_success_ratio": {
+      "numerator": 1,
+      "denominator": 2,
+      "comparison": "STRICTLY_LESS"
+    },
+    "low_consecutive_failures": 3,
+    "disable_auto_upgrade_after_user_lowering": true,
+    "G1_MEMORY": {
+      "high_full_correct_count": 3,
+      "high_requires_no_user_help_or_retry": true
+    },
+    "G2_INHIBITION": {
+      "high_go_hit_minimum": 8,
+      "high_no_go_commission_maximum": 0,
+      "low_no_go_commission_minimum": 2
+    },
+    "G3_SWITCH": {
+      "high_hit_minimum": 11,
+      "high_each_rule_ratio": {
+        "numerator": 4,
+        "denominator": 5,
+        "rounding": "CEIL"
+      }
+    },
+    "S1_GUIDED": {
+      "high_first_pass_ratio": {
+        "numerator": 7,
+        "denominator": 8,
+        "rounding": "CEIL"
+      },
+      "policy_hints_block_upgrade": false
+    },
+    "S2_RHYTHM": {
+      "high_hit_ratio": {
+        "numerator": 85,
+        "denominator": 100,
+        "rounding": "CEIL"
+      },
+      "high_out_of_window_maximum": 1
+    },
+    "M1_ALTERNATE": {
+      "high_hit_ratio": {
+        "numerator": 85,
+        "denominator": 100,
+        "rounding": "CEIL"
+      },
+      "high_out_of_window_maximum": 1
+    },
+    "M2_DUAL_ZONE": {
+      "high_hit_minimum": 11
+    }
+  },
+  "metrics": {
+    "median_method": "MIDDLE_OR_MEAN_OF_TWO",
+    "percentile_method": "NEAREST_RANK",
+    "cv_standard_deviation": "SAMPLE",
+    "cv_minimum_samples": 10,
+    "missing_value": null,
+    "display_percent_decimal_places": 1,
+    "trend_minimum_points_for_line": 3,
+    "trend_maximum_points": 20
+  },
+  "internal_example_content": {
+    "content_id": "song-original-001",
+    "version": "1.0.0",
+    "category": "ORIGINAL_EXERCISE",
+    "localized_title": {
+      "zh-Hans": "短旋律练习一",
+      "en": "Short Melody One"
+    },
+    "note_indices": [
+      0,
+      1,
+      2,
+      4,
+      2,
+      1,
+      0,
+      0
+    ],
+    "duration_ms": 400,
+    "supported_tasks": [
+      "S1_GUIDED",
+      "S2_RHYTHM"
+    ],
+    "rights_status": "DEVELOPMENT_ONLY",
+    "audio_assets_status": "MISSING"
+  },
+  "performance": {
+    "hold_policy": "HOLD_400_V1",
+    "hold_duration_ms": 400,
+    "rhythm_lead_in_beats": 4
+  }
+}

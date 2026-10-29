@@ -1,0 +1,260 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-frere-jacques-001",
+  "version": "2.0.0",
+  "localized_title": {
+    "zh-Hans": "两只老虎",
+    "en": "Frère Jacques"
+  },
+  "localized_description": {
+    "zh-Hans": "法国传统民歌 · 单声部练习编配",
+    "en": "Traditional French melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 4,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "notes": [
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 3
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 3
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 8
+    }
+  ],
+  "source": {
+    "composer": "Traditional French melody",
+    "reference": "https://noctavepiano.com/en/sheet-music/trad-frere-jacques/",
+    "adaptation": "Complete traditional melody in C, one voice without canon or accompaniment; low G retained.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "pickup_ticks": 0,
+  "key_midis": [
+    60,
+    62,
+    64,
+    65,
+    67,
+    69
+  ],
+  "score_source": {
+    "kind": "user_image",
+    "file": "supplied-frere-jacques.png",
+    "reference": "https://musescore.com/user/259021/scores/5856883",
+    "content_version": "2.0.0",
+    "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+    "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+    "ticks_per_quarter": 4,
+    "playback_order": [
+      1,
+      1,
+      2,
+      2,
+      3,
+      3,
+      4,
+      4
+    ],
+    "sha256": "8a83db6ea77ce61b9ee60abf18a14dba2664c32a25d7e955c96908ac2e5b9601"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_frere_jacques_60.ogg",
+    "sha256": "c0af7eb07dffabef0621ecc71975c539364b18a59f009e76ca0edd4e4d2fc317",
+    "tempo_bpm": 60,
+    "duration_ms": 32000,
+    "sample_frames": 705600,
+    "base_tempo_bpm": 60,
+    "total_ticks": 128,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_frere_jacques_40.ogg",
+        "sha256": "7b187e3707c3e8e8b19be003602710d1f7d4a23878eba4dba9f8cdf405fe5885",
+        "tempo_bpm": 40,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      },
+      "50": {
+        "path": "assets/audio/backing_frere_jacques_50.ogg",
+        "sha256": "202e5f03d54e063b2c057e0313593b2db24b12983816a2998d8ecf44ab2206c4",
+        "tempo_bpm": 50,
+        "duration_ms": 38400,
+        "sample_frames": 846720
+      },
+      "60": {
+        "path": "assets/audio/backing_frere_jacques_60.ogg",
+        "sha256": "c0af7eb07dffabef0621ecc71975c539364b18a59f009e76ca0edd4e4d2fc317",
+        "tempo_bpm": 60,
+        "duration_ms": 32000,
+        "sample_frames": 705600
+      },
+      "70": {
+        "path": "assets/audio/backing_frere_jacques_70.ogg",
+        "sha256": "aad6641130b9584e94096312de99002fa2da2527fe8e720bdc3cf5a1fef07ea3",
+        "tempo_bpm": 70,
+        "duration_ms": 27429,
+        "sample_frames": 604800
+      },
+      "80": {
+        "path": "assets/audio/backing_frere_jacques_80.ogg",
+        "sha256": "d28139a29f492902ffca1a33688e6923d29bfe1aa37dcdd9aa6aae6ef74dda8e",
+        "tempo_bpm": 80,
+        "duration_ms": 24000,
+        "sample_frames": 529200
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "kind": "user_image",
+      "file": "supplied-frere-jacques.png",
+      "reference": "https://musescore.com/user/259021/scores/5856883",
+      "content_version": "2.0.0",
+      "rights": "User-supplied score image; internal prototype transcription. No redistribution license inferred.",
+      "transcription": "Literal treble and bass staves, original pitch, ties merged, written repeats unfolded.",
+      "ticks_per_quarter": 4,
+      "playback_order": [
+        1,
+        1,
+        2,
+        2,
+        3,
+        3,
+        4,
+        4
+      ]
+    },
+    "source_sha256": "8a83db6ea77ce61b9ee60abf18a14dba2664c32a25d7e955c96908ac2e5b9601",
+    "score_hash": "4e607658d57ee65aa14c2207f2be1d92af35276494958766b2993867efd7d686",
+    "score_note_count": 14,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "b7d3750c283cbe8696c3ee0ec80e2a4395cd868dd36fd24c2ee73ae0b4af22d8"
+}

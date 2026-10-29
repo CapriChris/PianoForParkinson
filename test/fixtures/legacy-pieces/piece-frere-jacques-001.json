@@ -1,0 +1,241 @@
+{
+  "schema_version": 1,
+  "content_id": "piece-frere-jacques-001",
+  "version": "1.3.0",
+  "localized_title": {
+    "zh-Hans": "两只老虎",
+    "en": "Frère Jacques"
+  },
+  "localized_description": {
+    "zh-Hans": "法国传统民歌 · 单声部练习编配",
+    "en": "Traditional French melody · Single-line practice arrangement"
+  },
+  "ticks_per_beat": 2,
+  "beats_per_bar": 4,
+  "tempo_bpm": 60,
+  "key_steps": [
+    -3,
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "notes": [
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 2,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 6,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 5,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 4,
+      "duration_ticks": 1
+    },
+    {
+      "note_index": 3,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 0,
+      "duration_ticks": 2
+    },
+    {
+      "note_index": 1,
+      "duration_ticks": 4
+    }
+  ],
+  "source": {
+    "composer": "Traditional French melody",
+    "reference": "https://noctavepiano.com/en/sheet-music/trad-frere-jacques/",
+    "adaptation": "Complete traditional melody in C, one voice without canon or accompaniment; low G retained.",
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0; existing samples resampled by pitch; see piano_attribution.txt"
+  },
+  "accompaniment": {
+    "path": "assets/audio/backing_frere_jacques_60.ogg",
+    "sha256": "96125ebc557a7eff6d763cec246096e00f15eca870d5d32d9e05be51eec0c6e5",
+    "tempo_bpm": 60,
+    "duration_ms": 32000,
+    "sample_frames": 705600,
+    "base_tempo_bpm": 60,
+    "total_ticks": 64,
+    "variants": {
+      "40": {
+        "path": "assets/audio/backing_frere_jacques_40.ogg",
+        "sha256": "3d43e1f1039bc417791a9a5e00b04f2d9c5df6114d9d6de31092764fd62a0f2c",
+        "tempo_bpm": 40,
+        "duration_ms": 48000,
+        "sample_frames": 1058400
+      },
+      "50": {
+        "path": "assets/audio/backing_frere_jacques_50.ogg",
+        "sha256": "0260ad8bea25f5dc0c340300cda8ff184b0920e6470998df0470ee7833083047",
+        "tempo_bpm": 50,
+        "duration_ms": 38400,
+        "sample_frames": 846720
+      },
+      "60": {
+        "path": "assets/audio/backing_frere_jacques_60.ogg",
+        "sha256": "96125ebc557a7eff6d763cec246096e00f15eca870d5d32d9e05be51eec0c6e5",
+        "tempo_bpm": 60,
+        "duration_ms": 32000,
+        "sample_frames": 705600
+      },
+      "70": {
+        "path": "assets/audio/backing_frere_jacques_70.ogg",
+        "sha256": "c01de4e42486be56b317044b7536971ab9cacb5278eebb8720d8c2619af3810d",
+        "tempo_bpm": 70,
+        "duration_ms": 27429,
+        "sample_frames": 604800
+      },
+      "80": {
+        "path": "assets/audio/backing_frere_jacques_80.ogg",
+        "sha256": "f2adf9cb7330d4cd38b0a8dddf2eaa2544bc87f264fa7c2d646477230ea6278f",
+        "tempo_bpm": 80,
+        "duration_ms": 24000,
+        "sample_frames": 529200
+      }
+    },
+    "arrangement": "Literal note events imported from individually selected accompaniment score voices; see source adaptation and attribution.",
+    "source": {
+      "file": "noctave-frere.mxl",
+      "reference": "https://noctavepiano.com/en/sheet-music/trad-frere-jacques/",
+      "download": "https://noctavepiano.com/partitions/trad-frere-jacques/trad-frere-jacques.mxl",
+      "arranger": "Noctave",
+      "rights": "CC0 1.0; source MusicXML retains the publisher rights statement.",
+      "selections": [
+        [
+          "P1",
+          "1",
+          -12
+        ]
+      ],
+      "measures": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "ticks_per_quarter": 2,
+      "tick_offset": 0,
+      "adaptation": "The reference places the tune in the bass staff. Its sustained right-hand counterline is lowered one octave for the backing; the app tune remains one octave above the source bass melody. No canon or added chord pattern.",
+      "melody_check": "exact"
+    },
+    "source_sha256": "a1a1a6fd039a6c34c3c9579d8c1024d87098bfe142bdf644c3dad57261dc3d9e",
+    "score_hash": "09425ca87ac0abd11dab6c7da2f2e44cafc5c3463f05926506cfbda70eae3016",
+    "score_note_count": 8,
+    "recording": "Salamander Grand Piano V3, Alexander Holm, CC BY 3.0. Local samples transposed, mixed, gated, resampled to mono 22050 Hz and encoded as Ogg/Vorbis separately at each tempo; see piano_attribution.txt."
+  },
+  "content_hash": "49f8fd0ec99c10e641eb17eaceb851f741382842a0eceaca8456bea95496f1ab"
+}

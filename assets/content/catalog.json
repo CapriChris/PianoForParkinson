@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "paths": [
+    "assets/content/song.json",
+    "assets/content/song-original-002.json",
+    "assets/content/song-original-003.json"
+  ]
+}

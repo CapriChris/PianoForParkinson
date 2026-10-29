@@ -1,0 +1,28 @@
+name: piano_practice
+description: 琴伴 — internal Android prototype for piano practice.
+publish_to: none
+version: 0.1.53+54
+environment:
+  sdk: '>=3.13.5 <4.0.0'
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  sqflite: 2.4.4+2
+  crypto: 3.0.7
+  unorm_dart: 0.3.3
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+  flutter_lints: 6.0.0
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/config/
+    - assets/content/
+    - assets/audio/
+    - assets/i18n/
+    - assets/ui_images/
