@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -74,7 +76,7 @@ class _IntroLessonsPageState extends State<IntroLessonsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              IconButton(
+              QinIconButton(
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
                 onPressed: () => Navigator.of(context).maybePop(),
                 icon: const Icon(Icons.arrow_back),
@@ -133,7 +135,7 @@ class _IntroLessonsPageState extends State<IntroLessonsPage> {
                         '完成标记读取失败，可以继续学习。',
                         'Completion marks could not be loaded. You can still learn.',
                       ),
-                      child: OutlinedButton(
+                      child: QinOutlinedButton(
                         onPressed: () => setState(() {
                           progress = c.repository.completedLessons();
                         }),
@@ -436,7 +438,7 @@ class _IntroLessonPageState extends State<IntroLessonPage>
   Widget lessonActions() => LayoutBuilder(
     builder: (context, constraints) {
       final actions = <Widget>[
-        OutlinedButton.icon(
+        QinOutlinedButton.icon(
           onPressed: saving
               ? null
               : () {
@@ -453,11 +455,11 @@ class _IntroLessonPageState extends State<IntroLessonPage>
                 : c.text('观看示范', 'Watch example'),
           ),
         ),
-        OutlinedButton(
+        QinOutlinedButton(
           onPressed: saving || page == 0 ? null : () => turnPage(-1),
           child: Text(c.text('上一页', 'Previous page')),
         ),
-        FilledButton(
+        QinFilledButton(
           onPressed: saving
               ? null
               : page == 2
@@ -471,7 +473,7 @@ class _IntroLessonPageState extends State<IntroLessonPage>
                 : c.text('下一页', 'Next page'),
           ),
         ),
-        TextButton(
+        QinTextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(c.text('退出教学', 'Exit lesson')),
         ),
@@ -591,6 +593,7 @@ class _IntroLessonPageState extends State<IntroLessonPage>
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
       toolbarHeight:
           rhythm &&
               MediaQuery.sizeOf(context).width >

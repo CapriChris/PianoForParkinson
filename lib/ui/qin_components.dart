@@ -1,9 +1,12 @@
+import 'qin_press.dart';
+
 import 'dart:math' as math;
 import 'dart:ui' show SemanticsRole;
 
 import 'package:flutter/material.dart';
 
 import 'qin_theme.dart';
+import 'qin_page_background.dart';
 
 bool qinShortLandscape(BuildContext context) {
   final size = MediaQuery.sizeOf(context);
@@ -214,12 +217,77 @@ class QinPanel extends StatelessWidget {
     padding: padding,
     decoration: BoxDecoration(
       color: (soft ? context.qin.soft : context.qin.surface).withValues(
-        alpha: context.qin.highContrast ? 1 : backgroundOpacity,
+        alpha: context.qin.highContrast
+            ? 1
+            : backgroundOpacity * qinContentOpacityOf(context),
       ),
       border: Border.all(color: context.qin.line),
       borderRadius: BorderRadius.circular(18),
     ),
     child: Material(type: MaterialType.transparency, child: child),
+  );
+}
+
+/// Labels fill the chip's painted surface as well as its outer layout slot.
+class QinCategoryBar extends StatelessWidget {
+  const QinCategoryBar({
+    super.key,
+    required this.entries,
+    required this.selected,
+    required this.onSelected,
+    required this.keyPrefix,
+    this.forceCompact = false,
+  });
+  final List<(String, String, String)> entries;
+  final String selected, keyPrefix;
+  final ValueChanged<String> onSelected;
+  final bool forceCompact;
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, bounds) {
+      final compact =
+          forceCompact ||
+          bounds.maxWidth < 340 ||
+          MediaQuery.textScalerOf(context).scale(1) > 1.25;
+      final labelStyle = Theme.of(context).textTheme.bodySmall
+          ?.copyWith(fontWeight: FontWeight.w600);
+      final labelHeight =
+          MediaQuery.textScalerOf(context).scale(labelStyle?.fontSize ?? 18) *
+          (labelStyle?.height ?? 1.4);
+      return Row(
+        children: [
+          for (final entry in entries)
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 3),
+                child: Tooltip(
+                  message: entry.$2,
+                  child: ChoiceChip(
+                    key: ValueKey('$keyPrefix-${entry.$1}'),
+                    label: SizedBox(
+                      width: double.infinity,
+                      height: labelHeight,
+                      child: FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(compact ? entry.$3 : entry.$2, maxLines: 1),
+                      ),
+                    ),
+                    labelStyle: labelStyle,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    selected: selected == entry.$1,
+                    showCheckmark: false,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    onSelected: (_) => onSelected(entry.$1),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    },
   );
 }
 
@@ -327,75 +395,68 @@ class QinEntryCard extends StatelessWidget {
   final Widget? leadingVisual;
   final bool selected;
   @override
-  Widget build(BuildContext context) => Card(
-    child: Semantics(
-      button: true,
-      selected: selected,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (MediaQuery.sizeOf(context).width >= 600 ||
-                  MediaQuery.textScalerOf(context).scale(1) <= 1.5) ...[
-                if (leadingVisual != null && !context.qin.highContrast)
-                  ExcludeSemantics(child: leadingVisual!)
-                else
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: context.qin.soft,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: context.qin.primary, size: 28),
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    selected: selected,
+    child: QinInkWell(
+      surfaceBuilder: (surface) => Card(child: surface),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (MediaQuery.sizeOf(context).width >= 600 ||
+                MediaQuery.textScalerOf(context).scale(1) <= 1.5) ...[
+              if (leadingVisual != null && !context.qin.highContrast)
+                ExcludeSemantics(child: leadingVisual!)
+              else
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: context.qin.soft,
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                const SizedBox(width: 12),
-              ],
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  child: Icon(icon, color: context.qin.primary, size: 28),
+                ),
+              const SizedBox(width: 12),
+            ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 6),
+                  Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+                  if (metadata != null) ...[
                     const SizedBox(height: 6),
                     Text(
-                      subtitle,
+                      metadata!,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    if (metadata != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        metadata!,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                    if (visual != null) ...[
-                      const SizedBox(height: 12),
-                      visual!,
-                    ],
-                    if (actionLabel != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        actionLabel!,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: context.qin.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
                   ],
-                ),
+                  if (visual != null) ...[const SizedBox(height: 12), visual!],
+                  if (actionLabel != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      actionLabel!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: context.qin.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(width: 8),
-              Icon(
-                selected ? Icons.check_circle_outline : Icons.chevron_right,
-                color: context.qin.primary,
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            Icon(
+              selected ? Icons.check_circle_outline : Icons.chevron_right,
+              color: context.qin.primary,
+            ),
+          ],
         ),
       ),
     ),
@@ -580,7 +641,7 @@ class QinNavigationBar extends StatelessWidget {
                     role: SemanticsRole.tab,
                     onTap: () => onSelected(i),
                     selected: i == selected,
-                    child: TextButton(
+                    child: QinTextButton(
                       onPressed: () => onSelected(i),
                       style: ButtonStyle(
                         padding: const WidgetStatePropertyAll(
@@ -618,6 +679,8 @@ class QinNavigationBar extends StatelessWidget {
                             [
                               Icons.home_outlined,
                               Icons.piano_outlined,
+                              if (labels.length == 4)
+                                Icons.calendar_month_outlined,
                               Icons.history_outlined,
                             ][i],
                             size: 28,

@@ -101,6 +101,7 @@ ThemeData qinTheme({required bool highContrast}) {
     surfaceTint: Colors.transparent,
   );
   final button = ButtonStyle(
+    overlayColor: const WidgetStatePropertyAll(Colors.transparent),
     minimumSize: const WidgetStatePropertyAll(Size(60, 60)),
     padding: const WidgetStatePropertyAll(
       EdgeInsets.symmetric(horizontal: 20, vertical: 14),
@@ -170,7 +171,7 @@ ThemeData qinTheme({required bool highContrast}) {
       surfaceTintColor: Colors.transparent,
       elevation: 0,
       scrolledUnderElevation: 0,
-      centerTitle: false,
+      centerTitle: true,
       toolbarHeight: 72,
       leadingWidth: 60,
       titleSpacing: 16,

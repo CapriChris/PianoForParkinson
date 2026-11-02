@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:convert';
 import 'dart:math' as math;
 
@@ -125,23 +127,26 @@ class _TrendPageState extends State<TrendPage> {
             ),
             const SizedBox(height: 12),
             for (var i = 0; i < tasks.length; i++)
-              Card(
-                color: i == taskIndex ? context.qin.soft : context.qin.surface,
-                child: ListTile(
-                  title: Text(
-                    taskTitle(tasks[i]['task_id'] as String, c.chinese),
-                  ),
-                  subtitle: Text(
-                    c.text(
-                      '${tasks[i]['block_count']} 组',
-                      '${tasks[i]['block_count']} blocks',
-                    ),
-                  ),
-                  trailing: i == taskIndex
-                      ? Icon(Icons.check_circle, color: context.qin.primary)
-                      : const Icon(Icons.chevron_right),
-                  onTap: () => Navigator.pop(context, i),
+              QinListTile(
+                surfaceBuilder: (surface) => Card(
+                  color: i == taskIndex
+                      ? context.qin.soft
+                      : context.qin.surface,
+                  child: surface,
                 ),
+                title: Text(
+                  taskTitle(tasks[i]['task_id'] as String, c.chinese),
+                ),
+                subtitle: Text(
+                  c.text(
+                    '${tasks[i]['block_count']} 组',
+                    '${tasks[i]['block_count']} blocks',
+                  ),
+                ),
+                trailing: i == taskIndex
+                    ? Icon(Icons.check_circle, color: context.qin.primary)
+                    : const Icon(Icons.chevron_right),
+                onTap: () => Navigator.pop(context, i),
               ),
           ],
         ),
@@ -188,7 +193,7 @@ class _TrendPageState extends State<TrendPage> {
             for (final option in metrics)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 6),
-                child: ListTile(
+                child: QinListTile(
                   selected: option.id == metric.id,
                   title: Text(option.title(c.chinese)),
                   subtitle: Text(metricHint(option)),
@@ -236,7 +241,7 @@ class _TrendPageState extends State<TrendPage> {
     required IconData icon,
     required String label,
     required VoidCallback onPressed,
-  }) => OutlinedButton(
+  }) => QinOutlinedButton(
     key: key,
     onPressed: onPressed,
     style: OutlinedButton.styleFrom(
@@ -339,7 +344,10 @@ class _TrendPageState extends State<TrendPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: PageTitle(c.text('练习趋势', 'Practice trends'))),
+    appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
+      title: PageTitle(c.text('练习趋势', 'Practice trends')),
+    ),
     body: SafeArea(
       child: loading
           ? QinPageList(
@@ -356,7 +364,7 @@ class _TrendPageState extends State<TrendPage> {
                   QinStatus(
                     tone: QinTone.error,
                     text: c.text('记录暂时无法读取', 'Unable to read records'),
-                    child: OutlinedButton(
+                    child: QinOutlinedButton(
                       onPressed: tasks.isEmpty ? load : () => choose(taskIndex),
                       child: Text(c.text('重试', 'Retry')),
                     ),
@@ -509,7 +517,7 @@ class _TrendPageState extends State<TrendPage> {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      IconButton(
+                      QinIconButton(
                         tooltip: c.text('上一组', 'Previous block'),
                         onPressed: selected > 0
                             ? () => setState(() => selected--)
@@ -534,7 +542,7 @@ class _TrendPageState extends State<TrendPage> {
                           ],
                         ),
                       ),
-                      IconButton(
+                      QinIconButton(
                         tooltip: c.text('下一组', 'Next block'),
                         onPressed: selected < points.length - 1
                             ? () => setState(() => selected++)
@@ -554,7 +562,7 @@ class _TrendPageState extends State<TrendPage> {
                     title: Text(c.text('逐组数据', 'All block values')),
                     children: [
                       for (var i = 0; i < points.length; i++)
-                        ListTile(
+                        QinListTile(
                           selected: selected == i,
                           leading: Icon(
                             selected == i

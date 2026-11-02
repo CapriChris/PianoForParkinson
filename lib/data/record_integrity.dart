@@ -44,6 +44,12 @@ class RecordIntegrity {
         RecordContract.fail('text_size_percent_v3');
       }
     }
+    if (settings['text_size_percent_v4'] != null) {
+      RecordContract.integer(settings, 'text_size_percent_v4', min: 80);
+      if (settings['text_size_percent_v4'] > 120) {
+        RecordContract.fail('text_size_percent_v4');
+      }
+    }
     if (settings.containsKey('dual_touch_check_completed') &&
         settings['dual_touch_check_completed'] is! bool) {
       RecordContract.fail('dual_touch_check_completed');

@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -92,7 +94,10 @@ class _SwitchTutorialPageState extends State<SwitchTutorialPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: PageTitle(c.text('试玩', 'Try both rules'))),
+    appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
+      title: PageTitle(c.text('试玩', 'Try both rules')),
+    ),
     body: SafeArea(
       child: QinPageList(
         children: [
@@ -172,7 +177,7 @@ class _SwitchTutorialPageState extends State<SwitchTutorialPage> {
               ),
             ),
             feedbackSpace(),
-            FilledButton(
+            QinFilledButton(
               onPressed: correct && held.isEmpty
                   ? () => setState(() {
                       index++;
@@ -190,12 +195,12 @@ class _SwitchTutorialPageState extends State<SwitchTutorialPage> {
               ),
             ),
             const SizedBox(height: 16),
-            FilledButton(
+            QinFilledButton(
               onPressed: start,
               child: Text(c.text('开始正式练习', 'Start practice')),
             ),
             const SizedBox(height: 12),
-            OutlinedButton(
+            QinOutlinedButton(
               onPressed: () => setState(() {
                 index = 0;
                 feedback = null;

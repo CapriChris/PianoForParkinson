@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -120,7 +122,7 @@ class _AudioVolumeControlState extends State<AudioVolumeControl> {
           const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
+            child: QinOutlinedButton.icon(
               onPressed: saving ? null : widget.onSample,
               icon: const Icon(Icons.volume_up_outlined),
               label: Text(widget.sampleLabel),

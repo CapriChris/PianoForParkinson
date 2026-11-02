@@ -5,6 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:piano_practice/data/practice_repository.dart';
+import 'package:piano_practice/data/database_safety.dart';
+import 'package:piano_practice/data/training_schedule_repository.dart';
+import 'package:piano_practice/domain/dance_training.dart';
 import 'package:piano_practice/data/content_repository.dart';
 import 'package:piano_practice/data/record_audit.dart';
 import 'package:piano_practice/domain/contracts.dart';
@@ -68,12 +71,20 @@ void main() {
         final profile = canonical((await repo.db.query('profiles')).single);
         // Construct an exact v2 fixture in this temporary database only.
         await repo.db.execute('DROP TABLE piece_performances');
-        await repo.db.delete('schema_migrations', where: 'version=3');
+        for (final table in [
+          'plan_links',
+          'plan_occurrences',
+          'training_plans',
+          'dance_sessions',
+        ]) {
+          await repo.db.execute('DROP TABLE $table');
+        }
+        await repo.db.delete('schema_migrations', where: 'version>=3');
         await repo.db.setVersion(2);
         await repo.db.close();
         repo = PracticeRepository();
         await repo.open(directory.path, 'zh-Hans');
-        expect(await repo.db.getVersion(), 3);
+        expect(await repo.db.getVersion(), DatabaseSafety.version);
         expect(await repo.detail(engine.id), old);
         expect(canonical((await repo.db.query('profiles')).single), profile);
         Json? first;
@@ -84,10 +95,12 @@ void main() {
             clock,
             tempo: 80,
           )..start();
-          clock.now = player.atTick(8);
+          clock.now = player.atTick(4 * content.pieces.first.ticksPerBeat);
           player.down(1, 2);
           player.up(1);
-          clock.now = player.atTick(8) + player.totalUs;
+          clock.now =
+              player.atTick(4 * content.pieces.first.ticksPerBeat) +
+              player.totalUs;
           player.tick();
           final r = PiecePerformance.completed(player, DateTime.now());
           // Force timestamp ties so the mixed cursor has to use IDs as well.
@@ -119,6 +132,34 @@ void main() {
           (await repo.historyPage()).records.first['task_id'],
           'PIANO_PIECE',
         );
+        final schedule = TrainingScheduleRepository(
+          repo.db,
+          repo.profile['profile_id'] as String,
+        );
+        final day = DateTime.now();
+        await schedule.savePlan({
+          'id': 'dance-plan',
+          'title': 'Dance',
+          'kind': 'dance',
+          'target_type': 'count',
+          'target': 1,
+          'days': [],
+          'start': localDay(day),
+          'end': null,
+          'paused': false,
+        });
+        final dance = <String, dynamic>{
+          'session_id': 'dance-native',
+          'started_utc_ms': day.millisecondsSinceEpoch,
+          'active_ms': 2500,
+          'covered_ms': 2500,
+          'confirmed': true,
+        };
+        await schedule.saveDance(dance);
+        await schedule.saveDance(dance);
+        final occurrence = (await schedule.occurrences(day)).single;
+        await schedule.link(occurrence, 'dance-native');
+        expect((await schedule.occurrences(day)).single['progress'], 1);
         final audit = await RecordAudit.run(repo.safety);
         expect(audit['complete'], isTrue);
         expect(audit['issues'], 0, reason: canonical(audit));

@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -64,7 +66,7 @@ class _SpokenTextState extends State<SpokenText> with WidgetsBindingObserver {
       valueListenable: c.activeSpeech,
       builder: (context, active, _) {
         final playing = identical(active, owner);
-        return IconButton(
+        return QinIconButton(
           style: IconButton.styleFrom(
             backgroundColor: playing ? context.qin.primary : context.qin.soft,
             foregroundColor: playing

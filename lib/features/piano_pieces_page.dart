@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -16,7 +18,10 @@ class PianoPiecesPage extends StatelessWidget {
   final AppController c;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: PageTitle(c.text('钢琴曲目', 'Piano pieces'))),
+    appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
+      title: PageTitle(c.text('钢琴曲目', 'Piano pieces')),
+    ),
     body: QinPageList(
       children: [
         QinSectionTitle(c.text('选择想弹的曲目', 'Choose a piece')),
@@ -49,48 +54,47 @@ class PianoPiecesPage extends StatelessWidget {
                               ),
                             ),
                           )
-                        : Card(
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(18),
-                              onTap: () => Navigator.of(context).push(
-                                MaterialPageRoute<void>(
-                                  builder: (_) =>
-                                      PianoPiecePage(c: c, piece: piece),
+                        : QinInkWell(
+                            surfaceBuilder: (surface) => Card(child: surface),
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute<void>(
+                                builder: (_) =>
+                                    PianoPiecePage(c: c, piece: piece),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                QinArtwork(
+                                  asset:
+                                      qinPieceImage(piece.id) ??
+                                      '13-open-score.png',
+                                  height: 140,
                                 ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  QinArtwork(
-                                    asset:
-                                        qinPieceImage(piece.id) ??
-                                        '13-open-score.png',
-                                    height: 140,
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        piece.title(c.locale),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall,
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        piece.composer(c.locale),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall,
+                                      ),
+                                    ],
                                   ),
-                                  Padding(
-                                    padding: const EdgeInsets.all(12),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          piece.title(c.locale),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .titleSmall,
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          piece.composer(c.locale),
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
                           ),
                   ),
@@ -251,10 +255,13 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
   Widget build(BuildContext context) {
     final enabled = !busy && (c.audioReady || !c.soundEnabled);
     return Scaffold(
-      appBar: AppBar(title: PageTitle(c.text('准备弹奏', 'Prepare to play'))),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(c.text('准备弹奏', 'Prepare to play')),
+      ),
       body: QinActionPage(
         actions: [
-          FilledButton.icon(
+          QinFilledButton.icon(
             key: const ValueKey('enter-performance'),
             onPressed: enabled ? perform : null,
             icon: const Icon(Icons.play_arrow),

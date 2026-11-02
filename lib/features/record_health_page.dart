@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -35,7 +37,10 @@ class _RecordHealthPageState extends State<RecordHealthPage> {
   Widget build(BuildContext context) {
     final c = widget.c;
     return Scaffold(
-      appBar: AppBar(title: PageTitle(c.text('记录完整性检查', 'Record integrity'))),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(c.text('记录完整性检查', 'Record integrity')),
+      ),
       body: FutureBuilder<Json>(
         future: report,
         builder: (context, snapshot) => QinPageList(
@@ -59,7 +64,7 @@ class _RecordHealthPageState extends State<RecordHealthPage> {
                   '暂时无法读取。原始记录和已有迁移备份会保留。',
                   'Unable to read records. Original data and existing migration backups are preserved.',
                 ),
-                child: OutlinedButton(
+                child: QinOutlinedButton(
                   onPressed: reload,
                   child: Text(c.text('重试检查', 'Retry check')),
                 ),
@@ -106,7 +111,7 @@ class _RecordHealthPageState extends State<RecordHealthPage> {
                 ),
               ],
               const SizedBox(height: 16),
-              OutlinedButton(
+              QinOutlinedButton(
                 onPressed: reload,
                 child: Text(c.text('重新检查', 'Check again')),
               ),

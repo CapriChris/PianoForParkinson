@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 import 'dart:math';
 
@@ -284,18 +286,18 @@ class _TrainingPageState extends State<TrainingPage> {
         runSpacing: 8,
         alignment: WrapAlignment.center,
         children: [
-          FilledButton.icon(
+          QinFilledButton.icon(
             key: const ValueKey('resume-practice'),
             onPressed: c.busy || task.ended ? null : () => c.resume(),
             icon: const Icon(Icons.play_arrow),
             label: Text(c.text('继续练习', 'Continue practice')),
           ),
           if (c.storageError != null)
-            FilledButton(
+            QinFilledButton(
               onPressed: c.flush,
               child: Text(c.text('重试保存', 'Retry saving')),
             ),
-          OutlinedButton(
+          QinOutlinedButton(
             key: const ValueKey('replay-demo'),
             onPressed:
                 task.taskId == 'G3_SWITCH' ||
@@ -307,7 +309,7 @@ class _TrainingPageState extends State<TrainingPage> {
             child: Text(c.text('重看演示', 'Replay demo')),
           ),
           if (task.block['status'] != 'COMPLETED')
-            OutlinedButton(
+            QinOutlinedButton(
               key: const ValueKey('lower-difficulty'),
               onPressed: c.busy || task.level <= 1
                   ? null
@@ -315,14 +317,14 @@ class _TrainingPageState extends State<TrainingPage> {
               child: Text(c.text('降低难度', 'Lower difficulty')),
             ),
           if (task.block['status'] != 'COMPLETED')
-            OutlinedButton(
+            QinOutlinedButton(
               key: const ValueKey('more-help'),
               onPressed: (task.memory || task.taskId == 'G3_SWITCH') && !c.busy
                   ? () => c.resume(help: true)
                   : null,
               child: Text(c.text('增加帮助', 'More help')),
             ),
-          OutlinedButton(
+          QinOutlinedButton(
             style: OutlinedButton.styleFrom(
               foregroundColor: context.qin.error,
               side: BorderSide(color: context.qin.error),
@@ -374,7 +376,7 @@ class _TrainingPageState extends State<TrainingPage> {
       itemCounter(task),
       if (nextBlock) ...[
         const SizedBox(height: 12),
-        FilledButton(
+        QinFilledButton(
           onPressed: c.next,
           child: Text(c.text('开始下一组', 'Next block')),
         ),
@@ -409,7 +411,7 @@ class _TrainingPageState extends State<TrainingPage> {
                   ),
           ),
           if (c.storageError != null)
-            FilledButton(
+            QinFilledButton(
               onPressed: c.finishSave,
               child: Text(c.text('重试保存', 'Retry saving')),
             ),
@@ -678,7 +680,7 @@ class _TrainingPageState extends State<TrainingPage> {
             MediaQuery.textScalerOf(context).scale(24) * 1.3 + 12,
           ),
           automaticallyImplyLeading: false,
-          leading: IconButton(
+          leading: QinIconButton(
             onPressed: back,
             tooltip: c.text('返回', 'Back'),
             icon: const Icon(Icons.arrow_back),
@@ -692,7 +694,7 @@ class _TrainingPageState extends State<TrainingPage> {
           ),
           actions: [
             if (!paused)
-              TextButton.icon(
+              QinTextButton.icon(
                 key: const ValueKey('pause-toggle'),
                 style: TextButton.styleFrom(
                   backgroundColor: paused ? context.qin.primary : null,

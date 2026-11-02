@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -42,6 +44,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
     setState(() => saving = true);
     try {
       await c.repository.savePiecePerformance(widget.record);
+      c.syncPlanReminders();
       if (!mounted) return;
       setState(() => saved = true);
       unawaited(c.refreshHistory());
@@ -106,7 +109,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
                   if (short)
                     Row(
                       children: [
-                        IconButton(
+                        QinIconButton(
                           tooltip: MaterialLocalizations.of(context)
                               .backButtonTooltip,
                           onPressed: () => Navigator.of(context).maybePop(),
@@ -124,7 +127,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
                   else ...[
                     Align(
                       alignment: Alignment.centerLeft,
-                      child: IconButton(
+                      child: QinIconButton(
                         tooltip: MaterialLocalizations.of(context)
                             .backButtonTooltip,
                         onPressed: () => Navigator.of(context).maybePop(),
@@ -149,7 +152,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
                 ],
               ),
               actions: [
-                FilledButton.icon(
+                QinFilledButton.icon(
                   onPressed: !saved || piece == null
                       ? null
                       : () {
@@ -167,7 +170,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
                   icon: const Icon(Icons.replay),
                   label: Text(c.text('再弹一次', 'Play again')),
                 ),
-                OutlinedButton.icon(
+                QinOutlinedButton.icon(
                   onPressed: () => HomePage.returnHome(context, c),
                   icon: const Icon(Icons.home_outlined),
                   label: Text(c.text('返回首页', 'Home')),
@@ -206,7 +209,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
                         )
                       : saving
                       ? null
-                      : OutlinedButton(
+                      : QinOutlinedButton(
                           onPressed: save,
                           child: Text(c.text('重试保存', 'Retry saving')),
                         ),

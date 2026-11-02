@@ -14,6 +14,17 @@ List<String> auditRows(Json request) {
     final row = Map<String, dynamic>.from(raw as Map);
     try {
       switch (request['table']) {
+        case 'dance_sessions':
+          final record = jsonDecode(row['record_json'] as String) as Json;
+          if (digest(record) != row['record_hash'] ||
+              record['session_id'] != row['session_id'] ||
+              record['started_utc_ms'] != row['started_utc_ms'] ||
+              record['active_ms'] is! int ||
+              record['active_ms'] < 0 ||
+              record['covered_ms'] is! int ||
+              record['covered_ms'] < 0) {
+            RecordContract.fail('dance record');
+          }
         case 'piece_performances':
           PiecePerformance.fromRow(row);
         case 'sessions':
@@ -119,7 +130,11 @@ class RecordAudit {
             details.add('events: E_RECORD_CONTRACT: sequence/clock order');
           }
         }
+        final hasDance = (await tx.rawQuery(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='dance_sessions'",
+        )).isNotEmpty;
         for (final table in [
+          if (hasDance) 'dance_sessions',
           'profiles',
           'piece_performances',
           'sessions',

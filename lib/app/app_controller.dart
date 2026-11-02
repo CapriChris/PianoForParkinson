@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 
 import '../data/content_repository.dart';
 import '../data/practice_repository.dart';
+import '../data/training_schedule_repository.dart';
+import '../platform/plan_reminders.dart';
 import '../domain/contracts.dart';
 import '../domain/cognitive_tasks.dart';
 import '../domain/intro_lessons.dart';
@@ -174,23 +176,32 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
 
   int? _textScalePreview;
 
-  /// Null follows the system at 100%.
+  /// Null follows system scaling using the current app typography baseline.
   int? get textScalePercent {
     if (_textScalePreview != null) return _textScalePreview;
     if (!initialized) return null;
     final currentSettings = settings;
-    if (currentSettings.containsKey('text_size_percent_v3')) {
-      final value = currentSettings['text_size_percent_v3'];
+    if (currentSettings.containsKey('text_size_percent_v4')) {
+      final value = currentSettings['text_size_percent_v4'];
       return value is int && value >= 80 && value <= 120 ? value : null;
     }
-    if (currentSettings.containsKey('text_size_percent_v2')) {
+    int? oldPercent;
+    if (currentSettings.containsKey('text_size_percent_v3')) {
+      final old = currentSettings['text_size_percent_v3'];
+      oldPercent = old is int && old >= 80 && old <= 120 ? old : null;
+    } else if (currentSettings.containsKey('text_size_percent_v2')) {
       final old = currentSettings['text_size_percent_v2'];
-      return old is int && old >= 80 && old <= 120
+      oldPercent = old is int && old >= 80 && old <= 120
           ? (old * 100 / 110).round().clamp(80, 120)
           : null;
+    } else {
+      final old = currentSettings['text_scale_percent'];
+      oldPercent = old is int && old >= 80 && old <= 200
+          ? old.clamp(80, 120)
+          : null;
     }
-    final old = currentSettings['text_scale_percent'];
-    return old is int && old >= 80 && old <= 200 ? old.clamp(80, 120) : null;
+    // New 100% is the previous 90%; retain old custom sizes within the range.
+    return oldPercent == null ? null : (oldPercent / .9).round().clamp(80, 120);
   }
 
   void previewTextScale(int percent) {
@@ -210,7 +221,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       throw ArgumentError.value(percent, 'percent');
     }
     try {
-      await updateSettings(values: {'text_size_percent_v3': percent});
+      await updateSettings(values: {'text_size_percent_v4': percent});
     } finally {
       clearTextScalePreview();
     }
@@ -709,9 +720,28 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     await flush();
     if (storageError == null) {
       saved = true;
+      syncPlanReminders();
       await refreshHistory();
     }
     notifyListeners();
+  }
+
+  // Record saving remains successful even if Android notifications are blocked.
+  void syncPlanReminders() {
+    try {
+      final id = repository.profile['profile_id'];
+      if (id is! String) return;
+      unawaited(
+        PlanReminders.instance
+            .sync(
+              TrainingScheduleRepository(repository.db, id),
+              chinese: chinese,
+            )
+            .catchError((Object _) {}),
+      );
+    } catch (_) {
+      /* Notifications do not affect saved practice records. */
+    }
   }
 
   Future<void> preview(

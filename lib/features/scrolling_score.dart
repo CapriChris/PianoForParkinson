@@ -39,7 +39,7 @@ class ScrollingScoreGeometry {
     note.ticks * pixelsPerTick,
     noteHeight,
   );
-  double get noteHeight => (staffGap * 1.0).clamp(18.0, 34.0);
+  double get noteHeight => (staffGap * 1.1).clamp(18.0, 34.0);
 }
 
 class ScrollingScore extends StatefulWidget {

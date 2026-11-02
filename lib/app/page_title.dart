@@ -7,6 +7,7 @@ class PageTitle extends StatelessWidget {
   Widget build(BuildContext context) => Text(
     text,
     maxLines: 2,
+    textAlign: TextAlign.center,
     softWrap: true,
     style: Theme.of(context).textTheme.titleLarge?.copyWith(
       fontSize:

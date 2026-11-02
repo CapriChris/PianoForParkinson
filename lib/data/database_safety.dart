@@ -5,7 +5,37 @@ import 'package:sqflite/sqflite.dart';
 import '../domain/contracts.dart';
 
 class DatabaseSafety {
-  static const version = 3;
+  static const version = 4;
+  static const migration4 = """
+CREATE TABLE dance_sessions (
+ session_id TEXT PRIMARY KEY,
+ profile_id TEXT NOT NULL REFERENCES profiles(profile_id) ON DELETE CASCADE,
+ started_utc_ms INTEGER NOT NULL,
+ record_json TEXT NOT NULL,
+ record_hash TEXT NOT NULL
+);
+CREATE TABLE training_plans (
+ plan_id TEXT PRIMARY KEY,
+ profile_id TEXT NOT NULL REFERENCES profiles(profile_id) ON DELETE CASCADE,
+ plan_json TEXT NOT NULL
+);
+CREATE TABLE plan_occurrences (
+ occurrence_id TEXT PRIMARY KEY,
+ plan_id TEXT NOT NULL REFERENCES training_plans(plan_id) ON DELETE CASCADE,
+ local_date TEXT NOT NULL,
+ snapshot_json TEXT NOT NULL,
+ skipped INTEGER NOT NULL DEFAULT 0 CHECK(skipped IN (0,1)),
+ UNIQUE(plan_id,local_date)
+);
+CREATE TABLE plan_links (
+ occurrence_id TEXT NOT NULL REFERENCES plan_occurrences(occurrence_id) ON DELETE CASCADE,
+ record_kind TEXT NOT NULL,
+ record_id TEXT NOT NULL,
+ units INTEGER NOT NULL CHECK(units>=0),
+ PRIMARY KEY(record_kind,record_id)
+);
+CREATE INDEX idx_dance_history ON dance_sessions(profile_id,started_utc_ms DESC);
+""";
   static const migration3 = '''CREATE TABLE piece_performances (
 session_id TEXT PRIMARY KEY,
 profile_id TEXT NOT NULL REFERENCES profiles(profile_id) ON DELETE CASCADE,
@@ -97,7 +127,7 @@ CREATE INDEX idx_piece_history ON piece_performances(profile_id,started_utc_ms D
       throw StateError('E_DB_MIGRATION_PATH');
     }
     for (var target = old + 1; target <= next; target++) {
-      final sql = target == 2 ? migration2 : migration3;
+      final sql = {2: migration2, 3: migration3, 4: migration4}[target]!;
       for (final statement in sql.split(';')) {
         if (statement.trim().isNotEmpty) await db.execute(statement);
       }

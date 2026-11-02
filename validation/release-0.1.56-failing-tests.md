@@ -1,0 +1,106 @@
+# 0.1.56完整套件失败清单
+
+本轮结果：606通过、102失败。以下保留失败用例名称供后续回归；不是已修复清单，也不表示失败均为产品逻辑错误。
+
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 640.0 en 1.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 640.0 en 2.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 640.0 zh-Hans 1.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 640.0 zh-Hans 2.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 914.0 en 1.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 914.0 en 2.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 914.0 zh-Hans 1.0
+- `test/widgets/alternate_test.dart`：M1 spacious two keys, hold and pause 914.0 zh-Hans 2.0
+- `test/widgets/audio_interruption_test.dart`：onboarding releases held keys and never restarts sound on foreground return
+- `test/widgets/cognitive_pages_test.dart`：G2_INHIBITION signals, pause and results 640.0 en 2.0
+- `test/widgets/cognitive_pages_test.dart`：G2_INHIBITION signals, pause and results 640.0 zh-Hans 1.0
+- `test/widgets/cognitive_pages_test.dart`：G2_INHIBITION signals, pause and results 640.0 zh-Hans 2.0
+- `test/widgets/cognitive_pages_test.dart`：G2_INHIBITION signals, pause and results 800.0 zh-Hans 1.0
+- `test/widgets/cognitive_pages_test.dart`：G2_INHIBITION signals, pause and results 800.0 zh-Hans 2.0
+- `test/widgets/cognitive_pages_test.dart`：G3_SWITCH signals, pause and results 640.0 zh-Hans 1.0
+- `test/widgets/cognitive_pages_test.dart`：G3_SWITCH signals, pause and results 640.0 zh-Hans 2.0
+- `test/widgets/cognitive_pages_test.dart`：G3_SWITCH signals, pause and results 800.0 zh-Hans 1.0
+- `test/widgets/cognitive_pages_test.dart`：G3_SWITCH signals, pause and results 800.0 zh-Hans 2.0
+- `test/widgets/dual_zone_pages_test.dart`：portrait M2 entry, required check, native proof and direct continuation en 1.0
+- `test/widgets/dual_zone_pages_test.dart`：portrait M2 entry, required check, native proof and direct continuation en 2.0
+- `test/widgets/dual_zone_pages_test.dart`：portrait M2 entry, required check, native proof and direct continuation zh-Hans 1.0
+- `test/widgets/dual_zone_pages_test.dart`：portrait M2 entry, required check, native proof and direct continuation zh-Hans 2.0
+- `test/widgets/intro_lessons_test.dart`：T3 stacked controls stay visible; medium landscape fits Size(800.0, 360.0) en
+- `test/widgets/intro_lessons_test.dart`：T3 stacked controls stay visible; medium landscape fits Size(800.0, 360.0) zh-Hans
+- `test/widgets/intro_lessons_test.dart`：T3 stacked controls stay visible; medium landscape fits Size(914.0, 411.0) en
+- `test/widgets/intro_lessons_test.dart`：T3 stacked controls stay visible; medium landscape fits Size(914.0, 411.0) zh-Hans
+- `test/widgets/intro_lessons_test.dart`：brand and optional lessons reachable from home and task instructions
+- `test/widgets/intro_lessons_test.dart`：completing all lessons removes links in every task, keeps home lessons and survives progress reload
+- `test/widgets/intro_lessons_test.dart`：exit skips completion; all lessons complete and can be repeated
+- `test/widgets/intro_lessons_test.dart`：first rhythm page has only metronome; second plays all beats and retains final progress
+- `test/widgets/intro_lessons_test.dart`：read failure allows learning and completion save failure can retry
+- `test/widgets/intro_lessons_test.dart`：rhythm alternates play and wait, locks example input and stops in background
+- `test/widgets/intro_lessons_test.dart`：short and full touch examples display different hold lengths
+- `test/widgets/phrase_finish_test.dart`：M1_ALTERNATE en keeps the timeline visible through final beat and pause
+- `test/widgets/phrase_finish_test.dart`：M1_ALTERNATE zh-Hans keeps the timeline visible through final beat and pause
+- `test/widgets/phrase_finish_test.dart`：S2_RHYTHM en keeps the timeline visible through final beat and pause
+- `test/widgets/phrase_finish_test.dart`：S2_RHYTHM zh-Hans keeps the timeline visible through final beat and pause
+- `test/widgets/piano_pieces_page_test.dart`：chosen tempo preview stops before performance, rotation restores on back
+- `test/widgets/piano_pieces_page_test.dart`：dragging during playback seeks and resumes in sync
+- `test/widgets/piano_pieces_page_test.dart`：home and previous record open preparation, short tasks exclude Ode
+- `test/widgets/piano_pieces_page_test.dart`：pausing during the lead-in resumes the remaining preparation
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard en Size(360.0, 640.0) 1.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard en Size(360.0, 640.0) 2.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard en Size(800.0, 360.0) 1.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard en Size(800.0, 360.0) 2.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard zh-Hans Size(360.0, 640.0) 1.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard zh-Hans Size(360.0, 640.0) 2.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard zh-Hans Size(800.0, 360.0) 1.0
+- `test/widgets/piano_pieces_page_test.dart`：picker opens preparation without a keyboard zh-Hans Size(800.0, 360.0) 2.0
+- `test/widgets/piano_pieces_page_test.dart`：playback scrolls continuously past a fixed line and supports note taps
+- `test/widgets/piano_pieces_page_test.dart`：preview pre-mixes unequal durations and stops on interruption
+- `test/widgets/piano_pieces_page_test.dart`：score can be dragged, auditioned, paused and resumed
+- `test/widgets/piece_review_test.dart`：legacy score gets reference only, never a fabricated user replay
+- `test/widgets/piece_review_test.dart`：note selection seeks immediately without disabling controls
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(360.0, 720.0) en 1.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(360.0, 720.0) en 2.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(360.0, 720.0) zh-Hans 1.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(360.0, 720.0) zh-Hans 2.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(800.0, 360.0) en 1.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(800.0, 360.0) en 2.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(800.0, 360.0) zh-Hans 1.0
+- `test/widgets/piece_review_test.dart`：whole interactive score, taps and real-track replay Size(800.0, 360.0) zh-Hans 2.0
+- `test/widgets/refinements_test.dart`：onboarding matching language buttons and adaptive keys 320.0 1.0
+- `test/widgets/refinements_test.dart`：onboarding matching language buttons and adaptive keys 320.0 2.0
+- `test/widgets/refinements_test.dart`：onboarding matching language buttons and adaptive keys 412.0 1.0
+- `test/widgets/refinements_test.dart`：onboarding matching language buttons and adaptive keys 412.0 2.0
+- `test/widgets/refinements_test.dart`：settings has selected language and two volume cards, no sound switches
+- `test/widgets/responsive_controls_test.dart`：responsive controls G1_MEMORY en 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G1_MEMORY en 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G1_MEMORY zh-Hans 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G1_MEMORY zh-Hans 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G2_INHIBITION en 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G2_INHIBITION en 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G2_INHIBITION zh-Hans 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G2_INHIBITION zh-Hans 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G3_SWITCH en 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G3_SWITCH en 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G3_SWITCH zh-Hans 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls G3_SWITCH zh-Hans 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S1_GUIDED en 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S1_GUIDED en 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S1_GUIDED zh-Hans 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S1_GUIDED zh-Hans 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S2_RHYTHM en 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S2_RHYTHM en 2.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S2_RHYTHM zh-Hans 1.0
+- `test/widgets/responsive_controls_test.dart`：responsive controls S2_RHYTHM zh-Hans 2.0
+- `test/widgets/rhythm_pages_test.dart`：rhythm cue, hold bar, inline pause and results Size(640.0, 360.0) zh-Hans 1.0
+- `test/widgets/rhythm_pages_test.dart`：rhythm cue, hold bar, inline pause and results Size(640.0, 360.0) zh-Hans 2.0
+- `test/widgets/rhythm_pages_test.dart`：rhythm cue, hold bar, inline pause and results Size(800.0, 360.0) zh-Hans 1.0
+- `test/widgets/rhythm_pages_test.dart`：rhythm cue, hold bar, inline pause and results Size(800.0, 360.0) zh-Hans 2.0
+- `test/widgets/speech_routes_test.dart`：S1_GUIDED speech stops on back, cover and background, never restarts
+- `test/widgets/speech_routes_test.dart`：S2_RHYTHM speech stops on back, cover and background, never restarts
+- `test/widgets/speech_routes_test.dart`：rhythm lesson requests landscape, four beat cells stay on one row and highlight follows progress
+- `test/widgets/training_panel_test.dart`：inline pause menu 640.0 en 1.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 640.0 en 2.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 640.0 zh-Hans 1.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 640.0 zh-Hans 2.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 800.0 en 1.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 800.0 en 2.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 800.0 zh-Hans 1.0
+- `test/widgets/training_panel_test.dart`：inline pause menu 800.0 zh-Hans 2.0

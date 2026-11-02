@@ -65,15 +65,18 @@ class PracticeRepository {
     );
     final migrations = await db.query('schema_migrations', orderBy: 'version');
     final schema = await rootBundle.loadString('assets/config/schema.sql');
-    if (migrations.length != 3 ||
+    if (migrations.length != 4 ||
         migrations.first['version'] != 1 ||
         migrations.first['migration_checksum'] != digest(schema) ||
         migrations[1]['version'] != 2 ||
         migrations[1]['migration_checksum'] !=
             digest(DatabaseSafety.migration2) ||
-        migrations.last['version'] != 3 ||
+        migrations[2]['version'] != 3 ||
+        migrations[2]['migration_checksum'] !=
+            digest(DatabaseSafety.migration3) ||
+        migrations.last['version'] != 4 ||
         migrations.last['migration_checksum'] !=
-            digest(DatabaseSafety.migration3)) {
+            digest(DatabaseSafety.migration4)) {
       await db.close();
       throw StateError('E_SCHEMA_VERSION: database preserved');
     }
@@ -689,7 +692,8 @@ class PracticeRepository {
   Future<HistoryPage> historyPage({Json? after}) async {
     final rows = await db.rawQuery(
       'SELECT * FROM (SELECT session_id,started_utc_ms,profile_id FROM sessions '
-      'UNION ALL SELECT session_id,started_utc_ms,profile_id FROM piece_performances) '
+      'UNION ALL SELECT session_id,started_utc_ms,profile_id FROM piece_performances '
+      'UNION ALL SELECT session_id,started_utc_ms,profile_id FROM dance_sessions) '
       'WHERE profile_id=? '
       '${after == null ? '' : 'AND (started_utc_ms < ? OR (started_utc_ms = ? AND session_id > ?)) '} '
       'ORDER BY started_utc_ms DESC, session_id ASC LIMIT 21',
@@ -768,6 +772,38 @@ class PracticeRepository {
       )).reversed.map((r) => Map<String, dynamic>.from(r)).toList();
 
   Future<Json?> detail(String id) async {
+    final dances = await db.query(
+      'dance_sessions',
+      where: 'session_id=? AND profile_id=?',
+      whereArgs: [id, profile['profile_id']],
+    );
+    if (dances.isNotEmpty) {
+      final row = Map<String, dynamic>.from(dances.single);
+      try {
+        final record = jsonDecode(row['record_json'] as String) as Json;
+        if (digest(record) != row['record_hash'] ||
+            record['session_id'] != row['session_id'] ||
+            record['started_utc_ms'] != row['started_utc_ms'] ||
+            record['active_ms'] is! int ||
+            (record['active_ms'] as int) < 0) {
+          throw const FormatException('Invalid dance record');
+        }
+        return {
+          ...row,
+          'task_id': 'DANCE',
+          'content_id': record['content_id'],
+          'status': 'COMPLETED',
+          'session_utc_offset_minutes':
+              record['utc_offset_minutes'] ??
+              DateTime.fromMillisecondsSinceEpoch(row['started_utc_ms'] as int)
+                  .timeZoneOffset
+                  .inMinutes,
+          'result_json': canonical(record),
+        };
+      } catch (_) {
+        return {...row, 'task_id': 'DANCE', 'record_unavailable': true};
+      }
+    }
     final pieces = await db.query(
       'piece_performances',
       where: 'session_id=? AND profile_id=?',
@@ -857,12 +893,19 @@ class PracticeRepository {
       limit: 1,
     );
     if (active.isNotEmpty) throw StateError('E_ACTIVE_SESSION');
-    await db.delete('sessions', where: 'session_id=?', whereArgs: [id]);
-    await db.delete(
-      'piece_performances',
-      where: 'session_id=?',
-      whereArgs: [id],
-    );
+    await db.transaction((tx) async {
+      await tx.delete(
+        'plan_links',
+        where: "record_id=? AND record_kind IN ('exercise','piece')",
+        whereArgs: [id],
+      );
+      await tx.delete('sessions', where: 'session_id=?', whereArgs: [id]);
+      await tx.delete(
+        'piece_performances',
+        where: 'session_id=?',
+        whereArgs: [id],
+      );
+    });
     _cache.remove(id);
   }
 
@@ -896,6 +939,8 @@ class PracticeRepository {
     );
     if (active.isNotEmpty) throw StateError('E_ACTIVE_SESSION');
     await db.transaction((tx) async {
+      await tx.delete('plan_links');
+      await tx.delete('dance_sessions');
       await tx.delete('sessions');
       await tx.delete('piece_performances');
       await tx.delete('profile_task_state');

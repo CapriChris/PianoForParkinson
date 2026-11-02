@@ -97,7 +97,7 @@ void main() {
     ]);
     expect(c.pieceTempo('piece-a', 60), 50);
     expect(c.pieceTempo('piece-b', 60), 70);
-    expect(c.settings['text_size_percent_v3'], 110);
+    expect(c.settings['text_size_percent_v4'], 110);
     expect(c.settings['sound_enabled'], originalSound);
     c.dispose();
     await tester.pump();

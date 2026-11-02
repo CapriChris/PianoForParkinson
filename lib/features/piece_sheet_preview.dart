@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 import 'dart:math' as math;
 
@@ -424,7 +426,7 @@ class PieceSheetPreviewState extends State<PieceSheetPreview>
           ),
           Row(
             children: [
-              IconButton(
+              QinIconButton(
                 key: const ValueKey('piece-audition'),
                 tooltip: widget.c.text(
                   playing ? '暂停试听' : '播放试听',

@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -275,7 +277,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                   width: 68,
                   child: Column(
                     children: [
-                      IconButton(
+                      QinIconButton(
                         key: const ValueKey('performance-back'),
                         tooltip: c.text('返回', 'Back'),
                         onPressed: () => Navigator.of(context).pop(),
@@ -284,7 +286,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                       const Spacer(),
                       if (player.mode == ScrollPieceMode.running ||
                           player.mode == ScrollPieceMode.paused)
-                        IconButton(
+                        QinIconButton(
                           key: const ValueKey('performance-pause'),
                           tooltip: c.text(
                             player.mode == ScrollPieceMode.paused ? '继续' : '暂停',

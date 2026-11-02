@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui' as ui;
@@ -19,6 +21,11 @@ import '../features/practice_steps.dart';
 import '../features/touch_check_page.dart';
 import '../features/song_library_page.dart';
 import '../features/piano_pieces_page.dart';
+import '../features/dance_page.dart';
+import '../features/dance_result_page.dart';
+import '../domain/dance_training.dart';
+import '../features/plans_page.dart';
+import '../platform/plan_reminders.dart';
 import '../features/record_health_page.dart';
 import '../features/piece_result_page.dart';
 import '../domain/cognitive_tasks.dart';
@@ -26,10 +33,16 @@ import '../domain/history.dart';
 import 'app_controller.dart';
 import 'page_title.dart';
 import '../ui/qin_theme.dart';
+import '../ui/qin_page_background.dart';
 import '../ui/text_scale.dart';
 import '../ui/qin_components.dart';
 import '../ui/metric_visuals.dart';
 import '../ui/qin_music_art.dart';
+
+// Shared with the background's text gradient and the compact header contents.
+const double practiceHeaderBaseHeight = 160;
+const double historyHeaderBaseHeight = 180;
+const double pageHeaderTextInset = 24;
 
 class PianoApp extends StatelessWidget {
   const PianoApp({super.key, required this.controller});
@@ -51,11 +64,9 @@ class PianoApp extends StatelessWidget {
         builder: (context, child) {
           final media = MediaQuery.of(context);
           final percent = controller.textScalePercent;
-          final scaledMedia = percent == null
-              ? media
-              : media.copyWith(
-                  textScaler: AppTextScaler(media.textScaler, percent),
-                );
+          final scaledMedia = media.copyWith(
+            textScaler: AppTextScaler(media.textScaler, percent ?? 100),
+          );
           final reduce =
               media.disableAnimations ||
               (controller.initialized &&
@@ -82,7 +93,10 @@ class PianoApp extends StatelessWidget {
             ),
             child: MediaQuery(
               data: scaledMedia.copyWith(disableAnimations: reduce),
-              child: child!,
+              child: QinMotionPolicy(
+                reduced: media.disableAnimations,
+                child: child!,
+              ),
             ),
           );
         },
@@ -105,7 +119,10 @@ class BootstrapError extends StatelessWidget {
   final AppController c;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const PageTitle(appName)),
+    appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
+      title: const PageTitle(appName),
+    ),
     body: SafeArea(
       child: QinPageList(
         children: [
@@ -116,13 +133,13 @@ class BootstrapError extends StatelessWidget {
               '记录不会被自动清除，请重试。',
               'Your records will not be cleared. Please retry.',
             ),
-            action: FilledButton(
+            action: QinFilledButton(
               onPressed: c.busy ? null : c.initialize,
               child: Text(c.text('重试', 'Retry')),
             ),
           ),
           const SizedBox(height: 16),
-          OutlinedButton.icon(
+          QinOutlinedButton.icon(
             onPressed: c.busy
                 ? null
                 : () => Navigator.push(
@@ -324,13 +341,13 @@ class _OnboardingState extends State<Onboarding> {
                     const Spacer(),
                     const SizedBox(height: 32),
                     if (step > 0) ...[
-                      OutlinedButton(
+                      QinOutlinedButton(
                         onPressed: () => setState(() => step--),
                         child: Text(c.text('上一步', 'Back')),
                       ),
                       const SizedBox(height: 12),
                     ],
-                    FilledButton(
+                    QinFilledButton(
                       onPressed: () async {
                         await c.stopPreview();
                         if (step < 2) {
@@ -375,7 +392,7 @@ class _OnboardingChoice extends StatelessWidget {
     final artWidth = MediaQuery.sizeOf(context).width < 380 ? 120.0 : 145.0;
     return Semantics(
       selected: selected,
-      child: OutlinedButton(
+      child: QinOutlinedButton(
         key: buttonKey,
         onPressed: onPressed,
         clipBehavior: Clip.antiAlias,
@@ -462,8 +479,9 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
-class _HomePageState extends State<HomePage> {
+class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int tab = 0;
+  String practiceCategory = 'all';
   bool openingRecommendation = false;
   AppController get c => widget.c;
   void showHome() => selectTab(0);
@@ -471,6 +489,24 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     c.homeNavigationRequests.addListener(showHome);
+    WidgetsBinding.instance.addObserver(this);
+    PlanReminders.instance.onOpen = () {
+      if (mounted) selectTab(2);
+    };
+    unawaited(refreshPlanReminders());
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) unawaited(refreshPlanReminders());
+  }
+
+  Future<void> refreshPlanReminders() async {
+    try {
+      await PlanReminders.instance.sync(scheduleStore(c), chinese: c.chinese);
+    } catch (_) {
+      /* Plans remain usable without notifications. */
+    }
   }
 
   @override
@@ -485,6 +521,8 @@ class _HomePageState extends State<HomePage> {
   @override
   void dispose() {
     c.homeNavigationRequests.removeListener(showHome);
+    WidgetsBinding.instance.removeObserver(this);
+    PlanReminders.instance.onOpen = null;
     super.dispose();
   }
 
@@ -535,7 +573,7 @@ class _HomePageState extends State<HomePage> {
       unawaited(c.refreshRecommendations());
     }
     setState(() => tab = value);
-    if (value == 2) c.refreshHistory();
+    if (value == 3) c.refreshHistory();
   }
 
   Future<void> openRecommendation() async {
@@ -591,7 +629,7 @@ class _HomePageState extends State<HomePage> {
       '上次练习尚未全部保存。请重试保存后再开始新练习。',
       'Your last practice is not fully saved. Retry saving before starting another practice.',
     ),
-    child: FilledButton.icon(
+    child: QinFilledButton.icon(
       onPressed: c.finishSave,
       icon: const Icon(Icons.save_outlined),
       label: Text(c.text('重试保存', 'Retry saving')),
@@ -609,6 +647,17 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
+  Widget danceEntry() => PracticeCard(
+    icon: Icons.accessibility_new,
+    artwork: '36-practice-dance.png',
+    title: c.text('舞蹈跟练', 'Dance practice'),
+    subtitle: c.text('跟随视频，按自己的节奏活动', 'Move with a video at your own pace'),
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute<void>(builder: (_) => DancePage(c: c)),
+    ),
+  );
+
   Widget piecesEntry() => PracticeCard(
     icon: Icons.piano_outlined,
     title: c.text('钢琴曲目', 'Piano pieces'),
@@ -620,48 +669,19 @@ class _HomePageState extends State<HomePage> {
     ),
   );
 
-  Widget practiceHeader({bool limited = false}) => Stack(
-    children: [
-      Positioned.fill(
-        child: context.qin.highContrast
-            ? ColoredBox(color: context.qin.surface)
-            : Image.asset(
-                'assets/ui_images/11-practice-piano.webp',
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight,
-                excludeFromSemantics: true,
-                errorBuilder: (_, _, _) =>
-                    ColoredBox(color: context.qin.surface),
-              ),
-      ),
-      if (!context.qin.highContrast)
-        const Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xf5fffaf0),
-                  Color(0xdcfffaf0),
-                  Color(0x00fffaf0),
-                ],
-                stops: [0, .45, .85],
-              ),
-            ),
-          ),
-        ),
-      if (limited)
-        SingleChildScrollView(child: practiceHeaderContent())
-      else
-        practiceHeaderContent(),
-    ],
-  );
+  Widget practiceHeader({bool limited = false}) => limited
+      ? SingleChildScrollView(child: practiceHeaderContent())
+      : practiceHeaderContent();
 
   Widget practiceHeaderContent() => ConstrainedBox(
-    constraints: const BoxConstraints(minHeight: 210),
+    constraints: const BoxConstraints(minHeight: practiceHeaderBaseHeight),
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(24, 72, 24, 24),
+      padding: const EdgeInsets.fromLTRB(
+        pageHeaderTextInset,
+        24,
+        pageHeaderTextInset,
+        24,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -698,7 +718,12 @@ class _HomePageState extends State<HomePage> {
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 640),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(24, 8, 24, 20),
+            padding: const EdgeInsets.fromLTRB(
+              pageHeaderTextInset,
+              8,
+              pageHeaderTextInset,
+              20,
+            ),
             child: Column(
               mainAxisSize: largeText ? MainAxisSize.min : MainAxisSize.max,
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -728,7 +753,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 24),
                 recommendationCard(),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
+                QinOutlinedButton.icon(
                   key: const ValueKey('home-other-practices'),
                   onPressed: () => selectTab(1),
                   icon: const Icon(Icons.tune),
@@ -736,7 +761,7 @@ class _HomePageState extends State<HomePage> {
                   style: OutlinedButton.styleFrom(
                     backgroundColor: contrast
                         ? context.qin.surface
-                        : const Color(0xfff2e5d3),
+                        : const Color(0xfff2e5d3).withValues(alpha: .88),
                     minimumSize: const Size.fromHeight(68),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(28),
@@ -751,32 +776,6 @@ class _HomePageState extends State<HomePage> {
       return Stack(
         fit: StackFit.expand,
         children: [
-          if (!contrast)
-            Image.asset(
-              'assets/ui_images/01-home-piano.webp',
-              fit: BoxFit.cover,
-              alignment: Alignment.center,
-              excludeFromSemantics: true,
-              errorBuilder: (_, _, _) =>
-                  ColoredBox(color: context.qin.background),
-            )
-          else
-            ColoredBox(color: context.qin.background),
-          if (!contrast)
-            const DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Color(0xc9fff8e9),
-                    Color(0x45fff8e9),
-                    Color(0x00fff8e9),
-                  ],
-                  stops: [0, .28, .55],
-                ),
-              ),
-            ),
           SingleChildScrollView(
             child: largeText
                 ? contents()
@@ -790,6 +789,18 @@ class _HomePageState extends State<HomePage> {
         ],
       );
     },
+  );
+
+  Widget practiceCategories() => QinCategoryBar(
+    keyPrefix: 'practice-category',
+    selected: practiceCategory,
+    forceCompact: !c.chinese,
+    onSelected: (value) => setState(() => practiceCategory = value),
+    entries: [
+      ('all', c.text('全部', 'All'), c.text('全部', 'All')),
+      ('piano', c.text('钢琴训练', 'Piano training'), c.text('钢琴', 'Piano')),
+      ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
+    ],
   );
 
   Widget directory() {
@@ -857,97 +868,215 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
+    body: QinPageSurface(
+      opacity: tab == 2 ? 1 : .88,
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned.fill(
-            child: tab == 0
-                ? homeContent()
+          QinPageBackground(
+            asset: tab == 0
+                ? 'assets/ui_images/01-home-piano.webp'
+                : tab == 1
+                ? 'assets/ui_images/11-practice-piano.webp'
                 : tab == 2
-                ? HistoryList(c: c, onPractice: () => selectTab(1))
-                : LayoutBuilder(
-                    builder: (context, bounds) {
-                      final scale = MediaQuery.textScalerOf(context).scale(1);
-                      final desired = 210.0 + (scale - 1).clamp(0.0, 2.0) * 100;
-                      final available = bounds.maxHeight * .55;
-                      final height = desired.clamp(0.0, available);
-                      return Column(
-                        children: [
-                          SizedBox(
-                            height: height,
-                            child: practiceHeader(
-                              limited: scale > 1.5 || height < desired,
-                            ),
-                          ),
-                          Expanded(
-                            child: QinPageList(
-                              key: ValueKey(tab),
-                              maxWidth: 1120,
-                              children: [
-                                if (c.hasPendingSave) ...[
-                                  saveNotice(),
-                                  const SizedBox(height: 16),
-                                ],
-                                if (!c.allIntroLessonsCompleted) ...[
-                                  lessonsEntry(),
-                                  const SizedBox(height: 12),
-                                ],
-                                piecesEntry(),
-                                const SizedBox(height: 12),
-                                directory(),
-                                if (c.allIntroLessonsCompleted) ...[
-                                  const SizedBox(height: 12),
-                                  lessonsEntry(),
-                                ],
-                              ],
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
+                ? 'assets/ui_images/39-plan-page-header.webp'
+                : 'assets/ui_images/30-records-piano-flowers-clear.webp',
+            aspectRatio: tab == 0 ? 507 / 900 : 3 / 2,
+            fill: tab == 0,
+            treatment: tab == 0
+                ? QinBackgroundTreatment.clear
+                : tab == 2
+                ? QinBackgroundTreatment.softened
+                : QinBackgroundTreatment.softenedWithTextGradient,
+            textRegionHeight:
+                MediaQuery.paddingOf(context).top +
+                (tab == 1
+                    ? practiceHeaderBaseHeight
+                    : historyHeaderBaseHeight) +
+                (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
+                      0.0,
+                      2.0,
+                    ) *
+                    100,
           ),
-          Positioned(
-            top: 6,
-            right: 8,
-            child: SizedBox(
-              width: 48,
-              height: 48,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  ClipOval(
-                    child: SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: BackdropFilter(
-                        filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                        child: DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: context.qin.highContrast
-                                ? context.qin.surface
-                                : const Color(0xb3fffaf0),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: context.qin.highContrast
-                                  ? context.qin.ink
-                                  : const Color(0x80ffffff),
+          SafeArea(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: tab == 0
+                      ? homeContent()
+                      : tab == 3
+                      ? HistoryList(c: c, onPractice: () => selectTab(1))
+                      : tab == 2
+                      ? PlansPage(
+                          c: c,
+                          onStart: (kind) async {
+                            if (kind.startsWith('exercise:')) {
+                              await open(kind.substring('exercise:'.length));
+                              return;
+                            }
+                            if (kind.startsWith('piece:')) {
+                              final piece = c.content.pieceFor(
+                                kind.substring('piece:'.length),
+                              );
+                              if (piece != null) {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        PianoPiecePage(c: c, piece: piece),
+                                  ),
+                                );
+                              }
+                              return;
+                            }
+                            if (kind == 'dance') {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => DancePage(c: c),
+                                ),
+                              );
+                            } else if (kind == 'piece') {
+                              await Navigator.push(
+                                context,
+                                MaterialPageRoute<void>(
+                                  builder: (_) => PianoPiecesPage(c: c),
+                                ),
+                              );
+                            } else {
+                              final task = await showDialog<String>(
+                                context: context,
+                                builder: (context) => SimpleDialog(
+                                  title: Text(
+                                    c.text('选择练习', 'Choose an exercise'),
+                                  ),
+                                  children: [
+                                    for (final id in [
+                                      'S1_GUIDED',
+                                      'S2_RHYTHM',
+                                      'M1_ALTERNATE',
+                                      'M2_DUAL_ZONE',
+                                      'G1_MEMORY',
+                                      'G2_INHIBITION',
+                                      'G3_SWITCH',
+                                    ])
+                                      SimpleDialogOption(
+                                        onPressed: () =>
+                                            Navigator.pop(context, id),
+                                        child: Text(taskTitle(id, c.chinese)),
+                                      ),
+                                  ],
+                                ),
+                              );
+                              if (task != null && mounted) await open(task);
+                            }
+                          },
+                        )
+                      : LayoutBuilder(
+                          builder: (context, bounds) {
+                            final scale = MediaQuery.textScalerOf(context)
+                                .scale(1);
+                            final desired =
+                                practiceHeaderBaseHeight +
+                                (scale - 1).clamp(0.0, 2.0) * 100;
+                            final available = bounds.maxHeight * .55;
+                            final height = desired.clamp(0.0, available);
+                            return Column(
+                              children: [
+                                SizedBox(
+                                  height: height,
+                                  child: practiceHeader(
+                                    limited:
+                                        scale > 1.5 ||
+                                        height < desired ||
+                                        bounds.maxWidth < 360,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: QinPageList(
+                                    key: ValueKey(tab),
+                                    maxWidth: 1120,
+                                    children: [
+                                      if (c.hasPendingSave) ...[
+                                        saveNotice(),
+                                        const SizedBox(height: 16),
+                                      ],
+                                      practiceCategories(),
+                                      const SizedBox(height: 16),
+                                      if (practiceCategory != 'dance') ...[
+                                        if (!c.allIntroLessonsCompleted) ...[
+                                          lessonsEntry(),
+                                          const SizedBox(height: 12),
+                                        ],
+                                        piecesEntry(),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (practiceCategory != 'piano') ...[
+                                        danceEntry(),
+                                        const SizedBox(height: 12),
+                                      ],
+                                      if (practiceCategory != 'dance') ...[
+                                        directory(),
+                                        if (c.allIntroLessonsCompleted) ...[
+                                          const SizedBox(height: 12),
+                                          lessonsEntry(),
+                                        ],
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                ),
+                Positioned(
+                  top: 6,
+                  right: 8,
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ClipOval(
+                          child: SizedBox(
+                            width: 40,
+                            height: 40,
+                            child: BackdropFilter(
+                              filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+                              child: DecoratedBox(
+                                decoration: BoxDecoration(
+                                  color: context.qin.highContrast
+                                      ? context.qin.surface
+                                      : const Color(0xb3fffaf0),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: context.qin.highContrast
+                                        ? context.qin.ink
+                                        : const Color(0x80ffffff),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
+                        QinIconButton(
+                          tooltip: c.text('设置', 'Settings'),
+                          onPressed: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SettingsPage(c: c),
+                            ),
+                          ),
+                          icon: const Icon(Icons.settings_outlined),
+                        ),
+                      ],
                     ),
                   ),
-                  IconButton(
-                    tooltip: c.text('设置', 'Settings'),
-                    onPressed: () => Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => SettingsPage(c: c)),
-                    ),
-                    icon: const Icon(Icons.settings_outlined),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ],
@@ -958,6 +1087,7 @@ class _HomePageState extends State<HomePage> {
       labels: [
         c.text('首页', 'Home'),
         c.text('练习', 'Practice'),
+        c.text('计划', 'Plan'),
         c.text('记录', 'History'),
       ],
       onSelected: selectTab,
@@ -999,125 +1129,128 @@ class PracticeCard extends StatelessWidget {
         : contrast
         ? context.qin.surface
         : const Color(0xfff4ebdf);
-    return Material(
-      color: background,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-        side: BorderSide(
-          color: contrast ? context.qin.ink : Colors.transparent,
+    return QinInkWell(
+      surfaceBuilder: (surface) => Material(
+        color: background.withValues(
+          alpha: contrast
+              ? 1
+              : dark
+              ? .94
+              : qinContentOpacityOf(context),
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: contrast ? context.qin.ink : Colors.transparent,
+          ),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: surface,
       ),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 104),
-          child: IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (showImage)
-                  SizedBox(
-                    width: (MediaQuery.sizeOf(context).width * .26).clamp(
-                      86.0,
-                      140.0,
-                    ),
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        Image.asset(
-                          'assets/ui_images/${artwork.replaceAll('.png', '.webp')}',
-                          fit: BoxFit.cover,
-                          cacheWidth: 360,
-                          excludeFromSemantics: true,
-                          errorBuilder: (_, _, _) =>
-                              Center(child: Icon(icon, color: foreground)),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  Padding(
-                    padding: const EdgeInsets.only(left: 16),
-                    child: Center(
-                      child: Icon(icon, color: foreground, size: 28),
-                    ),
+      onTap: onTap,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 104),
+        child: IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showImage)
+                SizedBox(
+                  width: (MediaQuery.sizeOf(context).width * .26).clamp(
+                    86.0,
+                    140.0,
                   ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (eyebrow != null) ...[
-                          Text(
-                            eyebrow!,
-                            style: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(color: foreground),
-                          ),
-                          const SizedBox(height: 4),
-                        ],
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.asset(
+                        'assets/ui_images/${artwork.replaceAll('.png', '.webp')}',
+                        fit: BoxFit.cover,
+                        cacheWidth: 360,
+                        excludeFromSemantics: true,
+                        errorBuilder: (_, _, _) =>
+                            Center(child: Icon(icon, color: foreground)),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Padding(
+                  padding: const EdgeInsets.only(left: 16),
+                  child: Center(child: Icon(icon, color: foreground, size: 28)),
+                ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 14,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if (eyebrow != null) ...[
                         Text(
-                          title,
-                          style: Theme.of(context).textTheme.titleSmall
+                          eyebrow!,
+                          style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(color: foreground),
                         ),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            subtitle!,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: dark
-                                      ? Colors.white
-                                      : context.qin.muted,
-                                ),
-                          ),
-                        ],
+                        const SizedBox(height: 4),
                       ],
-                    ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(right: 14),
-                  child: Center(
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: dark
-                            ? Colors.white.withValues(alpha: .15)
-                            : contrast
-                            ? context.qin.surface
-                            : const Color(0xffe9dfd2),
-                        border: contrast
-                            ? Border.all(color: context.qin.ink)
-                            : null,
+                      Text(
+                        title,
+                        style: Theme.of(context).textTheme.titleSmall
+                            ?.copyWith(color: foreground),
                       ),
-                      child: Semantics(
-                        label: completed
-                            ? (Localizations.localeOf(context).languageCode ==
-                                      'zh'
-                                  ? '已完成'
-                                  : 'Completed')
-                            : null,
-                        excludeSemantics: true,
-                        child: Icon(
-                          completed ? Icons.check : Icons.chevron_right,
-                          color: completed ? context.qin.primary : foreground,
-                          size: 23,
+                      if (subtitle != null) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          subtitle!,
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(
+                                color: dark ? Colors.white : context.qin.muted,
+                              ),
                         ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: Center(
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: dark
+                          ? Colors.white.withValues(alpha: .15)
+                          : contrast
+                          ? context.qin.surface
+                          : const Color(0xffe9dfd2),
+                      border: contrast
+                          ? Border.all(color: context.qin.ink)
+                          : null,
+                    ),
+                    child: Semantics(
+                      label: completed
+                          ? (Localizations.localeOf(context).languageCode ==
+                                    'zh'
+                                ? '已完成'
+                                : 'Completed')
+                          : null,
+                      excludeSemantics: true,
+                      child: Icon(
+                        completed ? Icons.check : Icons.chevron_right,
+                        color: completed ? context.qin.primary : foreground,
+                        size: 23,
                       ),
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -1196,10 +1329,13 @@ class InstructionPage extends StatelessWidget {
         qinPracticeImage(taskId);
     final steps = practiceSteps(taskId);
     return Scaffold(
-      appBar: AppBar(title: PageTitle(title)),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(title),
+      ),
       body: QinActionPage(
         actions: [
-          FilledButton(
+          QinFilledButton.icon(
             onPressed: blocked || (!c.audioReady && c.soundEnabled)
                 ? null
                 : () => Navigator.of(context).push(
@@ -1207,9 +1343,10 @@ class InstructionPage extends StatelessWidget {
                       builder: (_) => TrainingPage(c: c, taskId: taskId),
                     ),
                   ),
-            child: Text(c.text('开始练习', 'Start practice')),
+            icon: const Icon(Icons.play_arrow),
+            label: Text(c.text('开始练习', 'Start practice')),
           ),
-          OutlinedButton.icon(
+          QinOutlinedButton.icon(
             onPressed: () async {
               await c.stopAllPlayback().catchError((_) {});
               if (!context.mounted) return;
@@ -1251,7 +1388,7 @@ class InstructionPage extends StatelessWidget {
           PracticeStepsPanel(c: c, steps: steps),
           const SizedBox(height: 16),
           if (taskId == 'G3_SWITCH') ...[
-            OutlinedButton.icon(
+            QinOutlinedButton.icon(
               key: const ValueKey('open-switch-tutorial'),
               onPressed: blocked || (!c.audioReady && c.soundEnabled)
                   ? null
@@ -1269,7 +1406,7 @@ class InstructionPage extends StatelessWidget {
             listenable: c,
             builder: (context, _) => c.allIntroLessonsCompleted
                 ? const SizedBox.shrink()
-                : TextButton.icon(
+                : QinTextButton.icon(
                     onPressed: () => Navigator.of(context).push(
                       MaterialPageRoute(builder: (_) => IntroLessonsPage(c: c)),
                     ),
@@ -1328,7 +1465,7 @@ class PreviewSheet extends StatelessWidget {
     },
   );
 
-  Widget back(BuildContext context) => FilledButton(
+  Widget back(BuildContext context) => QinFilledButton(
     onPressed: () async {
       await c.stopPreview();
       if (context.mounted) Navigator.pop(context);
@@ -1439,17 +1576,91 @@ class PreviewSheet extends StatelessWidget {
   }
 }
 
-class HistoryList extends StatelessWidget {
+class HistoryList extends StatefulWidget {
   const HistoryList({super.key, required this.c, this.onPractice});
   final AppController c;
   final VoidCallback? onPractice;
+  @override
+  State<HistoryList> createState() => _HistoryListState();
+}
+
+class _HistoryListState extends State<HistoryList> {
+  AppController get c => widget.c;
+  VoidCallback? get onPractice => widget.onPractice;
+  String category = 'recent';
+  bool searching = false;
+
+  List<Json> get visibleHistory => c.history
+      .where(
+        (record) => switch (category) {
+          'exercises' =>
+            record['task_id'] != 'PIANO_PIECE' && record['task_id'] != 'DANCE',
+          'pieces' => record['task_id'] == 'PIANO_PIECE',
+          'dance' => record['task_id'] == 'DANCE',
+          _ => true,
+        },
+      )
+      .toList();
+
+  Future<void> loadMoreMatching() async {
+    if (searching || c.historyLoading) return;
+    final requested = category;
+    final count = visibleHistory.length;
+    setState(() => searching = true);
+    try {
+      while (mounted &&
+          category == requested &&
+          c.historyHasMore &&
+          c.history.isNotEmpty &&
+          !c.historyLoading) {
+        await c.loadMoreHistory();
+        if (c.historyError != null || visibleHistory.length > count) break;
+      }
+    } finally {
+      if (mounted) setState(() => searching = false);
+    }
+  }
+
+  Future<void> refresh() async {
+    await c.refreshHistory();
+    if (mounted &&
+        category != 'recent' &&
+        visibleHistory.isEmpty &&
+        c.historyHasMore) {
+      await loadMoreMatching();
+    }
+  }
+
+  Widget categories() => QinCategoryBar(
+    keyPrefix: 'history-category',
+    selected: category,
+    forceCompact: !c.chinese,
+    onSelected: (value) => setState(() => category = value),
+    entries: [
+      ('recent', c.text('全部', 'All'), c.text('全部', 'All')),
+      ('exercises', c.text('钢琴练习', 'Piano exercises'), c.text('练习', 'Piano')),
+      ('pieces', c.text('钢琴曲目', 'Piano pieces'), c.text('曲目', 'Pieces')),
+      ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
+    ],
+  );
+
   Widget header(BuildContext context) {
-    final content = Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 70, 24),
+    final content = Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(
+        pageHeaderTextInset,
+        18,
+        pageHeaderTextInset,
+        24,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          PageTitle(c.text('记录', 'History')),
+          Text(
+            c.text('记录', 'History'),
+            textAlign: TextAlign.start,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
           const SizedBox(height: 20),
           Text(
             c.text('每一次练习，都在这里', 'Your practice moments'),
@@ -1467,36 +1678,7 @@ class HistoryList extends StatelessWidget {
         ],
       ),
     );
-    return Stack(
-      fit: StackFit.expand,
-      children: [
-        ColoredBox(color: context.qin.background),
-        if (!context.qin.highContrast)
-          Image.asset(
-            'assets/ui_images/30-records-piano-flowers-clear.webp',
-            fit: BoxFit.cover,
-            alignment: Alignment.centerRight,
-            excludeFromSemantics: true,
-            errorBuilder: (_, _, _) => const SizedBox.shrink(),
-          ),
-        if (!context.qin.highContrast)
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xf5f8f7f1),
-                  Color(0xc4f8f7f1),
-                  Color(0x00f8f7f1),
-                ],
-                stops: [0, .43, .86],
-              ),
-            ),
-          ),
-        SingleChildScrollView(child: content),
-      ],
-    );
+    return SingleChildScrollView(child: content);
   }
 
   @override
@@ -1504,87 +1686,102 @@ class HistoryList extends StatelessWidget {
     animation: c,
     builder: (context, _) => LayoutBuilder(
       builder: (context, bounds) {
+        final entries = visibleHistory;
+        if (category != 'recent' &&
+            entries.isEmpty &&
+            c.historyHasMore &&
+            !c.historyLoading &&
+            !searching &&
+            c.historyError == null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted &&
+                !searching &&
+                category != 'recent' &&
+                visibleHistory.isEmpty) {
+              unawaited(loadMoreMatching());
+            }
+          });
+        }
         final scale = MediaQuery.textScalerOf(context).scale(1);
-        final desired = 235.0 + (scale - 1).clamp(0.0, 2.0) * 100;
+        final desired =
+            historyHeaderBaseHeight + (scale - 1).clamp(0.0, 2.0) * 100;
         final height = desired.clamp(0.0, bounds.maxHeight * .5);
         return Column(
           children: [
             SizedBox(height: height, child: header(context)),
             Expanded(
               child: RefreshIndicator(
-                onRefresh: c.refreshHistory,
+                onRefresh: refresh,
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   padding: qinPagePadding(context),
-                  itemCount: c.history.length + 2,
+                  itemCount: entries.length + 2,
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, i) {
                     if (i == 0) {
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Material(
-                            color: context.qin.soft,
-                            borderRadius: BorderRadius.circular(18),
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(18),
-                              onTap: () => Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => TrendPage(c: c),
-                                ),
+                          QinInkWell(
+                            surfaceBuilder: (surface) => Material(
+                              color: context.qin.soft.withValues(
+                                alpha: qinContentOpacityOf(context),
                               ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Row(
-                                  children: [
-                                    CircleAvatar(
-                                      backgroundColor: context.qin.primary,
-                                      foregroundColor: context.qin.onPrimary,
-                                      child: const Icon(
-                                        Icons.bar_chart_rounded,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 14),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            c.text('练习趋势', 'Practice trends'),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleMedium,
+                              borderRadius: BorderRadius.circular(18),
+                              child: surface,
+                            ),
+                            borderRadius: BorderRadius.circular(18),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TrendPage(c: c),
+                              ),
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Row(
+                                children: [
+                                  CircleAvatar(
+                                    backgroundColor: context.qin.primary,
+                                    foregroundColor: context.qin.onPrimary,
+                                    child: const Icon(Icons.bar_chart_rounded),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          c.text('练习趋势', 'Practice trends'),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium,
+                                        ),
+                                        Text(
+                                          c.text(
+                                            '查看各项练习的表现变化',
+                                            'See your practice progress',
                                           ),
-                                          Text(
-                                            c.text(
-                                              '查看各项练习的表现变化',
-                                              'See your practice progress',
-                                            ),
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall,
-                                          ),
-                                        ],
-                                      ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                      ],
                                     ),
-                                    const QinCircleArrow(),
-                                  ],
-                                ),
+                                  ),
+                                  const QinCircleArrow(),
+                                ],
                               ),
                             ),
                           ),
                           const SizedBox(height: 20),
-                          Text(
-                            c.text('最近练习', 'Recent practice'),
-                            style: Theme.of(context).textTheme.titleLarge,
-                          ),
+                          categories(),
                         ],
                       );
                     }
-                    if (i == c.history.length + 1) {
-                      if (c.historyLoading) {
+                    if (i == entries.length + 1) {
+                      if (c.historyLoading || searching) {
                         return const Center(
                           child: Padding(
                             padding: EdgeInsets.all(24),
@@ -1599,25 +1796,36 @@ class HistoryList extends StatelessWidget {
                             '记录暂时无法读取，请重试。',
                             'Records could not be read. Please retry.',
                           ),
-                          child: OutlinedButton(
+                          child: QinOutlinedButton(
                             onPressed: c.history.isEmpty
-                                ? c.refreshHistory
-                                : c.loadMoreHistory,
+                                ? refresh
+                                : loadMoreMatching,
                             child: Text(c.text('重试', 'Retry')),
                           ),
                         );
                       }
-                      if (c.history.isEmpty) {
+                      if (entries.isEmpty && c.historyHasMore) {
+                        return QinOutlinedButton(
+                          onPressed: loadMoreMatching,
+                          child: Text(c.text('加载更多', 'Load more')),
+                        );
+                      }
+                      if (entries.isEmpty) {
                         return QinEmptyState(
                           icon: Icons.history_outlined,
-                          title: c.text('还没有练习记录', 'No practice records yet'),
+                          title: c.history.isEmpty
+                              ? c.text('还没有练习记录', 'No practice records yet')
+                              : c.text(
+                                  '暂无这类练习记录',
+                                  'No records in this category',
+                                ),
                           message: c.text(
                             '完成一段练习后，可以在这里回看。',
                             'Complete a practice and return here to review it.',
                           ),
                           action: onPractice == null
                               ? null
-                              : FilledButton(
+                              : QinFilledButton(
                                   onPressed: onPractice,
                                   child: Text(
                                     c.text('选择练习', 'Choose a practice'),
@@ -1626,8 +1834,8 @@ class HistoryList extends StatelessWidget {
                         );
                       }
                       return c.historyHasMore
-                          ? OutlinedButton(
-                              onPressed: c.loadMoreHistory,
+                          ? QinOutlinedButton(
+                              onPressed: loadMoreMatching,
                               child: Text(c.text('加载更多', 'Load more')),
                             )
                           : Center(
@@ -1637,7 +1845,7 @@ class HistoryList extends StatelessWidget {
                               ),
                             );
                     }
-                    final item = c.history[i - 1];
+                    final item = entries[i - 1];
                     if (item['record_unavailable'] == true) {
                       return QinEntryCard(
                         icon: Icons.info_outline,
@@ -1663,6 +1871,7 @@ class HistoryList extends StatelessWidget {
                       item['content_id'] as String?,
                     );
                     final taskId = item['task_id'] as String;
+                    final dance = taskId == 'DANCE';
                     Map<String, dynamic>? summary;
                     try {
                       final raw = item['result_json'];
@@ -1684,144 +1893,172 @@ class HistoryList extends StatelessWidget {
                         denominator > 0 &&
                         numerator >= 0 &&
                         numerator <= denominator;
-                    final title = taskId == 'PIANO_PIECE'
+                    final title = dance
+                        ? (summary?[c.chinese ? 'title_zh' : 'title_en'] ??
+                                  summary?['title'] ??
+                                  c.text('舞蹈跟练', 'Dance practice'))
+                              as String
+                        : taskId == 'PIANO_PIECE'
                         ? piece?.title(c.locale) ??
                               c.text('钢琴曲目', 'Piano piece')
                         : taskTitle(taskId, c.chinese);
-                    final artwork = piece != null
+                    final artwork = dance
+                        ? '36-practice-dance.png'
+                        : piece != null
                         ? qinPieceImage(piece.id) ?? qinPracticeImage(taskId)
                         : qinSongImage(
                                 taskId,
                                 item['content_id'] as String? ?? '',
                               ) ??
                               qinPracticeImage(taskId);
-                    return Material(
-                      color: context.qin.surface,
-                      borderRadius: BorderRadius.circular(18),
-                      clipBehavior: Clip.antiAlias,
-                      child: InkWell(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ResultPage(c: c, record: item),
-                          ),
+                    return QinInkWell(
+                      key: ValueKey('history-record-${item['session_id']}'),
+                      surfaceBuilder: (surface) => Material(
+                        color: context.qin.surface.withValues(
+                          alpha: qinContentOpacityOf(context),
                         ),
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            final compact =
-                                constraints.maxWidth < 380 ||
-                                MediaQuery.textScalerOf(context).scale(1) > 1.4;
-                            final imageSize = compact ? 70.0 : 96.0;
-                            return IntrinsicHeight(
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(
-                                  minHeight: 108,
-                                ),
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    SizedBox(
-                                      width: imageSize,
-                                      child: Stack(
-                                        fit: StackFit.expand,
-                                        children: [
-                                          context.qin.highContrast
-                                              ? ColoredBox(
-                                                  color: context.qin.soft,
-                                                  child: Icon(
-                                                    Icons.music_note,
-                                                    color: context.qin.ink,
-                                                  ),
-                                                )
-                                              : Image.asset(
-                                                  'assets/ui_images/${artwork.replaceAll('.png', '.webp')}',
-                                                  fit: BoxFit.cover,
-                                                  excludeFromSemantics: true,
-                                                  errorBuilder: (_, _, _) =>
-                                                      const Center(
-                                                        child: Icon(
-                                                          Icons.music_note,
-                                                        ),
-                                                      ),
-                                                ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              title,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .titleMedium,
-                                            ),
-                                            const SizedBox(height: 3),
-                                            Text(
-                                              recordDateLabel(date),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              completed
-                                                  ? c.text('已完成', 'Completed')
-                                                  : c.text(
-                                                      '部分练习',
-                                                      'Partial practice',
+                        borderRadius: BorderRadius.circular(18),
+                        clipBehavior: Clip.antiAlias,
+                        child: surface,
+                      ),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ResultPage(c: c, record: item),
+                        ),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final compact =
+                              constraints.maxWidth < 380 ||
+                              MediaQuery.textScalerOf(context).scale(1) > 1.4;
+                          final imageSize = compact ? 70.0 : 96.0;
+                          return IntrinsicHeight(
+                            child: ConstrainedBox(
+                              constraints: const BoxConstraints(minHeight: 108),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  SizedBox(
+                                    width: imageSize,
+                                    child: Stack(
+                                      fit: StackFit.expand,
+                                      children: [
+                                        context.qin.highContrast
+                                            ? ColoredBox(
+                                                color: context.qin.soft
+                                                    .withValues(
+                                                      alpha:
+                                                          qinContentOpacityOf(
+                                                            context,
+                                                          ),
                                                     ),
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.copyWith(
-                                                    color: context.qin.primary,
+                                                child: Icon(
+                                                  dance
+                                                      ? Icons.accessibility_new
+                                                      : Icons.music_note,
+                                                  color: context.qin.ink,
+                                                ),
+                                              )
+                                            : Image.asset(
+                                                'assets/ui_images/${artwork.replaceAll('.png', '.webp')}',
+                                                fit: BoxFit.cover,
+                                                excludeFromSemantics: true,
+                                                errorBuilder: (_, _, _) => Center(
+                                                  child: Icon(
+                                                    dance
+                                                        ? Icons
+                                                              .accessibility_new
+                                                        : Icons.music_note,
                                                   ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
+                                                ),
+                                              ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 4),
-                                    Center(
-                                      child: SizedBox(
-                                        width: compact ? 62 : 82,
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          child: Text(
-                                            valid
-                                                ? '$numerator / $denominator'
-                                                : '—',
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            title,
                                             style: Theme.of(context)
                                                 .textTheme
-                                                .titleMedium
+                                                .titleMedium,
+                                          ),
+                                          const SizedBox(height: 3),
+                                          Text(
+                                            recordDateLabel(date),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            dance
+                                                ? c.text(
+                                                    '舞蹈跟练',
+                                                    'Dance practice',
+                                                  )
+                                                : completed
+                                                ? c.text('已完成', 'Completed')
+                                                : c.text(
+                                                    '部分练习',
+                                                    'Partial practice',
+                                                  ),
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
                                                 ?.copyWith(
                                                   color: context.qin.primary,
                                                 ),
                                           ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Center(
+                                    child: SizedBox(
+                                      width: compact ? 62 : 82,
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          dance
+                                              ? c.text(
+                                                  '${((summary?['active_ms'] as int? ?? 0) / 60000).toStringAsFixed(1)} 分钟',
+                                                  '${((summary?['active_ms'] as int? ?? 0) / 60000).toStringAsFixed(1)} min',
+                                                )
+                                              : valid
+                                              ? '$numerator / $denominator'
+                                              : '—',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .titleMedium
+                                              ?.copyWith(
+                                                color: context.qin.primary,
+                                              ),
                                         ),
                                       ),
                                     ),
-                                    const SizedBox(width: 6),
-                                    const Center(child: QinCircleArrow()),
-                                    const SizedBox(width: 10),
-                                  ],
-                                ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Center(child: QinCircleArrow()),
+                                  const SizedBox(width: 10),
+                                ],
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     );
                   },
@@ -1842,6 +2079,13 @@ class ResultPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (record['record_unavailable'] == true) return RecordHealthPage(c: c);
+    if (record['task_id'] == 'DANCE') {
+      return DanceResultPage(
+        c: c,
+        record: jsonDecode(record['result_json'] as String) as Json,
+        alreadySaved: true,
+      );
+    }
     if (record['task_id'] == 'PIANO_PIECE') {
       return PieceResultPage(
         c: c,
@@ -1857,7 +2101,7 @@ class ResultPage extends StatelessWidget {
     final memory = record['task_id'] == 'G1_MEMORY';
     final piece = c.content.pieceFor(record['content_id'] as String?);
     final actions = <Widget>[
-      FilledButton(
+      QinFilledButton.icon(
         onPressed: () async {
           final taskId = record['task_id'] as String;
           if (piece != null) {
@@ -1908,19 +2152,24 @@ class ResultPage extends StatelessWidget {
             ),
           );
         },
-        child: Text(
+        icon: const Icon(Icons.replay),
+        label: Text(
           piece == null
               ? c.text('再练一次', 'Practice again')
               : c.text('打开新版曲目', 'Open updated piece'),
         ),
       ),
-      OutlinedButton(
+      QinOutlinedButton.icon(
         onPressed: () => HomePage.returnHome(context, c),
-        child: Text(c.text('返回首页', 'Home')),
+        icon: const Icon(Icons.home_outlined),
+        label: Text(c.text('返回首页', 'Home')),
       ),
     ];
     return Scaffold(
-      appBar: AppBar(title: PageTitle(c.text('本次练习', 'Your practice'))),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(c.text('本次练习', 'Your practice')),
+      ),
       body: QinActionPage(
         actions: actions,
         children: [
@@ -1993,7 +2242,7 @@ class ResultPage extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 16),
-          OutlinedButton(
+          QinOutlinedButton(
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute(
@@ -2178,15 +2427,15 @@ class ResultPage extends StatelessWidget {
               ExpansionTile(
                 title: Text(c.text('记录信息', 'Record information')),
                 children: [
-                  ListTile(
+                  QinListTile(
                     title: Text(c.text('参数版本', 'Parameter version')),
                     subtitle: Text('${record['parameter_profile_version']}'),
                   ),
-                  ListTile(
+                  QinListTile(
                     title: Text(c.text('指标版本', 'Metric version')),
                     subtitle: Text('${record['metric_version']}'),
                   ),
-                  ListTile(
+                  QinListTile(
                     title: Text(c.text('练习模式', 'Practice mode')),
                     subtitle: Text(
                       record['mode'] == 'ASSIST'
@@ -2199,7 +2448,7 @@ class ResultPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          TextButton.icon(
+          QinTextButton.icon(
             style: TextButton.styleFrom(foregroundColor: context.qin.error),
             onPressed: () async {
               if (await confirm(
@@ -2368,7 +2617,7 @@ Future<bool> confirm(
         title: Text(title),
         content: Text(body),
         actions: [
-          TextButton(
+          QinTextButton(
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               Localizations.localeOf(context).languageCode == 'zh'
@@ -2376,7 +2625,7 @@ Future<bool> confirm(
                   : 'Cancel',
             ),
           ),
-          FilledButton(
+          QinFilledButton(
             style: destructive
                 ? FilledButton.styleFrom(
                     backgroundColor: context.qin.error,
@@ -2400,64 +2649,36 @@ class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key, required this.c});
   final AppController c;
 
-  Widget header(BuildContext context, {bool limited = false}) => Stack(
-    children: [
-      Positioned.fill(
-        child: context.qin.highContrast
-            ? ColoredBox(color: context.qin.surface)
-            : Image.asset(
-                'assets/ui_images/12-settings-flowers.webp',
-                fit: BoxFit.cover,
-                alignment: Alignment.centerRight,
-                excludeFromSemantics: true,
-                errorBuilder: (_, _, _) =>
-                    ColoredBox(color: context.qin.background),
-              ),
-      ),
-      if (!context.qin.highContrast)
-        const Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Color(0xf7fffaf0),
-                  Color(0xe0fffaf0),
-                  Color(0x00fffaf0),
-                ],
-                stops: [0, .42, .85],
-              ),
-            ),
-          ),
-        ),
-      if (limited)
-        SingleChildScrollView(child: headerContent(context))
-      else
-        headerContent(context),
-    ],
+  Widget header(BuildContext context, {bool limited = false}) => limited
+      ? SingleChildScrollView(child: headerContent(context))
+      : headerContent(context);
+
+  Widget pageBackground(BuildContext context) => const QinPageBackground(
+    asset: 'assets/ui_images/12-settings-flowers.webp',
+    aspectRatio: 3 / 2,
   );
 
   Widget headerContent(BuildContext context) => ConstrainedBox(
-    constraints: const BoxConstraints(minHeight: 150),
+    constraints: const BoxConstraints(minHeight: 64),
     child: Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 24, 20),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 8),
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          IconButton(
-            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-            onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(Icons.arrow_back),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 60),
+            child: Text(
+              c.text('设置', 'Settings'),
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.headlineMedium,
+            ),
           ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Text(
-                c.text('设置', 'Settings'),
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: QinIconButton(
+              tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+              onPressed: () => Navigator.of(context).pop(),
+              icon: const Icon(Icons.arrow_back),
             ),
           ),
         ],
@@ -2479,300 +2700,345 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: c,
     builder: (context, _) => Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, bounds) {
-            final scale = MediaQuery.textScalerOf(context).scale(1);
-            final desired = 150.0 + (scale - 1).clamp(0.0, 2.0) * 48;
-            final height = desired.clamp(0.0, bounds.maxHeight * .45);
-            return Column(
-              children: [
-                SizedBox(
-                  height: height,
-                  child: header(context, limited: height < desired),
-                ),
-                Expanded(
-                  child: QinPageList(
-                    padding: EdgeInsets.zero,
+      body: QinPageSurface(
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            if (!context.qin.highContrast) pageBackground(context),
+            SafeArea(
+              child: LayoutBuilder(
+                builder: (context, bounds) {
+                  final scale = MediaQuery.textScalerOf(context).scale(1);
+                  final desired = 64.0 + (scale - 1).clamp(0.0, 2.0) * 48;
+                  final height = desired.clamp(0.0, bounds.maxHeight * .45);
+                  return Column(
                     children: [
-                      Padding(
-                        padding: qinPagePadding(context),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                      SizedBox(
+                        height: height,
+                        child: header(context, limited: height < desired),
+                      ),
+                      Expanded(
+                        child: QinPageList(
+                          padding: EdgeInsets.zero,
                           children: [
-                            QinSectionTitle(
-                              c.text('语言与练习', 'Language and practice'),
-                            ),
-                            QinPanel(
+                            Padding(
+                              padding: qinPagePadding(context),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
-                                  groupTitle(
-                                    context,
-                                    Icons.language,
-                                    c.text('语言', 'Language'),
+                                  QinSectionTitle(
+                                    c.text('语言与练习', 'Language and practice'),
                                   ),
-                                  const SizedBox(height: 12),
-                                  LanguagePicker(c: c),
-                                  const SizedBox(height: 16),
-                                  const Divider(),
-                                  const SizedBox(height: 16),
-                                  groupTitle(
-                                    context,
-                                    Icons.school_outlined,
-                                    c.text('体验模式', 'Practice mode'),
-                                  ),
-                                  ModePicker(c: c, descriptions: true),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            QinSectionTitle(c.text('声音', 'Sound')),
-                            QinPanel(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  AudioVolumeControl(
-                                    c: c,
-                                    embedded: true,
-                                    icon: Icons.piano_outlined,
-                                    settingKey: 'gain_permille',
-                                    title: c.text('琴键与节拍', 'Keys and beats'),
-                                    sampleLabel: c.text(
-                                      '试听琴键',
-                                      'Test key sound',
-                                    ),
-                                    onSample: !c.soundEnabled || !c.audioReady
-                                        ? null
-                                        : () async {
-                                            try {
-                                              await c.preview(
-                                                0,
-                                                true,
-                                                pointer: -900,
-                                              );
-                                              await Future<void>.delayed(
-                                                const Duration(
-                                                  milliseconds: 400,
-                                                ),
-                                              );
-                                              await c.preview(
-                                                0,
-                                                false,
-                                                pointer: -900,
-                                              );
-                                            } catch (_) {
-                                              await c.stopPreview();
-                                            }
-                                          },
-                                  ),
-                                  const SizedBox(height: 16),
-                                  const Divider(),
-                                  const SizedBox(height: 16),
-                                  AudioVolumeControl(
-                                    c: c,
-                                    embedded: true,
-                                    icon: Icons.record_voice_over_outlined,
-                                    settingKey: 'speech_gain_permille',
-                                    description:
-                                        (c.capabilities['tts_locales']
-                                                    as List? ??
-                                                [])
-                                            .any(
-                                              (tag) => '$tag'.startsWith(
-                                                c.chinese ? 'zh' : 'en',
-                                              ),
-                                            )
-                                        ? null
-                                        : c.text(
-                                            '本机暂无对应的本地语音，文字提示仍可使用。',
-                                            'No local voice for this language. Text guidance remains available.',
-                                          ),
-                                    title: c.text('语音提示', 'Spoken guidance'),
-                                    sampleLabel: c.text(
-                                      '试听语音',
-                                      'Test spoken guidance',
-                                    ),
-                                    onSample:
-                                        c.settings['speech_enabled'] != true ||
-                                            c.settings['speech_gain_permille'] ==
-                                                0 ||
-                                            !(c.capabilities['tts_locales']
-                                                        as List? ??
-                                                    [])
-                                                .any(
-                                                  (tag) => '$tag'.startsWith(
-                                                    c.chinese ? 'zh' : 'en',
-                                                  ),
-                                                )
-                                        ? null
-                                        : () => c.speak(
-                                            c.text(
-                                              '跟着提示，慢慢弹奏。准备好就开始。',
-                                              'Follow the guidance and play at your own pace. Begin when you are ready.',
-                                            ),
-                                          ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            QinSectionTitle(c.text('显示', 'Display')),
-                            QinPanel(
-                              child: Column(
-                                children: [
-                                  TextSizeControl(c: c),
-                                  const SizedBox(height: 8),
-                                  const Divider(),
-                                  const SizedBox(height: 8),
-                                  SwitchListTile(
-                                    secondary: const Icon(Icons.contrast),
-                                    value: c.settings['high_contrast'] == true,
-                                    title: Text(
-                                      c.text('高对比显示', 'High contrast'),
-                                    ),
-                                    subtitle: Text(
-                                      c.text(
-                                        '增强黑白对比，突出边界。',
-                                        'Use stronger black-and-white contrast and clearer boundaries.',
-                                      ),
-                                    ),
-                                    contentPadding: EdgeInsets.zero,
-                                    onChanged: (v) => c.updateSettings(
-                                      values: {
-                                        ...c.settings,
-                                        'high_contrast': v,
-                                      },
-                                    ),
-                                  ),
-                                  SwitchListTile(
-                                    secondary: const Icon(
-                                      Icons.auto_awesome_outlined,
-                                    ),
-                                    value:
-                                        c.settings['decorative_animation_enabled'] ==
-                                        true,
-                                    title: Text(
-                                      c.text('装饰动画', 'Decorative animations'),
-                                    ),
-                                    subtitle: Text(
-                                      c.text(
-                                        '可关闭摆锤等装饰运动。',
-                                        'Turn off decorative movement such as the pendulum.',
-                                      ),
-                                    ),
-                                    contentPadding: EdgeInsets.zero,
-                                    onChanged: (value) => c.updateSettings(
-                                      values: {
-                                        'decorative_animation_enabled': value,
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            QinSectionTitle(c.text('记录与应用', 'Records and app')),
-                            QinPanel(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Text(
-                                    c.text(
-                                      '记录只保存在本机。卸载或清除应用数据后无法恢复。',
-                                      'Records stay on this device. Uninstalling or clearing app data removes them.',
+                                  QinPanel(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        groupTitle(
+                                          context,
+                                          Icons.language,
+                                          c.text('语言', 'Language'),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        LanguagePicker(c: c),
+                                        const SizedBox(height: 16),
+                                        const Divider(),
+                                        const SizedBox(height: 16),
+                                        groupTitle(
+                                          context,
+                                          Icons.school_outlined,
+                                          c.text('体验模式', 'Practice mode'),
+                                        ),
+                                        ModePicker(c: c, descriptions: true),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  OutlinedButton.icon(
-                                    onPressed:
-                                        c.engine != null && !c.engine!.ended
-                                        ? null
-                                        : () => Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (_) =>
-                                                  RecordHealthPage(c: c),
+                                  QinSectionTitle(c.text('声音', 'Sound')),
+                                  QinPanel(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        AudioVolumeControl(
+                                          c: c,
+                                          embedded: true,
+                                          icon: Icons.piano_outlined,
+                                          settingKey: 'gain_permille',
+                                          title: c.text(
+                                            '琴键与节拍',
+                                            'Keys and beats',
+                                          ),
+                                          sampleLabel: c.text(
+                                            '试听琴键',
+                                            'Test key sound',
+                                          ),
+                                          onSample:
+                                              !c.soundEnabled || !c.audioReady
+                                              ? null
+                                              : () async {
+                                                  try {
+                                                    await c.preview(
+                                                      0,
+                                                      true,
+                                                      pointer: -900,
+                                                    );
+                                                    await Future<void>.delayed(
+                                                      const Duration(
+                                                        milliseconds: 400,
+                                                      ),
+                                                    );
+                                                    await c.preview(
+                                                      0,
+                                                      false,
+                                                      pointer: -900,
+                                                    );
+                                                  } catch (_) {
+                                                    await c.stopPreview();
+                                                  }
+                                                },
+                                        ),
+                                        const SizedBox(height: 16),
+                                        const Divider(),
+                                        const SizedBox(height: 16),
+                                        AudioVolumeControl(
+                                          c: c,
+                                          embedded: true,
+                                          icon:
+                                              Icons.record_voice_over_outlined,
+                                          settingKey: 'speech_gain_permille',
+                                          description:
+                                              (c.capabilities['tts_locales']
+                                                          as List? ??
+                                                      [])
+                                                  .any(
+                                                    (tag) => '$tag'.startsWith(
+                                                      c.chinese ? 'zh' : 'en',
+                                                    ),
+                                                  )
+                                              ? null
+                                              : c.text(
+                                                  '本机暂无对应的本地语音，文字提示仍可使用。',
+                                                  'No local voice for this language. Text guidance remains available.',
+                                                ),
+                                          title: c.text(
+                                            '语音提示',
+                                            'Spoken guidance',
+                                          ),
+                                          sampleLabel: c.text(
+                                            '试听语音',
+                                            'Test spoken guidance',
+                                          ),
+                                          onSample:
+                                              c.settings['speech_enabled'] !=
+                                                      true ||
+                                                  c.settings['speech_gain_permille'] ==
+                                                      0 ||
+                                                  !(c.capabilities['tts_locales']
+                                                              as List? ??
+                                                          [])
+                                                      .any(
+                                                        (tag) =>
+                                                            '$tag'.startsWith(
+                                                              c.chinese
+                                                                  ? 'zh'
+                                                                  : 'en',
+                                                            ),
+                                                      )
+                                              ? null
+                                              : () => c.speak(
+                                                  c.text(
+                                                    '跟着提示，慢慢弹奏。准备好就开始。',
+                                                    'Follow the guidance and play at your own pace. Begin when you are ready.',
+                                                  ),
+                                                ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 24),
+                                  QinSectionTitle(c.text('显示', 'Display')),
+                                  QinPanel(
+                                    child: Column(
+                                      children: [
+                                        TextSizeControl(c: c),
+                                        const SizedBox(height: 8),
+                                        const Divider(),
+                                        const SizedBox(height: 8),
+                                        SwitchListTile(
+                                          secondary: const Icon(Icons.contrast),
+                                          value:
+                                              c.settings['high_contrast'] ==
+                                              true,
+                                          title: Text(
+                                            c.text('高对比显示', 'High contrast'),
+                                          ),
+                                          subtitle: Text(
+                                            c.text(
+                                              '增强黑白对比，突出边界。',
+                                              'Use stronger black-and-white contrast and clearer boundaries.',
                                             ),
                                           ),
-                                    icon: const Icon(Icons.fact_check_outlined),
-                                    label: Text(
-                                      c.text(
-                                        '记录完整性检查',
-                                        'Record integrity check',
-                                      ),
+                                          contentPadding: EdgeInsets.zero,
+                                          onChanged: (v) => c.updateSettings(
+                                            values: {
+                                              ...c.settings,
+                                              'high_contrast': v,
+                                            },
+                                          ),
+                                        ),
+                                        SwitchListTile(
+                                          secondary: const Icon(
+                                            Icons.auto_awesome_outlined,
+                                          ),
+                                          value:
+                                              c.settings['decorative_animation_enabled'] ==
+                                              true,
+                                          title: Text(
+                                            c.text(
+                                              '装饰动画',
+                                              'Decorative animations',
+                                            ),
+                                          ),
+                                          subtitle: Text(
+                                            c.text(
+                                              '可关闭摆锤等装饰运动。',
+                                              'Turn off decorative movement such as the pendulum.',
+                                            ),
+                                          ),
+                                          contentPadding: EdgeInsets.zero,
+                                          onChanged: (value) => c.updateSettings(
+                                            values: {
+                                              'decorative_animation_enabled':
+                                                  value,
+                                            },
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
-                                  const SizedBox(height: 16),
-                                  if (c.hasPendingSave)
-                                    Text(
-                                      c.text(
-                                        '请先在首页保存上次练习，再清除记录。',
-                                        'Save the pending practice from Home before clearing records.',
-                                      ),
-                                    ),
-                                  OutlinedButton.icon(
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: context.qin.error,
-                                      side: BorderSide(
-                                        color: context.qin.error,
-                                      ),
-                                    ),
-                                    onPressed:
-                                        c.hasPendingSave ||
-                                            c.engine != null && !c.engine!.ended
-                                        ? null
-                                        : () async {
-                                            if (await confirm(
-                                              context,
-                                              c.text(
-                                                '清除全部训练记录？',
-                                                'Clear all practice records?',
-                                              ),
-                                              c.text(
-                                                '练习记录、难度和教学进度会清除，语言与显示设置会保留。',
-                                                'Records, difficulty and tutorial progress will be cleared. Language and display settings stay.',
-                                              ),
-                                              confirmLabel: c.text(
-                                                '清除记录',
-                                                'Clear records',
-                                              ),
-                                              destructive: true,
-                                            )) {
-                                              try {
-                                                await c.clearPracticeRecords();
-                                              } catch (_) {
-                                                if (context.mounted) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            c.text(
-                                                              '暂时无法清除，请稍后重试。',
-                                                              'Unable to clear records. Please retry later.',
+                                  const SizedBox(height: 24),
+                                  QinSectionTitle(
+                                    c.text('记录与应用', 'Records and app'),
+                                  ),
+                                  QinPanel(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.stretch,
+                                      children: [
+                                        Text(
+                                          c.text(
+                                            '记录只保存在本机。卸载或清除应用数据后无法恢复。',
+                                            'Records stay on this device. Uninstalling or clearing app data removes them.',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 24),
+                                        QinOutlinedButton.icon(
+                                          onPressed:
+                                              c.engine != null &&
+                                                  !c.engine!.ended
+                                              ? null
+                                              : () => Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        RecordHealthPage(c: c),
+                                                  ),
+                                                ),
+                                          icon: const Icon(
+                                            Icons.fact_check_outlined,
+                                          ),
+                                          label: Text(
+                                            c.text(
+                                              '记录完整性检查',
+                                              'Record integrity check',
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        if (c.hasPendingSave)
+                                          Text(
+                                            c.text(
+                                              '请先在首页保存上次练习，再清除记录。',
+                                              'Save the pending practice from Home before clearing records.',
+                                            ),
+                                          ),
+                                        QinOutlinedButton.icon(
+                                          style: OutlinedButton.styleFrom(
+                                            foregroundColor: context.qin.error,
+                                            side: BorderSide(
+                                              color: context.qin.error,
+                                            ),
+                                          ),
+                                          onPressed:
+                                              c.hasPendingSave ||
+                                                  c.engine != null &&
+                                                      !c.engine!.ended
+                                              ? null
+                                              : () async {
+                                                  if (await confirm(
+                                                    context,
+                                                    c.text(
+                                                      '清除全部训练记录？',
+                                                      'Clear all practice records?',
+                                                    ),
+                                                    c.text(
+                                                      '练习记录、难度和教学进度会清除，语言与显示设置会保留。',
+                                                      'Records, difficulty and tutorial progress will be cleared. Language and display settings stay.',
+                                                    ),
+                                                    confirmLabel: c.text(
+                                                      '清除记录',
+                                                      'Clear records',
+                                                    ),
+                                                    destructive: true,
+                                                  )) {
+                                                    try {
+                                                      await c
+                                                          .clearPracticeRecords();
+                                                    } catch (_) {
+                                                      if (context.mounted) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              c.text(
+                                                                '暂时无法清除，请稍后重试。',
+                                                                'Unable to clear records. Please retry later.',
+                                                              ),
                                                             ),
                                                           ),
-                                                        ),
-                                                      );
-                                                }
-                                              }
-                                            }
-                                          },
-                                    icon: const Icon(Icons.delete_outline),
-                                    label: Text(
-                                      c.text('清除全部记录', 'Clear all records'),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextButton(
-                                    onPressed: () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => AboutPage(c: c),
-                                      ),
-                                    ),
-                                    child: Text(
-                                      c.text('关于本版本', 'About this version'),
+                                                        );
+                                                      }
+                                                    }
+                                                  }
+                                                },
+                                          icon: const Icon(
+                                            Icons.delete_outline,
+                                          ),
+                                          label: Text(
+                                            c.text(
+                                              '清除全部记录',
+                                              'Clear all records',
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
+                                        QinTextButton(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (_) => AboutPage(c: c),
+                                            ),
+                                          ),
+                                          child: Text(
+                                            c.text(
+                                              '关于本版本',
+                                              'About this version',
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -2782,11 +3048,11 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ),
                     ],
-                  ),
-                ),
-              ],
-            );
-          },
+                  );
+                },
+              ),
+            ),
+          ],
         ),
       ),
     ),
@@ -2840,7 +3106,10 @@ class AboutPage extends StatelessWidget {
   final AppController c;
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: PageTitle(c.text('关于本版本', 'About this version'))),
+    appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
+      title: PageTitle(c.text('关于本版本', 'About this version')),
+    ),
     body: QinPageList(
       children: [
         QinPanel(
@@ -2883,11 +3152,17 @@ class AboutPage extends StatelessWidget {
           ),
           style: Theme.of(context).textTheme.bodySmall,
         ),
-        TextButton.icon(
+        QinTextButton.icon(
           onPressed: () =>
               showLicensePage(context: context, applicationName: appName),
           icon: const Icon(Icons.description_outlined),
           label: Text(c.text('音色来源与许可', 'Sound credits and licenses')),
+        ),
+        const SizedBox(height: 16),
+        QinSectionTitle(c.text('舞蹈素材', 'Dance materials')),
+        SelectableText(
+          '${chineseDanceCourse.credits}\n\n${englishDanceCourse.credits}',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),
         QinStatus(

@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -41,12 +43,15 @@ class _TouchCheckPageState extends State<TouchCheckPage> {
         MediaQuery.sizeOf(context).width >= 600 &&
         !MediaQuery.of(context).accessibleNavigation;
     return Scaffold(
-      appBar: AppBar(title: PageTitle(c.text('双区配合', 'Two-zone coordination'))),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(c.text('双区配合', 'Two-zone coordination')),
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
           padding: const EdgeInsets.all(16),
-          child: FilledButton(
+          child: QinFilledButton(
             onPressed: ready && verified ? widget.onContinue : null,
             child: Text(c.text('完成检查，继续', 'Continue after check')),
           ),

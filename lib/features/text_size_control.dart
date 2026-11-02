@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -92,7 +94,7 @@ class _TextSizeControlState extends State<TextSizeControl> {
         ),
         Align(
           alignment: Alignment.centerRight,
-          child: TextButton.icon(
+          child: QinTextButton.icon(
             key: const ValueKey('text-size-follow-system'),
             onPressed: saving || custom == null ? null : () => save(null),
             icon: Icon(custom == null ? Icons.check : Icons.refresh, size: 20),

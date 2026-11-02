@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -48,7 +50,10 @@ class _SongLibraryPageState extends State<SongLibraryPage> {
     final c = widget.c;
     final songs = c.content.songsFor(widget.taskId);
     return Scaffold(
-      appBar: AppBar(title: PageTitle(c.text('选择旋律', 'Choose a melody'))),
+      appBar: AppBar(
+        leading: Navigator.canPop(context) ? const QinBackButton() : null,
+        title: PageTitle(c.text('选择旋律', 'Choose a melody')),
+      ),
       body: QinPageList(
         children: [
           QinSectionTitle(
@@ -73,19 +78,6 @@ class _SongLibraryPageState extends State<SongLibraryPage> {
             ),
             const SizedBox(height: 12),
           ],
-          const SizedBox(height: 8),
-          ExpansionTile(
-            title: Text(c.text('内容与来源', 'Content and credits')),
-            children: [
-              Text(
-                c.text(
-                  '以上为项目原创短旋律练习，钢琴声音采用已署名采样，当前用于内部演示。',
-                  'These short exercises are project original, using credited piano samples for internal demonstration.',
-                ),
-                style: Theme.of(context).textTheme.bodySmall,
-              ),
-            ],
-          ),
         ],
       ),
     );

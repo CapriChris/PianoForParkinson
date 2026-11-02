@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 
-/// App text size is relative to the device's text scaling.
+/// App 100% uses the previous 90% baseline and follows device text scaling.
 class AppTextScaler extends TextScaler {
   const AppTextScaler(this.system, this.percent);
   final TextScaler system;
   final int percent;
 
   @override
-  double scale(double fontSize) => system.scale(fontSize) * percent / 100;
+  double scale(double fontSize) => system.scale(fontSize) * .9 * percent / 100;
 
   @override
   double get textScaleFactor => scale(1);

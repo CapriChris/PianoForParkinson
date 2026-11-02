@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "name": "balance-six-part-1.mp4",
+      "source_name": "第一部分.mp4",
+      "bytes": 34614645,
+      "sha256": "c4d0b3d534eeea941683167c488042b373d81573ebbd29e7914cfb6d9048488b"
+    },
+    {
+      "name": "balance-six-part-2.mp4",
+      "source_name": "第二部分.mp4",
+      "bytes": 173248152,
+      "sha256": "6adc1436249496af22e4d16c8b5009df8ed103af509523bc66fc261114d7591c"
+    },
+    {
+      "name": "balance-six-part-3.mp4",
+      "source_name": "第三部分.mp4",
+      "bytes": 12174975,
+      "sha256": "b094dd7196351d154f143f7891f7fd99a89aaba62f5e6ab69f89e3760134532f"
+    },
+    {
+      "name": "fandango-lesson-4.webm",
+      "source_name": null,
+      "bytes": 344420928,
+      "sha256": "6ccd78b931591ae48918679da681f2631211fc4503dbdae08615b2b53dd74cb7"
+    }
+  ]
+}

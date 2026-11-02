@@ -72,33 +72,33 @@ void main() {
       double scale() =>
           MediaQuery.textScalerOf(tester.element(find.byType(SettingsPage)))
               .scale(20);
-      expect(scale(), closeTo(25, .01));
+      expect(scale(), closeTo(22.5, .01));
       expect(tester.widget<Slider>(sliderFinder).min, 80);
       expect(tester.widget<Slider>(sliderFinder).max, 120);
       expect(tester.widget<Slider>(sliderFinder).value, 100);
       tester.widget<Slider>(sliderFinder).onChanged!(110);
       await tester.pumpAndSettle();
-      expect(scale(), closeTo(27.5, .01));
+      expect(scale(), closeTo(24.75, .01));
       tester.widget<Slider>(sliderFinder).onChangeEnd!(110);
       await tester.pumpAndSettle();
-      expect(c.settings['text_size_percent_v3'], 110);
+      expect(c.settings['text_size_percent_v4'], 110);
       expect(tester.takeException(), isNull);
       final follow = find.byKey(const ValueKey('text-size-follow-system'));
       await tester.ensureVisible(follow);
       await tester.pumpAndSettle();
       await tester.tap(follow);
       await tester.pumpAndSettle();
-      expect(c.settings['text_size_percent_v3'], isNull);
-      expect(scale(), closeTo(25, .01));
+      expect(c.settings['text_size_percent_v4'], isNull);
+      expect(scale(), closeTo(22.5, .01));
       await tester.ensureVisible(sliderFinder);
       await tester.pumpAndSettle();
       final sliderRect = tester.getRect(sliderFinder);
       await tester.tapAt(Offset(sliderRect.left + 38, sliderRect.center.dy));
       await tester.pumpAndSettle();
-      expect(c.settings['text_size_percent_v3'], lessThan(100));
+      expect(c.settings['text_size_percent_v4'], lessThan(100));
       expect(
         scale(),
-        closeTo(25 * c.settings['text_size_percent_v3'] / 100, .01),
+        closeTo(22.5 * c.settings['text_size_percent_v4'] / 100, .01),
       );
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox());
@@ -132,10 +132,15 @@ void main() {
           }),
         };
       final c = AppController(repository: repo)..initialized = true;
-      expect(c.textScalePercent, 100);
+      expect(c.textScalePercent, 111);
       repo.profile['settings_json'] = canonical({
         ...c.settings,
         'text_size_percent_v2': 110,
+      });
+      expect(c.textScalePercent, 111);
+      repo.profile['settings_json'] = canonical({
+        ...c.settings,
+        'text_size_percent_v3': 90,
       });
       expect(c.textScalePercent, 100);
       await c.saveTextScale(null);

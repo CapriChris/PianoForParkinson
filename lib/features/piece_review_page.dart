@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -85,79 +87,80 @@ class _PieceReviewCardState extends State<PieceReviewCard> {
       final foreground = contrast || !available
           ? context.qin.ink
           : Colors.white;
-      return Material(
-        color: background.withValues(
-          alpha: contrast ? 1 : widget.backgroundOpacity,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-          side: BorderSide(
-            color: contrast || !available ? context.qin.line : background,
+      return QinInkWell(
+        surfaceBuilder: (surface) => Material(
+          color: background.withValues(
+            alpha: contrast ? 1 : widget.backgroundOpacity,
           ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+            side: BorderSide(
+              color: contrast || !available ? context.qin.line : background,
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: surface,
         ),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          key: const ValueKey('open-piece-review'),
-          onTap: available ? open : null,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
+        key: const ValueKey('open-piece-review'),
+        onTap: available ? open : null,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: foreground.withValues(alpha: contrast ? .08 : .15),
+                ),
+                child: Icon(Icons.graphic_eq, color: foreground),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      c.text('逐音回顾', 'Performance review'),
+                      style: Theme.of(context).textTheme.titleSmall
+                          ?.copyWith(color: foreground),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      available
+                          ? c.text(
+                              '查看每个音符的演奏情况',
+                              'Review your performance note by note',
+                            )
+                          : c.text(
+                              '旧记录未保存原谱，无法还原完整乐谱',
+                              'The original score was not saved with this older record',
+                            ),
+                      style: Theme.of(context).textTheme.bodySmall
+                          ?.copyWith(color: foreground),
+                    ),
+                  ],
+                ),
+              ),
+              if (available) ...[
+                const SizedBox(width: 12),
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: 36,
+                  height: 36,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    color: foreground.withValues(alpha: contrast ? .08 : .15),
+                    border: Border.all(color: foreground),
                   ),
-                  child: Icon(Icons.graphic_eq, color: foreground),
+                  child: Icon(Icons.chevron_right, color: foreground),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        c.text('逐音回顾', 'Performance review'),
-                        style: Theme.of(context).textTheme.titleSmall
-                            ?.copyWith(color: foreground),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        available
-                            ? c.text(
-                                '查看每个音符的演奏情况',
-                                'Review your performance note by note',
-                              )
-                            : c.text(
-                                '旧记录未保存原谱，无法还原完整乐谱',
-                                'The original score was not saved with this older record',
-                              ),
-                        style: Theme.of(context).textTheme.bodySmall
-                            ?.copyWith(color: foreground),
-                      ),
-                    ],
-                  ),
-                ),
-                if (available) ...[
-                  const SizedBox(width: 12),
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(color: foreground),
-                    ),
-                    child: Icon(Icons.chevron_right, color: foreground),
-                  ),
-                ],
               ],
-            ),
+            ],
           ),
         ),
       );
     }
-    return InkWell(
+    return QinInkWell(
       key: const ValueKey('open-piece-review'),
       onTap: piece == null ? null : open,
       borderRadius: BorderRadius.circular(18),
@@ -559,7 +562,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
       title: Text(title),
       content: Text(description),
       actions: [
-        TextButton(
+        QinTextButton(
           onPressed: () => Navigator.pop(context),
           child: Text(c.text('知道了', 'Got it')),
         ),
@@ -586,7 +589,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   Text(title),
-                  IconButton(
+                  QinIconButton(
                     key: ValueKey('review-$id-help'),
                     tooltip: c.text('$title：说明', '$title: help'),
                     onPressed: () => optionHelp(title, description),
@@ -681,7 +684,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
               ),
               Padding(
                 padding: const EdgeInsets.all(16),
-                child: FilledButton(
+                child: QinFilledButton(
                   onPressed: () => Navigator.pop(context),
                   child: Text(c.text('完成', 'Done')),
                 ),
@@ -764,7 +767,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
       ),
       Row(
         children: [
-          IconButton(
+          QinIconButton(
             key: const ValueKey('review-play'),
             tooltip: c.text(
               playing ? '暂停回放' : '播放回放',
@@ -834,13 +837,14 @@ class _PieceReviewPageState extends State<PieceReviewPage>
   Widget build(BuildContext context) => Scaffold(
     extendBodyBehindAppBar: true,
     appBar: AppBar(
+      leading: Navigator.canPop(context) ? const QinBackButton() : null,
       backgroundColor: context.qin.highContrast
           ? context.qin.background
           : Colors.transparent,
       surfaceTintColor: Colors.transparent,
       title: PageTitle(c.text('乐谱回顾', 'Score review')),
       actions: [
-        IconButton(
+        QinIconButton(
           key: const ValueKey('review-options'),
           tooltip: c.text('回放设置', 'Replay settings'),
           onPressed: busy ? null : options,
@@ -878,7 +882,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
                       const SizedBox(height: 12),
                       QinActionRow(
                         children: [
-                          OutlinedButton.icon(
+                          QinOutlinedButton.icon(
                             key: const ValueKey('review-user-mode'),
                             style: OutlinedButton.styleFrom(
                               backgroundColor: userMode
@@ -891,7 +895,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
                             icon: const Icon(Icons.touch_app_outlined),
                             label: Text(c.text('我的演奏', 'My performance')),
                           ),
-                          OutlinedButton.icon(
+                          QinOutlinedButton.icon(
                             key: const ValueKey('review-demo-mode'),
                             style: OutlinedButton.styleFrom(
                               backgroundColor: !userMode

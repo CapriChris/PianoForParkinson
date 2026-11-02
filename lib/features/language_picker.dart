@@ -1,3 +1,5 @@
+import '../ui/qin_press.dart';
+
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
@@ -14,7 +16,7 @@ class LanguagePicker extends StatelessWidget {
       for (final entry in {'zh-Hans': '简体中文', 'en': 'English'}.entries)
         Semantics(
           selected: c.locale == entry.key,
-          child: OutlinedButton.icon(
+          child: QinOutlinedButton.icon(
             key: ValueKey('language-${entry.key}'),
             style: OutlinedButton.styleFrom(
               backgroundColor: c.locale == entry.key ? context.qin.soft : null,
