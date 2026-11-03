@@ -1,19 +1,18 @@
 # 琴伴 · Android 内部演示
 
-当前本地版本 **0.1.59+60**，提供主应用通用 APK。分类栏、钢琴曲目列表和计划表单按可用空间调整布局，修复琴键粒子被相邻琴键遮挡的问题。四个舞蹈视频随 APK 打包，可直接离线播放。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md) · [未来开发计划](docs/未来开发计划.md)
+## 下载 0.1.59（构建 60）
 
-GitHub已发布版本仍是 **0.1.56+57**：[下载与发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [0.1.56更新说明](docs/2026-11-02-0.1.56-更新说明.md) · [历史构建与验证](validation/release-0.1.56.md)。内部测试版完整测试套件尚未通过。
+当前 Android 内测版已发布到 GitHub。通用 APK 约 631 MiB，支持 ARM64、ARMv7 和 x86_64，最低支持 Android 7.0（API 24）。四段舞蹈视频随包提供，可离线播放。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.59/qinban-0.1.59-android-universal.apk) · [发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.59) · [SHA-256 校验文件](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.59/SHA256SUMS-0.1.59.txt)
 
-工作区新增 AI 训练助手，可从首页、练习完成页或历史详情进入。未配置在线服务的构建支持本机摘要和常用帮助。接入真实问答需要配置琴伴 HTTPS 服务和模型账号。[AI 训练助手设计与接入](docs/2026-11-03-AI训练助手设计.md#8-运行与接入)
+包名为 `com.pianoforparkinson.piano_practice`。已安装相同包名及签名的用户可以直接覆盖安装，保留本机训练记录。此包沿用开发签名，用于内部测试。静态检查及 11 项互联和 AI 助手专项测试通过，完整套件仍有既有失败项，此构建尚未在真机上复验。
 
-| 安装包 | 用途 |
-| --- | --- |
-| [通用版](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.56/qinban-0.1.56-android-universal.apk) | 新安装或更新原主应用，包名 `com.pianoforparkinson.piano_practice` |
-| [旧预览版升级包](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.56/qinban-0.1.56-android-universal-preview-update.apk) | 覆盖此前 isolated 预览包，包名以 `.validation` 结尾 |
+## 本版功能
 
-请选择与原应用包名相同的安装包直接覆盖，保留本机记录；不要先卸载。两个包均包含ARM64、ARMv7和x86_64架构及四个离线视频。
+- **AI 训练助手**可从首页、练习完成页和历史详情进入。助手根据问题查找本机相关记录，经授权后才将训练摘要发给在线服务。可在回答下方查看引用。流式输出需要网关运行新版代码。[设计与接入说明](docs/2026-11-03-AI训练助手设计.md)
+- **双端互联**通过设置中的「云端服务联调」进入。使用 Web 联调账号和测试患者，验证患者绑定、训练记录同步及面部分析等接口。[双端交接说明](CROSS_CLIENT_INTEGRATION_HANDOFF.md) · [接口协议](cross_client_openapi_integration.json)
+- **布局适配**覆盖练习与记录分类、钢琴曲目列表和计划表单，并修复相邻琴键遮挡按键粒子的问题。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md)
 
-上表为 GitHub 上的 0.1.56 历史安装包。0.1.57 的 host-pending 下载原型已停用。0.1.58 起恢复随包视频。[0.1.58 构建记录](validation/bundled-videos-0.1.58.md)
+旧版安装包仍可在历史 Release 查阅。视频按需下载列入未来开发计划。[0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [未来开发计划](docs/未来开发计划.md)
 
 ## 0.1.56 舞蹈、训练计划与统一记录
 
@@ -24,7 +23,7 @@ GitHub已发布版本仍是 **0.1.56+57**：[下载与发布说明](https://gith
 - Android标准通知权限、通知渠道与精确定时状态检查；用户主动点击授权入口，返回后重新调度。未来30天安排在打开/恢复应用时刷新，未完成各品牌真机送达验证。
 - 页面插画、半透明内容背景、统一按压动画和字号基线调整；课程来源集中到关于页。CausalNet仅完成桌面检查，摄像头和模型尚未接入App。
 
-下面的旧版本章节保留历史过程；当前行为以本节、更新说明及源码为准。
+下文保留旧版本的功能与验证记录。
 
 ## 从仓库构建
 
@@ -38,9 +37,15 @@ flutter run -d <Android设备ID>
 flutter build apk --release
 ```
 
-构建旧预览版升级包时追加 `--dart-define=ISOLATED_TEST_PACKAGE=true`。视频二进制、安装包、数据库、密钥及本地构建缓存不提交到Git；资源恢复脚本会核对字节数与SHA-256。当前构建沿用项目的开发签名，不是应用商店正式发布签名。
+运行或构建双端联调版时，添加以下参数。将示例网关地址替换成自己的 HTTPS 地址。Web 互联的 API 地址在 App 的「云端服务联调」页填写。
 
-当前开发环境使用 Flutter 3.47.7、Dart 3.13.5 和 JDK 21。历史记录中指向 `../环境配置`、`../设计修订` 和 `../releases` 的链接属于原工作目录，不包含在此仓库中；本地构建和验证产物也未上传。
+```powershell
+flutter build apk --release --dart-define=PD_CLOUD_INTEGRATION=true --dart-define=QIN_AI_GATEWAY=https://ai.example.com/ --dart-define=QIN_AI_PROVIDER_NAME=DeepSeek
+```
+
+Android Studio 调试可将相同的三个参数填入 Flutter 运行配置的 **Additional run args**。修改参数后重新启动会话。视频文件、安装包、数据库、密钥及本地构建缓存保存在 Git 源码之外。
+
+当前开发环境使用 Flutter 3.47.7、Dart 3.13.5 和 JDK 21。旧文档中指向 `../环境配置`、`../设计修订` 和 `../releases` 的链接属于原工作目录。发布附件在 GitHub Release 中下载。
 
 ## 0.1.53 首次使用引导与偏好
 
@@ -372,7 +377,7 @@ schema 和原参数配置仍为 v1，不修改上游数值，不需要数据库�
 
 已实现：免登录首次引导、简体中文／英文、两种体验模式、真实钢琴采样、三节入门教学、G1 旋律记忆、G2 弹奏与等待、G3 位置与图形及试玩、S1 逐音歌曲、S2 节奏练习、M1 交替按键、M2 双区配合、时值提示与判定、组间规则自适应、暂停／帮助／降低难度／退出、结果与本机记录、同条件趋势及指标切换、单条删除及清除记录、语言／独立音量／高对比设置。
 
-Android 原生 Kotlin 使用 SoundPool；数据库使用 sqflite／SQLite，采用设计附件的表、外键、唯一有效尝试及删除级联。数据库位于应用私有 no-backup 目录；release 不声明网络权限。
+Android 原生 Kotlin 使用 SoundPool。数据库使用 sqflite／SQLite，采用设计附件的表、外键、唯一有效尝试及删除级联。练习数据库位于应用私有 no-backup 目录，在线问答和双端互联通过 HTTPS 访问各自的服务。
 
 ## 构建与运行
 
