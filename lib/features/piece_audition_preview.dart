@@ -55,76 +55,80 @@ class PieceAuditionPreview extends StatelessWidget {
               const SizedBox(height: 12),
               SizedBox(
                 height: math.max(76, scale.scale(24) + 44),
-                child: Row(
-                  children: [
-                    for (var key = 0; key < player.piece.keyCount; key++) ...[
-                      if (key > 0) const SizedBox(width: 6),
-                      Expanded(
-                        child: Semantics(
-                          label: chinese
-                              ? '预览琴键 ${player.piece.keyLabel(key)}'
-                              : 'Preview key ${player.piece.keyLabel(key)}',
-                          selected: playing && player.targetKey == key,
-                          child: KeyPressFeedback(
-                            key: ValueKey('preview-feedback-$key'),
-                            pressed: playing && player.targetKey == key,
-                            enabled: player.mode == ScrollPieceMode.running,
-                            pulse: playing && player.targetKey == key
-                                ? (player, player.currentIndex)
-                                : null,
-                            color: NoteColors.degree(player.piece.keyStep(key))
-                                .fill,
-                            child: Container(
-                              key: ValueKey('preview-key-$key'),
-                              decoration: BoxDecoration(
-                                color: playing && player.targetKey == key
-                                    ? NoteColors.degree(
-                                        player.piece.keyStep(key),
-                                      ).pressed
-                                    : palette.soft,
-                                border: Border.all(
-                                  color: palette.highContrast
-                                      ? palette.ink
-                                      : NoteColors.degree(
+                child: KeyParticleLayer(
+                  child: Row(
+                    children: [
+                      for (var key = 0; key < player.piece.keyCount; key++) ...[
+                        if (key > 0) const SizedBox(width: 6),
+                        Expanded(
+                          child: Semantics(
+                            label: chinese
+                                ? '预览琴键 ${player.piece.keyLabel(key)}'
+                                : 'Preview key ${player.piece.keyLabel(key)}',
+                            selected: playing && player.targetKey == key,
+                            child: KeyPressFeedback(
+                              key: ValueKey('preview-feedback-$key'),
+                              pressed: playing && player.targetKey == key,
+                              enabled: player.mode == ScrollPieceMode.running,
+                              pulse: playing && player.targetKey == key
+                                  ? (player, player.currentIndex)
+                                  : null,
+                              color: NoteColors.degree(
+                                player.piece.keyStep(key),
+                              ).fill,
+                              child: Container(
+                                key: ValueKey('preview-key-$key'),
+                                decoration: BoxDecoration(
+                                  color: playing && player.targetKey == key
+                                      ? NoteColors.degree(
                                           player.piece.keyStep(key),
-                                        ).fill,
-                                  width: 2,
+                                        ).pressed
+                                      : palette.soft,
+                                  border: Border.all(
+                                    color: palette.highContrast
+                                        ? palette.ink
+                                        : NoteColors.degree(
+                                            player.piece.keyStep(key),
+                                          ).fill,
+                                    width: 2,
+                                  ),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    FittedBox(
-                                      fit: BoxFit.scaleDown,
-                                      child: NoteLabel(
-                                        player.piece.keyLabel(key),
-                                        style: TextStyle(
-                                          fontSize: 24,
-                                          fontWeight: FontWeight.w700,
-                                          color:
-                                              playing && player.targetKey == key
-                                              ? palette.highContrast
-                                                    ? palette.ink
-                                                    : NoteColors.degree(
-                                                        player.piece.keyStep(
-                                                          key,
-                                                        ),
-                                                      ).ink
-                                              : palette.ink,
+                                child: Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: NoteLabel(
+                                          player.piece.keyLabel(key),
+                                          style: TextStyle(
+                                            fontSize: 24,
+                                            fontWeight: FontWeight.w700,
+                                            color:
+                                                playing &&
+                                                    player.targetKey == key
+                                                ? palette.highContrast
+                                                      ? palette.ink
+                                                      : NoteColors.degree(
+                                                          player.piece.keyStep(
+                                                            key,
+                                                          ),
+                                                        ).ink
+                                                : palette.ink,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
             ],

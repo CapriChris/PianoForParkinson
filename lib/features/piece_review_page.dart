@@ -145,15 +145,7 @@ class _PieceReviewCardState extends State<PieceReviewCard> {
               ),
               if (available) ...[
                 const SizedBox(width: 12),
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: foreground),
-                  ),
-                  child: Icon(Icons.chevron_right, color: foreground),
-                ),
+                QinCircleArrow(radius: 18, outlineColor: foreground),
               ],
             ],
           ),

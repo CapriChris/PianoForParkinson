@@ -184,6 +184,32 @@ void main() {
     );
   }
 
+  testWidgets('history labels fit at 360dp and shorten when space runs out', (
+    tester,
+  ) async {
+    final c = AppController(repository: CategoryHistoryMemory());
+    setup(tester, c, const Size(360, 720), 'zh-Hans', 1);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: qinTheme(highContrast: false),
+        home: Scaffold(body: HistoryList(c: c)),
+      ),
+    );
+    final chip = find.byKey(const ValueKey('history-category-exercises'));
+    Finder label(String text) =>
+        find.descendant(of: chip, matching: find.text(text));
+    await tester.pumpAndSettle();
+    expect(label('钢琴练习'), findsOneWidget);
+    tester.view.physicalSize = const Size(320, 720);
+    await tester.pumpAndSettle();
+    expect(label('练习'), findsOneWidget);
+    tester.view.physicalSize = const Size(360, 720);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.5;
+    await tester.pumpAndSettle();
+    expect(label('练习'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('an empty history category finishes paging at large text', (
     tester,
   ) async {

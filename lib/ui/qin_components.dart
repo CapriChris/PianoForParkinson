@@ -236,30 +236,41 @@ class QinCategoryBar extends StatelessWidget {
     required this.selected,
     required this.onSelected,
     required this.keyPrefix,
-    this.forceCompact = false,
   });
   final List<(String, String, String)> entries;
   final String selected, keyPrefix;
   final ValueChanged<String> onSelected;
-  final bool forceCompact;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, bounds) {
-      final compact =
-          forceCompact ||
-          bounds.maxWidth < 340 ||
-          MediaQuery.textScalerOf(context).scale(1) > 1.25;
+      const chipInset = 3.0;
+      const labelInset = 1.0;
       final labelStyle = Theme.of(context).textTheme.bodySmall
           ?.copyWith(fontWeight: FontWeight.w600);
+      final scaler = MediaQuery.textScalerOf(context);
+      final labelWidth =
+          bounds.maxWidth / entries.length - 2 * (chipInset + labelInset);
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: scaler,
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 1,
+      );
+      final useFullLabels = entries.every((entry) {
+        painter.text = TextSpan(text: entry.$2, style: labelStyle);
+        painter.layout();
+        return painter.width <= labelWidth;
+      });
+      painter.dispose();
       final labelHeight =
-          MediaQuery.textScalerOf(context).scale(labelStyle?.fontSize ?? 18) *
+          scaler.scale(labelStyle?.fontSize ?? 18) *
           (labelStyle?.height ?? 1.4);
       return Row(
         children: [
           for (final entry in entries)
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 3),
+                padding: const EdgeInsets.symmetric(horizontal: chipInset),
                 child: Tooltip(
                   message: entry.$2,
                   child: ChoiceChip(
@@ -269,11 +280,16 @@ class QinCategoryBar extends StatelessWidget {
                       height: labelHeight,
                       child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text(compact ? entry.$3 : entry.$2, maxLines: 1),
+                        child: Text(
+                          useFullLabels ? entry.$2 : entry.$3,
+                          maxLines: 1,
+                        ),
                       ),
                     ),
                     labelStyle: labelStyle,
-                    labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                    labelPadding: const EdgeInsets.symmetric(
+                      horizontal: labelInset,
+                    ),
                     padding: const EdgeInsets.symmetric(vertical: 10),
                     selected: selected == entry.$1,
                     showCheckmark: false,
@@ -724,20 +740,34 @@ class QinNavigationBar extends StatelessWidget {
 
 /// Decorative direction indicator for an already-tappable card or button.
 class QinCircleArrow extends StatelessWidget {
-  const QinCircleArrow({super.key, this.radius = 16});
+  const QinCircleArrow({super.key, this.radius = 16, this.outlineColor});
   final double radius;
+  final Color? outlineColor;
   @override
-  Widget build(BuildContext context) => ExcludeSemantics(
-    child: CircleAvatar(
-      radius: radius,
-      backgroundColor: context.qin.highContrast
-          ? context.qin.surface
-          : context.qin.soft,
-      child: Icon(
-        Icons.chevron_right,
-        size: radius + 4,
-        color: context.qin.ink,
-      ),
-    ),
-  );
+  Widget build(BuildContext context) {
+    final outline = outlineColor;
+    return ExcludeSemantics(
+      child: outline != null
+          ? Container(
+              width: radius * 2,
+              height: radius * 2,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: outline),
+              ),
+              child: Icon(Icons.chevron_right, color: outline),
+            )
+          : CircleAvatar(
+              radius: radius,
+              backgroundColor: context.qin.highContrast
+                  ? context.qin.surface
+                  : context.qin.soft,
+              child: Icon(
+                Icons.chevron_right,
+                size: radius + 4,
+                color: context.qin.ink,
+              ),
+            ),
+    );
+  }
 }

@@ -118,14 +118,18 @@ void main() {
       },
     );
     // Also exercise the date boundary: yesterday's alarm can still be pending.
-    var now = DateTime.utc(2026, 11, 2, 15, 59, 30);
+    // The plugin also checks the real system clock. Keep this midnight fixture
+    // in the future instead of letting a fixed calendar date expire.
+    final future = DateTime.now().toUtc().add(const Duration(days: 2));
+    final date = DateTime.utc(future.year, future.month, future.day);
+    var now = date.add(const Duration(hours: 15, minutes: 59, seconds: 30));
     final service = PlanReminders(clock: () => now);
     final store = TrainingScheduleRepository(db, 'p');
     final plan = <String, dynamic>{
       'id': 'overdue',
       'title': 'Pending reminder',
       'kind': 'dance',
-      'start': '2026-11-02',
+      'start': date.toIso8601String().substring(0, 10),
       'end': null,
       'days': <int>[],
       'target_type': 'count',
@@ -144,7 +148,7 @@ void main() {
     pending = [
       {'id': scheduled['id'], 'payload': scheduled['payload']},
     ];
-    now = DateTime.utc(2026, 11, 2, 16, 0, 15);
+    now = date.add(const Duration(hours: 16, seconds: 15));
     calls.clear();
     await service.sync(store);
     expect(calls.where((c) => c.method == 'cancel'), isEmpty);

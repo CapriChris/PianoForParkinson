@@ -13,6 +13,7 @@ import '../domain/history.dart' show recordDateLabel;
 import '../ui/metric_visuals.dart' show MetricRingPainter;
 import '../ui/qin_components.dart';
 import '../ui/qin_theme.dart';
+import 'assistant_page.dart';
 import 'dance_player_page.dart';
 
 class DanceResultPage extends StatefulWidget {
@@ -22,11 +23,13 @@ class DanceResultPage extends StatefulWidget {
     required this.record,
     this.saveRecord,
     this.alreadySaved = false,
+    this.showAssistant = true,
   });
   final AppController c;
   final Json record;
   final Future<void> Function(Json)? saveRecord;
   final bool alreadySaved;
+  final bool showAssistant;
   @override
   State<DanceResultPage> createState() => _DanceResultPageState();
 }
@@ -409,6 +412,21 @@ class _DanceResultPageState extends State<DanceResultPage> {
                   ),
                   const SizedBox(height: 16),
                   summary(parts),
+                  if (saved &&
+                      widget.showAssistant &&
+                      r['session_id'] is String) ...[
+                    const SizedBox(height: 12),
+                    AssistantReviewCard(
+                      c: c,
+                      recordId: r['session_id'] as String,
+                      title:
+                          (r[c.chinese ? 'title_zh' : 'title_en'] ??
+                                  r['title'] ??
+                                  c.text('舞蹈跟练', 'Dance practice'))
+                              as String,
+                      date: widget.alreadySaved ? date?.split(' ').first : null,
+                    ),
+                  ],
                   for (final p in parts) ...[
                     const SizedBox(height: 12),
                     QinPanel(

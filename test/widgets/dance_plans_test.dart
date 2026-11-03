@@ -186,6 +186,39 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Checkbox), findsWidgets);
     final toolbar = find.byKey(const ValueKey('plan-selection-toolbar'));
+    final selectAll = find.text('全选');
+    final count = find.text('已选 1 项');
+    final cancel = find.text('取消');
+    final delete = find.text('删除');
+    for (final label in [selectAll, count, cancel, delete]) {
+      expect(tester.getRect(toolbar).contains(tester.getCenter(label)), isTrue);
+      expect(label.hitTestable(), findsOneWidget);
+    }
+    expect(
+      tester.getRect(cancel).top,
+      greaterThan(tester.getRect(count).bottom),
+    );
+
+    tester.view.physicalSize = const Size(760, 640);
+    await tester.pumpAndSettle();
+    expect(
+      tester.getCenter(count).dx,
+      closeTo(tester.getCenter(toolbar).dx, 1),
+    );
+    for (final label in [selectAll, cancel, delete]) {
+      expect(
+        tester.getCenter(label).dy,
+        closeTo(tester.getCenter(count).dy, 1),
+      );
+    }
+    expect(
+      tester.getRect(selectAll).right,
+      lessThan(tester.getRect(count).left),
+    );
+    expect(tester.getRect(cancel).right, lessThan(tester.getRect(delete).left));
+
+    tester.view.physicalSize = const Size(320, 640);
+    await tester.pumpAndSettle();
     final toolbarBounds = tester.getRect(toolbar);
     await tester.drag(scroll, const Offset(0, -120));
     await tester.pumpAndSettle();
@@ -253,6 +286,43 @@ void main() {
     await tester.tap(expired);
     await tester.pumpAndSettle();
     expect(find.byType(PlanEditor), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('target row fits 360dp when the controls need less room', (
+    tester,
+  ) async {
+    final c = AppController();
+    addTearDown(c.dispose);
+    mocks(tester, const Size(360, 844), 'zh-Hans', 1, c);
+    final theme = qinTheme(highContrast: false);
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme.copyWith(
+          // Test glyphs are square. Model the narrower digits in a phone font.
+          textTheme: theme.textTheme.copyWith(
+            bodyLarge: theme.textTheme.bodyLarge!.copyWith(fontSize: 11),
+          ),
+        ),
+        home: PlanEditor(c: c),
+      ),
+    );
+    final label = find.text('目标');
+    final name = find.byType(TextField).first;
+    final input = find.byKey(const ValueKey('plan-target-input'));
+    final minus = find.byKey(const ValueKey('plan-target-decrease'));
+    await tester.pumpAndSettle();
+    expect(tester.getCenter(label).dy, closeTo(tester.getCenter(input).dy, 1));
+    expect(tester.getRect(minus).left, closeTo(tester.getRect(name).left, 2));
+
+    tester.view.physicalSize = const Size(320, 844);
+    await tester.pumpAndSettle();
+    expect(tester.getRect(label).bottom, lessThan(tester.getRect(input).top));
+
+    tester.view.physicalSize = const Size(360, 844);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.8;
+    await tester.pumpAndSettle();
+    expect(tester.getRect(label).bottom, lessThan(tester.getRect(input).top));
     expect(tester.takeException(), isNull);
   });
 
@@ -619,6 +689,50 @@ void main() {
       expect(selected!.$2, preset.value);
     });
   }
+  testWidgets(
+    'custom weekday chips fill seven equal slots at different widths',
+    (tester) async {
+      final c = AppController();
+      addTearDown(c.dispose);
+      mocks(tester, const Size(320, 720), 'en', 2, c);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: qinTheme(highContrast: false),
+          home: PlanRepeatPage(c: c, mode: 'custom', days: const {1, 7}),
+        ),
+      );
+      final chips = [
+        for (var day = 1; day <= 7; day++)
+          find.byKey(ValueKey('repeat-day-$day')),
+      ];
+      var previousWidth = 0.0;
+      for (final width in [320.0, 420.0, 760.0]) {
+        tester.view.physicalSize = Size(width, 720);
+        await tester.pumpAndSettle();
+        await tester.scrollUntilVisible(chips.first, 80);
+        await tester.pumpAndSettle();
+        final first = tester.getRect(chips.first);
+        expect(first.width, greaterThan(previousWidth));
+        for (final chip in chips) {
+          final bounds = tester.getRect(chip);
+          expect(bounds.top, closeTo(first.top, 1));
+          expect(bounds.width, closeTo(first.width, 1));
+          final painted = find
+              .descendant(of: chip, matching: find.byType(Material))
+              .first;
+          expect(tester.getRect(painted).width, closeTo(first.width, 1));
+        }
+        expect(tester.getRect(chips.last).right, lessThanOrEqualTo(width));
+        expect(tester.takeException(), isNull);
+        previousWidth = first.width;
+      }
+      await tester.ensureVisible(chips.last);
+      await tester.pumpAndSettle();
+      await tester.tap(chips.last);
+      await tester.pumpAndSettle();
+      expect(tester.widget<FilterChip>(chips.last).selected, isFalse);
+    },
+  );
   for (final locale in ['zh-Hans', 'en']) {
     for (final scale in [1.0, 2.0]) {
       testWidgets('dance and plan form fit 320dp $locale $scale', (

@@ -7,6 +7,7 @@ import '../data/content_repository.dart';
 import '../data/practice_repository.dart';
 import '../data/training_schedule_repository.dart';
 import '../platform/plan_reminders.dart';
+import '../platform/assistant_gateway.dart';
 import '../domain/contracts.dart';
 import '../domain/cognitive_tasks.dart';
 import '../domain/intro_lessons.dart';
@@ -18,6 +19,9 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final content = ContentRepository();
   final PracticeRepository repository;
   final platform = PlatformService();
+  final AssistantGateway assistant;
+  int _assistantConsentRevision = 0;
+  bool _assistantRevoking = false;
   final previewInterruptions = ValueNotifier<int>(0);
   final trainingUpdates = ValueNotifier<int>(0);
   final activeSpeech = ValueNotifier<Object?>(null);
@@ -64,8 +68,10 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   AppController({
     Clock? clock,
     PracticeRepository? repository,
+    AssistantGateway? assistant,
     this.databaseSubdirectory,
   }) : clock = clock ?? MonotonicClock(),
+       assistant = assistant ?? AssistantGateway.fromEnvironment(),
        repository = repository ?? PracticeRepository() {
     if (databaseSubdirectory != null &&
         !RegExp(r'^[a-zA-Z0-9-]+$').hasMatch(databaseSubdirectory!)) {
@@ -96,6 +102,27 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   String text(String zh, String en) => chinese ? zh : en;
   String get mode => repository.profile['mode'] as String;
   Json get settings => repository.settings;
+  int get assistantConsentRevision => _assistantConsentRevision;
+  bool get assistantRecordsAllowed =>
+      !_assistantRevoking &&
+      settings['assistant_record_consent'] == assistant.consentVersion;
+  Future<void> setAssistantRecordsAllowed(bool allowed) async {
+    final revision = ++_assistantConsentRevision;
+    _assistantRevoking = !allowed;
+    try {
+      await updateSettings(
+        values: {
+          'assistant_record_consent': allowed ? assistant.consentVersion : '',
+        },
+      );
+    } finally {
+      if (revision == _assistantConsentRevision) {
+        _assistantRevoking = false;
+        if (!_disposed) notifyListeners();
+      }
+    }
+  }
+
   bool get dualTouchCheckCompleted =>
       settings['dual_touch_check_completed'] == true;
   Future<void> completeDualTouchCheck() async {

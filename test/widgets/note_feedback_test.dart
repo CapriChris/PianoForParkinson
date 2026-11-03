@@ -1,7 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/domain/contracts.dart';
 import 'package:piano_practice/domain/piano_piece.dart';
@@ -36,18 +38,9 @@ Color? keyColor(WidgetTester tester, int i) =>
             as BoxDecoration)
         .color;
 
-KeyParticlesPainter particles(WidgetTester tester, String key) =>
-    tester
-            .widget<CustomPaint>(
-              find
-                  .descendant(
-                    of: find.byKey(ValueKey(key)),
-                    matching: find.byType(CustomPaint),
-                  )
-                  .last,
-            )
-            .painter!
-        as KeyParticlesPainter;
+KeyParticlesPainter particles(WidgetTester tester, String key) => tester
+    .state<KeyPressFeedbackState>(find.byKey(ValueKey(key)))
+    .particlePainter;
 
 Future<void> movingFrame(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 16));
@@ -93,6 +86,74 @@ void main() {
         }
       }
     }
+  });
+
+  testWidgets('right-side particles paint above the neighboring key', (
+    tester,
+  ) async {
+    const captureKey = ValueKey('keyboard-pixel-capture');
+    await tester.pumpWidget(
+      RepaintBoundary(
+        key: captureKey,
+        child: page(
+          PianoKeyboard(
+            count: 3,
+            active: const {0, 1, 2},
+            onDown: (p, k, d, xy) {},
+            onUp: (p, k, c, xy) {},
+          ),
+        ),
+      ),
+    );
+    final capture = tester.renderObject<RenderRepaintBoundary>(
+      find.byKey(captureKey),
+    );
+    final key = find.byKey(const ValueKey('key-feedback-0'));
+    final neighbor = tester.getRect(
+      find.byKey(const ValueKey('key-feedback-1')),
+    );
+    final bounds = tester.getRect(key);
+    final before = (await tester.runAsync(capture.toImage))!;
+    final gesture = await tester.startGesture(bounds.center);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 180));
+    final painter = particles(tester, 'key-feedback-0');
+    const padding = KeyParticlesPainter.padding;
+    final center =
+        bounds.topLeft -
+        const Offset(padding, padding) +
+        painter.particleCenter(
+          Size(bounds.width + 2 * padding, bounds.height + 2 * padding),
+          5,
+        );
+    expect(neighbor.deflate(2).contains(center), isTrue);
+    final after = (await tester.runAsync(capture.toImage))!;
+    Future<Color> pixel(ui.Image image) async {
+      final bytes = (await image.toByteData(
+        format: ui.ImageByteFormat.rawRgba,
+      ))!;
+      final offset = (center.dy.floor() * image.width + center.dx.floor()) * 4;
+      return Color.fromARGB(
+        bytes.getUint8(offset + 3),
+        bytes.getUint8(offset),
+        bytes.getUint8(offset + 1),
+        bytes.getUint8(offset + 2),
+      );
+    }
+
+    final colors = (await tester.runAsync(
+      () async => (await pixel(before), await pixel(after)),
+    ))!;
+    final expected = Color.alphaBlend(
+      painter.color.withValues(alpha: (1 - painter.animation.value) * .88),
+      colors.$1,
+    );
+    expect(colors.$2.r, closeTo(expected.r, .02));
+    expect(colors.$2.g, closeTo(expected.g, .02));
+    expect(colors.$2.b, closeTo(expected.b, .02));
+    before.dispose();
+    after.dispose();
+    await gesture.up();
   });
 
   testWidgets('key face sinks and rebounds without changing its input bounds', (

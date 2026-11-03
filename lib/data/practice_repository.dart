@@ -26,6 +26,8 @@ class _WriteCache {
 class PracticeRepository {
   late Database db;
   late Json profile;
+  String? _settingsSource;
+  late Json _normalizedSettings;
   final Map<String, _WriteCache> _cache = {};
   final safety = DatabaseSafety();
   Future<void> open(String directory, String locale) async {
@@ -262,9 +264,23 @@ class PracticeRepository {
     return result;
   }
 
-  Json get settings => normalizedAudioSettings(
-    jsonDecode(profile['settings_json'] as String) as Json,
-  );
+  Json get settings {
+    final source = profile['settings_json'] as String;
+    if (source != _settingsSource) {
+      _normalizedSettings = normalizedAudioSettings(jsonDecode(source) as Json);
+      _settingsSource = source;
+    }
+    // Callers can edit a returned snapshot without changing the saved values.
+    return _copySetting(_normalizedSettings) as Json;
+  }
+
+  static Object? _copySetting(Object? value) => switch (value) {
+    Map<String, dynamic> map => map.map(
+      (key, item) => MapEntry(key, _copySetting(item)),
+    ),
+    List<dynamic> list => list.map(_copySetting).toList(),
+    _ => value,
+  };
   Future<void> settingsUpdate({
     String? locale,
     String? mode,
@@ -712,6 +728,50 @@ class PracticeRepository {
     ], rows.length > 20);
   }
 
+  Future<List<Json>> assistantRecords({
+    required DateTime from,
+    required DateTime until,
+    String? taskId,
+    String? contentId,
+  }) async {
+    final rows = await db.rawQuery(
+      'SELECT session_id FROM ('
+      'SELECT session_id, started_utc_ms, profile_id, task_id, content_id FROM sessions '
+      "WHERE ended_utc_ms IS NOT NULL AND status IN ('COMPLETED','EXITED','RECOVERED_INTERRUPTED') "
+      'UNION ALL SELECT session_id, started_utc_ms, profile_id, '
+      "'PIANO_PIECE', content_id FROM piece_performances "
+      'UNION ALL SELECT session_id, started_utc_ms, profile_id, '
+      "'DANCE', NULL FROM dance_sessions) "
+      'WHERE profile_id=? AND started_utc_ms>=? AND started_utc_ms<? '
+      '${taskId == null ? '' : 'AND task_id=? '}'
+      '${contentId == null ? '' : 'AND content_id=? '}'
+      'ORDER BY started_utc_ms DESC, session_id LIMIT 41',
+      [
+        profile['profile_id'],
+        from.millisecondsSinceEpoch,
+        until.millisecondsSinceEpoch,
+        ?taskId,
+        ?contentId,
+      ],
+    );
+    return rows.cast<Json>();
+  }
+
+  Future<String?> assistantExerciseCondition(String id) async {
+    final blocks = await db.query(
+      'blocks',
+      columns: ['comparison_key', 'status'],
+      where: 'session_id=?',
+      whereArgs: [id],
+    );
+    final keys = blocks.map((block) => block['comparison_key']).toSet();
+    if (keys.length != 1 ||
+        blocks.any((block) => block['status'] != 'COMPLETED')) {
+      return null;
+    }
+    return keys.single as String?;
+  }
+
   static const _trendJoin =
       'FROM summaries m JOIN blocks b ON m.block_id=b.block_id AND m.session_id=b.session_id '
       'JOIN sessions s ON b.session_id=s.session_id '
@@ -818,8 +878,8 @@ class PracticeRepository {
       }
     }
     final rows = await db.rawQuery(
-      'SELECT s.*, m.result_json FROM sessions s LEFT JOIN summaries m ON s.session_id=m.session_id AND m.scope=\'SESSION\' AND m.metric_version=s.metric_version WHERE s.session_id=?',
-      [id],
+      'SELECT s.*, m.result_json FROM sessions s LEFT JOIN summaries m ON s.session_id=m.session_id AND m.scope=\'SESSION\' AND m.metric_version=s.metric_version WHERE s.session_id=? AND s.profile_id=?',
+      [id, profile['profile_id']],
     );
     return rows.isEmpty
         ? null

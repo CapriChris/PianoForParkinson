@@ -110,6 +110,7 @@ class PlanReminders {
     final desired = <int>{};
     final plans = await store.plans();
     final now = tz.TZDateTime.from(_clock(), zone);
+    final occurrences = <({Json plan, DateTime day, tz.TZDateTime date})>[];
 
     for (final active in plans) {
       if (!allowed ||
@@ -118,9 +119,6 @@ class PlanReminders {
           active['reminder'] != true) {
         continue;
       }
-      final target =
-          (active['target'] as int) *
-          (active['target_type'] == 'minutes' ? 60000 : 1);
       for (var offset = -1; offset < 30; offset++) {
         final day = DateTime(now.year, now.month, now.day + offset);
         if (!planDue(active, day)) continue;
@@ -132,51 +130,65 @@ class PlanReminders {
           active['hour'] as int,
           active['minute'] as int,
         );
-        final occurrence = '${active['id']}:${localDay(day)}';
-        final id = int.parse(
-          digest({'occurrence': occurrence}).substring(0, 7),
-          radix: 16,
-        );
-        final payload = '$occurrence@${date.millisecondsSinceEpoch}';
-        if (await store.automaticProgress(active, day) >= target) continue;
-        if (!date.isAfter(now)) {
-          // An inexact alarm may still be waiting for Android to deliver it.
-          // Resuming the app after its due time must not silently cancel it.
-          final previous = pendingById[id];
-          if (now.difference(date) <= const Duration(hours: 1) &&
-              previous != null &&
-              (previous.payload == payload || previous.payload == occurrence)) {
-            desired.add(id);
-          }
-          continue;
-        }
-        desired.add(id);
-        await plugin.zonedSchedule(
-          id: id,
-          scheduledDate: date,
-          title: chinese ? '琴伴 · 训练计划' : 'Qinban · Training plan',
-          body: chinese
-              ? '该练习啦：${active['title']}'
-              : 'Time to practise: ${active['title']}',
-          notificationDetails: const NotificationDetails(
-            android: AndroidNotificationDetails(
-              channelId,
-              '训练计划提醒',
-              channelDescription: 'Scheduled training plan reminders',
-              importance: Importance.high,
-              priority: Priority.high,
-              playSound: true,
-              enableVibration: true,
-              category: AndroidNotificationCategory.reminder,
-              visibility: NotificationVisibility.private,
-            ),
-          ),
-          androidScheduleMode: exact
-              ? AndroidScheduleMode.exactAllowWhileIdle
-              : AndroidScheduleMode.inexactAllowWhileIdle,
-          payload: payload,
-        );
+        occurrences.add((plan: active, day: day, date: date));
       }
+    }
+
+    final progress = await store.automaticProgressFor([
+      for (final occurrence in occurrences)
+        (plan: occurrence.plan, date: occurrence.day),
+    ]);
+    for (final (index, entry) in occurrences.indexed) {
+      final (plan: active, :day, :date) = entry;
+      final target =
+          (active['target'] as int) *
+          (active['target_type'] == 'minutes'
+              ? Duration.millisecondsPerMinute
+              : 1);
+      final occurrence = '${active['id']}:${localDay(day)}';
+      final id = int.parse(
+        digest({'occurrence': occurrence}).substring(0, 7),
+        radix: 16,
+      );
+      final payload = '$occurrence@${date.millisecondsSinceEpoch}';
+      if (progress[index] >= target) continue;
+      if (!date.isAfter(now)) {
+        // An inexact alarm may still be waiting for Android to deliver it.
+        // Resuming the app after its due time must not silently cancel it.
+        final previous = pendingById[id];
+        if (now.difference(date) <= const Duration(hours: 1) &&
+            previous != null &&
+            (previous.payload == payload || previous.payload == occurrence)) {
+          desired.add(id);
+        }
+        continue;
+      }
+      desired.add(id);
+      await plugin.zonedSchedule(
+        id: id,
+        scheduledDate: date,
+        title: chinese ? '琴伴 · 训练计划' : 'Qinban · Training plan',
+        body: chinese
+            ? '该练习啦：${active['title']}'
+            : 'Time to practise: ${active['title']}',
+        notificationDetails: const NotificationDetails(
+          android: AndroidNotificationDetails(
+            channelId,
+            '训练计划提醒',
+            channelDescription: 'Scheduled training plan reminders',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+            category: AndroidNotificationCategory.reminder,
+            visibility: NotificationVisibility.private,
+          ),
+        ),
+        androidScheduleMode: exact
+            ? AndroidScheduleMode.exactAllowWhileIdle
+            : AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: payload,
+      );
     }
     for (final notification in pending) {
       if (!desired.contains(notification.id)) {

@@ -10,6 +10,12 @@ import 'record_integrity.dart';
 
 class ContentRepository {
   static bool _pianoLicenseRegistered = false;
+  static final _songPath = RegExp(r'^assets/content/[a-z0-9_-]+\.json$');
+  static final _piecePath = RegExp(r'^assets/content/piece-[a-z0-9_-]+\.json$');
+
+  static Future<Json> _readJson(String path) async =>
+      jsonDecode(await rootBundle.loadString(path)) as Json;
+
   late PracticeConfig config;
   late Json song, soundPack;
   List<Json> songs = [];
@@ -36,25 +42,26 @@ class ContentRepository {
   }
 
   Future<void> load() async {
-    config = PracticeConfig(
-      jsonDecode(await rootBundle.loadString('assets/config/demo.json'))
-          as Json,
-    );
+    final [configuration, catalog, pieceCatalog, pack] = await Future.wait([
+      _readJson('assets/config/demo.json'),
+      _readJson('assets/content/catalog.json'),
+      _readJson('assets/content/piece-catalog.json'),
+      _readJson('assets/content/sound_pack.json'),
+    ]);
+    config = PracticeConfig(configuration);
     RecordIntegrity.configuration(config.json);
-    final catalog = jsonDecode(
-      await rootBundle.loadString('assets/content/catalog.json'),
-    ) as Json;
     if (catalog['schema_version'] != 1) {
       throw const FormatException('Invalid catalog');
     }
-    songs = [];
+    final songPaths = catalog['paths'] as List;
+    if (songPaths.any((path) => path is! String || !_songPath.hasMatch(path))) {
+      throw const FormatException('Invalid content path');
+    }
+    final loadedSongs = await Future.wait(
+      songPaths.cast<String>().map(_readJson),
+    );
     final ids = <String>{};
-    for (final path in catalog['paths'] as List) {
-      if (path is! String ||
-          !RegExp(r'^assets/content/[a-z0-9_-]+\.json$').hasMatch(path)) {
-        throw const FormatException('Invalid content path');
-      }
-      final item = jsonDecode(await rootBundle.loadString(path)) as Json;
+    for (final item in loadedSongs) {
       final hashData = {...item}..remove('content_hash');
       if (item['content_hash'] != digest(hashData) ||
           item['rights']?['status'] != 'DEVELOPMENT_ONLY' ||
@@ -83,34 +90,32 @@ class ContentRepository {
       if (canonical(normalizeRecordText(item)) != canonical(item)) {
         throw const FormatException('Content must use NFC');
       }
-      songs.add(item);
     }
+    songs = loadedSongs;
     if (songs.isEmpty) throw const FormatException('Empty catalog');
     song = songs.first;
-    final pieceCatalog = jsonDecode(
-      await rootBundle.loadString('assets/content/piece-catalog.json'),
-    ) as Json;
     if (pieceCatalog['schema_version'] != 1 || pieceCatalog['paths'] is! List) {
       throw const FormatException('Invalid piece catalog');
     }
+    final piecePaths = pieceCatalog['paths'] as List;
+    if (piecePaths.any(
+      (path) => path is! String || !_piecePath.hasMatch(path),
+    )) {
+      throw const FormatException('Invalid piece path');
+    }
+    final loadedPieces = await Future.wait(
+      piecePaths.cast<String>().map(_readJson),
+    );
     pieces = [];
     final pieceIds = <String>{};
-    for (final path in pieceCatalog['paths'] as List) {
-      if (path is! String ||
-          !RegExp(r'^assets/content/piece-[a-z0-9_-]+\.json$').hasMatch(path)) {
-        throw const FormatException('Invalid piece path');
-      }
-      final piece = PianoPiece.fromJson(
-        jsonDecode(await rootBundle.loadString(path)) as Json,
-      );
+    for (final item in loadedPieces) {
+      final piece = PianoPiece.fromJson(item);
       if (!pieceIds.add(piece.id)) {
         throw const FormatException('Duplicate piece');
       }
       pieces.add(piece);
     }
-    soundPack = jsonDecode(
-      await rootBundle.loadString('assets/content/sound_pack.json'),
-    ) as Json;
+    soundPack = pack;
     if (!_pianoLicenseRegistered) {
       LicenseRegistry.addLicense(() async* {
         yield LicenseEntryWithLineBreaks([
@@ -131,42 +136,26 @@ class ContentRepository {
       });
       _pianoLicenseRegistered = true;
     }
-    final hashData = {...song}..remove('content_hash');
-    if (song['content_hash'] != digest(hashData) ||
-        song['rights']['status'] != 'DEVELOPMENT_ONLY') {
-      throw const FormatException('Invalid development content');
-    }
-    if (!(song['localized_title'] as Map).keys.toSet().containsAll([
-      'zh-Hans',
-      'en',
-    ])) {
-      throw const FormatException('Missing content language');
-    }
-    for (final note in song['notes'] as List) {
-      if (note['note_index'] is! int ||
-          note['note_index'] < 0 ||
-          note['note_index'] > 4 ||
-          note['duration_ms'] != 400) {
-        throw const FormatException('Invalid note');
-      }
-    }
-    if ((soundPack['assets'] as List).length != 10) {
+    final assets = soundPack['assets'] as List;
+    if (assets.length != 10) {
       throw const FormatException('Incomplete sound pack');
     }
-    for (final asset in soundPack['assets'] as List) {
-      final bytes = await rootBundle.load(asset['path'] as String);
-      if (sha256
-              .convert(
-                bytes.buffer.asUint8List(
-                  bytes.offsetInBytes,
-                  bytes.lengthInBytes,
-                ),
-              )
-              .toString() !=
-          asset['sha256']) {
-        throw const FormatException('Sound hash mismatch');
-      }
-    }
+    await Future.wait(
+      assets.map((asset) async {
+        final bytes = await rootBundle.load(asset['path'] as String);
+        if (sha256
+                .convert(
+                  bytes.buffer.asUint8List(
+                    bytes.offsetInBytes,
+                    bytes.lengthInBytes,
+                  ),
+                )
+                .toString() !=
+            asset['sha256']) {
+          throw const FormatException('Sound hash mismatch');
+        }
+      }),
+    );
   }
 
   List<int> get notes =>

@@ -260,105 +260,108 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
             );
             setState(() {});
           },
-          child: Row(
-            children: [
-              for (var i = 0; i < widget.count; i++) ...[
-                if (i > 0) SizedBox(width: splitZones && i == 3 ? 24 : 8),
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    enabled: !widget.locked && widget.active.contains(i),
-                    selected: visibleTarget(i),
-                    label:
-                        '${Localizations.localeOf(context).languageCode == 'zh' ? '琴键' : 'Key'} ${widget.labels?[i] ?? '${i + 1}'}',
-                    onTap: !widget.locked && widget.active.contains(i)
-                        ? () {
-                            final p = semanticPointer--;
-                            setState(
-                              () => pressPulses[i] = (pressPulses[i] ?? 0) + 1,
-                            );
-                            widget.onDown(p, i, false, {
-                              'device_kind': 'ACCESSIBILITY',
-                            });
-                            widget.onUp(p, i, false, {
-                              'device_kind': 'ACCESSIBILITY',
-                            });
-                          }
-                        : null,
-                    child: KeyPressFeedback(
-                      key: ValueKey('key-feedback-$i'),
-                      enabled:
-                          !widget.locked ||
-                          widget.demonstratingKeys.contains(i),
-                      resetToken: feedbackEpoch,
-                      pulse: widget.demonstratingKeys.contains(i)
-                          ? (widget.demonstrationPulse, i)
-                          : pressPulses[i],
-                      pressed:
-                          pressed(i) || widget.demonstratingKeys.contains(i),
-                      color: widget.noteDegrees == null
-                          ? context.qin.primary
-                          : NoteColors.degree(widget.noteDegrees![i]).fill,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: keySurface(context, i),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: widget.noteDegrees != null
-                                ? context.qin.highContrast
-                                      ? context.qin.ink
-                                      : NoteColors.degree(
-                                          widget.noteDegrees![i],
-                                        ).fill
-                                : visibleTarget(i)
-                                ? context.qin.primary
-                                : context.qin.edge,
-                            width: visibleTarget(i)
-                                ? 3
-                                : context.qin.highContrast ||
-                                      widget.noteDegrees != null
-                                ? 2
-                                : 1,
+          child: KeyParticleLayer(
+            child: Row(
+              children: [
+                for (var i = 0; i < widget.count; i++) ...[
+                  if (i > 0) SizedBox(width: splitZones && i == 3 ? 24 : 8),
+                  Expanded(
+                    child: Semantics(
+                      button: true,
+                      enabled: !widget.locked && widget.active.contains(i),
+                      selected: visibleTarget(i),
+                      label:
+                          '${Localizations.localeOf(context).languageCode == 'zh' ? '琴键' : 'Key'} ${widget.labels?[i] ?? '${i + 1}'}',
+                      onTap: !widget.locked && widget.active.contains(i)
+                          ? () {
+                              final p = semanticPointer--;
+                              setState(
+                                () =>
+                                    pressPulses[i] = (pressPulses[i] ?? 0) + 1,
+                              );
+                              widget.onDown(p, i, false, {
+                                'device_kind': 'ACCESSIBILITY',
+                              });
+                              widget.onUp(p, i, false, {
+                                'device_kind': 'ACCESSIBILITY',
+                              });
+                            }
+                          : null,
+                      child: KeyPressFeedback(
+                        key: ValueKey('key-feedback-$i'),
+                        enabled:
+                            !widget.locked ||
+                            widget.demonstratingKeys.contains(i),
+                        resetToken: feedbackEpoch,
+                        pulse: widget.demonstratingKeys.contains(i)
+                            ? (widget.demonstrationPulse, i)
+                            : pressPulses[i],
+                        pressed:
+                            pressed(i) || widget.demonstratingKeys.contains(i),
+                        color: widget.noteDegrees == null
+                            ? context.qin.primary
+                            : NoteColors.degree(widget.noteDegrees![i]).fill,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: keySurface(context, i),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: widget.noteDegrees != null
+                                  ? context.qin.highContrast
+                                        ? context.qin.ink
+                                        : NoteColors.degree(
+                                            widget.noteDegrees![i],
+                                          ).fill
+                                  : visibleTarget(i)
+                                  ? context.qin.primary
+                                  : context.qin.edge,
+                              width: visibleTarget(i)
+                                  ? 3
+                                  : context.qin.highContrast ||
+                                        widget.noteDegrees != null
+                                  ? 2
+                                  : 1,
+                            ),
                           ),
-                        ),
-                        child: Center(
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: NoteLabel(
-                                  widget.labels?[i] ?? '${i + 1}',
-                                  style: TextStyle(
-                                    fontSize: 24,
-                                    fontWeight: FontWeight.w700,
-                                    color: keyInk(context, i),
+                          child: Center(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: NoteLabel(
+                                    widget.labels?[i] ?? '${i + 1}',
+                                    style: TextStyle(
+                                      fontSize: 24,
+                                      fontWeight: FontWeight.w700,
+                                      color: keyInk(context, i),
+                                    ),
                                   ),
                                 ),
-                              ),
-                              if (widget.showKeyMarks &&
-                                  widget.showShapes &&
-                                  i < 3)
-                                ShapeMark(
-                                  shape: i,
-                                  size: 24,
-                                  color: keyInk(context, i),
-                                )
-                              else if (widget.showKeyMarks &&
-                                  widget.textScale <= 1500)
-                                KeyMark(
-                                  shape: widget.markShapes?[i] ?? i,
-                                  color: keyInk(context, i),
-                                ),
-                            ],
+                                if (widget.showKeyMarks &&
+                                    widget.showShapes &&
+                                    i < 3)
+                                  ShapeMark(
+                                    shape: i,
+                                    size: 24,
+                                    color: keyInk(context, i),
+                                  )
+                                else if (widget.showKeyMarks &&
+                                    widget.textScale <= 1500)
+                                  KeyMark(
+                                    shape: widget.markShapes?[i] ?? i,
+                                    color: keyInk(context, i),
+                                  ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

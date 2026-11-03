@@ -18,6 +18,7 @@ import 'package:piano_practice/features/song_library_page.dart';
 import 'package:piano_practice/features/key_duration_guide.dart';
 import 'package:piano_practice/features/keyboard.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
+import 'package:piano_practice/ui/text_scale.dart';
 
 import 'cognitive_pages_test.dart' show mocks;
 import 'rhythm_pages_test.dart' show MemoryPreferences;
@@ -58,6 +59,61 @@ Future<void> scrollTo(WidgetTester tester, Finder target, double delta) async {
 }
 
 void main() {
+  testWidgets('piece picker uses two columns at 360dp when titles fit', (
+    tester,
+  ) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('piano_training/platform_events/v1'),
+          (_) async => null,
+        );
+    final c = AppController(repository: MemoryPreferences());
+    addTearDown(c.dispose);
+    mocks(tester, const Size(360, 760), 'zh-Hans', 1, c);
+    await tester.runAsync(c.content.load);
+    final titles = c.content.pieces
+        .take(2)
+        .map((p) => p.title(c.locale))
+        .toList();
+    for (final (width, scale, highContrast, twoColumns) in [
+      (360.0, 1.0, false, true),
+      (412.0, 1.0, false, true),
+      (320.0, 1.0, false, false),
+      (360.0, 1.5, false, false),
+      (360.0, 1.0, true, false),
+    ]) {
+      tester.view.physicalSize = Size(width, 760);
+      tester.platformDispatcher.textScaleFactorTestValue = scale;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: qinTheme(highContrast: highContrast),
+          builder: (context, child) {
+            final media = MediaQuery.of(context);
+            return MediaQuery(
+              data: media.copyWith(
+                textScaler: AppTextScaler(media.textScaler, 100),
+              ),
+              child: child!,
+            );
+          },
+          home: PianoPiecesPage(c: c),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final first = tester.getTopLeft(find.text(titles.first));
+      final second = tester.getTopLeft(find.text(titles.last));
+      if (twoColumns) {
+        expect(second.dx, greaterThan(first.dx));
+        expect(second.dy, closeTo(first.dy, 1));
+      } else {
+        expect(second.dx, closeTo(first.dx, 1));
+        expect(second.dy, greaterThan(first.dy));
+      }
+      expect(tester.takeException(), isNull);
+    }
+    await remove(tester);
+  });
+
   testWidgets('all available piece keys fit on one row at phone widths', (
     tester,
   ) async {

@@ -12,6 +12,8 @@ import '../domain/contracts.dart';
 import '../features/keyboard.dart';
 import '../features/language_picker.dart';
 import '../features/audio_volume_control.dart';
+import '../features/assistant_page.dart';
+import '../integration/remote_pages.dart';
 import '../features/text_size_control.dart';
 import '../features/training_page.dart';
 import '../features/trend_page.dart';
@@ -714,79 +716,97 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     builder: (context, constraints) {
       final contrast = context.qin.highContrast;
       final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.5;
-      Widget contents() => Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 640),
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              pageHeaderTextInset,
-              8,
-              pageHeaderTextInset,
-              20,
+      return SingleChildScrollView(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: 640,
+              minHeight: largeText ? 0 : constraints.maxHeight,
             ),
-            child: Column(
-              mainAxisSize: largeText ? MainAxisSize.min : MainAxisSize.max,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const SizedBox(height: 72),
-                Text(
-                  c.text('今天，\n弹一小段旋律', 'A little melody\nfor today'),
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    color: context.qin.ink,
-                    fontWeight: FontWeight.w700,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                pageHeaderTextInset,
+                8,
+                pageHeaderTextInset,
+                20,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 72),
+                      Text(
+                        c.text('今天，\n弹一小段旋律', 'A little melody\nfor today'),
+                        style: Theme.of(context).textTheme.headlineMedium
+                            ?.copyWith(
+                              color: context.qin.ink,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        c.text(
+                          '在熟悉的琴键上，\n遇见更安静的自己。',
+                          'At the familiar keys,\nfind a quieter moment.',
+                        ),
+                        style: Theme.of(context).textTheme.bodyLarge
+                            ?.copyWith(color: context.qin.ink),
+                      ),
+                      if (c.hasPendingSave) ...[
+                        const SizedBox(height: 16),
+                        saveNotice(),
+                      ],
+                    ],
                   ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  c.text(
-                    '在熟悉的琴键上，\n遇见更安静的自己。',
-                    'At the familiar keys,\nfind a quieter moment.',
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 24),
+                      recommendationCard(),
+                      const SizedBox(height: 12),
+                      QinOutlinedButton.icon(
+                        key: const ValueKey('home-other-practices'),
+                        onPressed: () => selectTab(1),
+                        icon: const Icon(Icons.tune),
+                        label: Text(c.text('其他训练', 'Other practices')),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: contrast
+                              ? context.qin.surface
+                              : const Color(0xfff2e5d3).withValues(alpha: .88),
+                          minimumSize: const Size.fromHeight(68),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      PracticeCard(
+                        key: const ValueKey('home-assistant'),
+                        icon: Icons.auto_awesome_outlined,
+                        title: c.text('AI 训练助手', 'AI practice assistant'),
+                        subtitle: c.text(
+                          '随时提问，回顾练习表现',
+                          'Ask questions and review your practice',
+                        ),
+                        artwork: '40-ai-assistant-home.webp',
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) => AssistantPage(c: c),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  style: Theme.of(context).textTheme.bodyLarge
-                      ?.copyWith(color: context.qin.ink),
-                ),
-                if (c.hasPendingSave) ...[
-                  const SizedBox(height: 16),
-                  saveNotice(),
                 ],
-                if (!largeText) const Spacer(),
-                const SizedBox(height: 24),
-                recommendationCard(),
-                const SizedBox(height: 12),
-                QinOutlinedButton.icon(
-                  key: const ValueKey('home-other-practices'),
-                  onPressed: () => selectTab(1),
-                  icon: const Icon(Icons.tune),
-                  label: Text(c.text('其他训练', 'Other practices')),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: contrast
-                        ? context.qin.surface
-                        : const Color(0xfff2e5d3).withValues(alpha: .88),
-                    minimumSize: const Size.fromHeight(68),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(28),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
-      );
-      return Stack(
-        fit: StackFit.expand,
-        children: [
-          SingleChildScrollView(
-            child: largeText
-                ? contents()
-                : ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: IntrinsicHeight(child: contents()),
-                  ),
-          ),
-        ],
       );
     },
   );
@@ -794,7 +814,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget practiceCategories() => QinCategoryBar(
     keyPrefix: 'practice-category',
     selected: practiceCategory,
-    forceCompact: !c.chinese,
     onSelected: (value) => setState(() => practiceCategory = value),
     entries: [
       ('all', c.text('全部', 'All'), c.text('全部', 'All')),
@@ -953,13 +972,10 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                   ),
                                   children: [
                                     for (final id in [
-                                      'S1_GUIDED',
-                                      'S2_RHYTHM',
-                                      'M1_ALTERNATE',
-                                      'M2_DUAL_ZONE',
-                                      'G1_MEMORY',
-                                      'G2_INHIBITION',
-                                      'G3_SWITCH',
+                                      ...exerciseIds.where(
+                                        (id) => !isCognitiveTask(id),
+                                      ),
+                                      ...exerciseIds.where(isCognitiveTask),
                                     ])
                                       SimpleDialogOption(
                                         onPressed: () =>
@@ -1634,7 +1650,6 @@ class _HistoryListState extends State<HistoryList> {
   Widget categories() => QinCategoryBar(
     keyPrefix: 'history-category',
     selected: category,
-    forceCompact: !c.chinese,
     onSelected: (value) => setState(() => category = value),
     entries: [
       ('recent', c.text('全部', 'All'), c.text('全部', 'All')),
@@ -1924,7 +1939,8 @@ class _HistoryListState extends State<HistoryList> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => ResultPage(c: c, record: item),
+                          builder: (_) =>
+                              ResultPage(c: c, record: item, fromHistory: true),
                         ),
                       ),
                       child: LayoutBuilder(
@@ -2073,9 +2089,16 @@ class _HistoryListState extends State<HistoryList> {
 }
 
 class ResultPage extends StatelessWidget {
-  const ResultPage({super.key, required this.c, required this.record});
+  const ResultPage({
+    super.key,
+    required this.c,
+    required this.record,
+    this.fromHistory = false,
+    this.showAssistant = true,
+  });
   final AppController c;
   final Json record;
+  final bool fromHistory, showAssistant;
   @override
   Widget build(BuildContext context) {
     if (record['record_unavailable'] == true) return RecordHealthPage(c: c);
@@ -2084,6 +2107,7 @@ class ResultPage extends StatelessWidget {
         c: c,
         record: jsonDecode(record['result_json'] as String) as Json,
         alreadySaved: true,
+        showAssistant: showAssistant,
       );
     }
     if (record['task_id'] == 'PIANO_PIECE') {
@@ -2091,6 +2115,7 @@ class ResultPage extends StatelessWidget {
         c: c,
         record: jsonDecode(record['result_json'] as String) as Json,
         alreadySaved: true,
+        showAssistant: showAssistant,
       );
     }
     final summary = record['result_json'] == null
@@ -2239,6 +2264,21 @@ class ResultPage extends StatelessWidget {
                   icon: Icons.timer_outlined,
                 ),
               ],
+            ),
+          ],
+          if (showAssistant &&
+              summary != null &&
+              record['session_id'] is String) ...[
+            const SizedBox(height: 12),
+            AssistantReviewCard(
+              c: c,
+              recordId: record['session_id'] as String,
+              title: taskTitle(record['task_id'] as String, c.chinese),
+              date: fromHistory
+                  ? recordDateLabel(recordedDate(record, 'started_utc_ms'))
+                        .split(' ')
+                        .first
+                  : null,
             ),
           ],
           const SizedBox(height: 16),
@@ -2918,6 +2958,34 @@ class SettingsPage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
+                                  if (const bool.fromEnvironment(
+                                    'PD_CLOUD_INTEGRATION',
+                                  )) ...[
+                                    QinSectionTitle(
+                                      c.text(
+                                        '云端服务联调',
+                                        'Cloud integration testing',
+                                      ),
+                                    ),
+                                    QinOutlinedButton.icon(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => CloudIntegrationPage(
+                                            controller: c,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(Icons.cloud_outlined),
+                                      label: Text(
+                                        c.text(
+                                          '患者同步、面部分析与 AI 问答',
+                                          'Patient sync, face analysis and AI help',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ],
                                   QinSectionTitle(
                                     c.text('记录与应用', 'Records and app'),
                                   ),
@@ -2928,11 +2996,13 @@ class SettingsPage extends StatelessWidget {
                                       children: [
                                         Text(
                                           c.text(
-                                            '记录只保存在本机。卸载或清除应用数据后无法恢复。',
-                                            'Records stay on this device. Uninstalling or clearing app data removes them.',
+                                            '完整记录保存在本机。卸载或清除应用数据后无法恢复。',
+                                            'Full records stay on this device. Uninstalling or clearing app data removes them.',
                                           ),
                                         ),
-                                        const SizedBox(height: 24),
+                                        const SizedBox(height: 8),
+                                        AssistantPrivacyTile(c: c),
+                                        const SizedBox(height: 16),
                                         QinOutlinedButton.icon(
                                           onPressed:
                                               c.engine != null &&
@@ -3167,10 +3237,15 @@ class AboutPage extends StatelessWidget {
         const SizedBox(height: 16),
         QinStatus(
           icon: Icons.lock_outline,
-          text: c.text(
-            '数据只保存在本机，不上传。不提供账号、导出或云端恢复。',
-            'Data stays on this device without uploads, accounts, exports or cloud recovery.',
-          ),
+          text: const bool.fromEnvironment('PD_CLOUD_INTEGRATION')
+              ? c.text(
+                  '本机训练可离线使用。联调时请使用测试患者和测试素材，手动提交后才会上传。',
+                  'Training works offline. Use test patients and media for integration testing. Uploads require manual submission.',
+                )
+              : c.text(
+                  '数据只保存在本机，不上传。不提供账号、导出或云端恢复。',
+                  'Data stays on this device without uploads, accounts, exports or cloud recovery.',
+                ),
         ),
       ],
     ),

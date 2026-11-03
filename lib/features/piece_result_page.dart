@@ -12,6 +12,7 @@ import '../ui/qin_components.dart';
 import '../ui/qin_music_art.dart';
 import '../ui/qin_theme.dart';
 import '../ui/metric_visuals.dart';
+import 'assistant_page.dart';
 import 'piano_performance_page.dart';
 import 'piece_review_page.dart';
 
@@ -21,10 +22,12 @@ class PieceResultPage extends StatefulWidget {
     required this.c,
     required this.record,
     this.alreadySaved = false,
+    this.showAssistant = true,
   });
   final AppController c;
   final Json record;
   final bool alreadySaved;
+  final bool showAssistant;
   @override
   State<PieceResultPage> createState() => _PieceResultPageState();
 }
@@ -216,6 +219,21 @@ class _PieceResultPageState extends State<PieceResultPage> {
                 ),
                 const SizedBox(height: 16),
                 PieceResultMetrics(record: r, chinese: c.chinese),
+                if (saved &&
+                    widget.showAssistant &&
+                    r['session_id'] is String) ...[
+                  const SizedBox(height: 12),
+                  AssistantReviewCard(
+                    c: c,
+                    recordId: r['session_id'] as String,
+                    title: title,
+                    date: widget.alreadySaved
+                        ? recordDateLabel(recordedDate(r, 'started_utc_ms'))
+                              .split(' ')
+                              .first
+                        : null,
+                  ),
+                ],
                 const SizedBox(height: 12),
                 PieceReviewCard(
                   c: c,

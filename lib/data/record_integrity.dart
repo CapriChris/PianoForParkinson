@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import '../domain/contracts.dart';
+import '../domain/cognitive_tasks.dart';
 import 'record_contract.dart';
 
 class RecordIntegrity {
@@ -322,15 +323,7 @@ class RecordIntegrity {
       RecordContract.string(row, field);
     }
     RecordContract.integer(row, 'started_utc_ms');
-    RecordContract.enumeration(row, 'task_id', {
-      'G1_MEMORY',
-      'G2_INHIBITION',
-      'G3_SWITCH',
-      'S1_GUIDED',
-      'S2_RHYTHM',
-      'M1_ALTERNATE',
-      'M2_DUAL_ZONE',
-    });
+    RecordContract.enumeration(row, 'task_id', exerciseIds);
     RecordContract.enumeration(row, 'status', {
       'PREPARING',
       'DEMONSTRATING',

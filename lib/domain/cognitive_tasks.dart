@@ -1,5 +1,15 @@
 import 'contracts.dart';
 
+const exerciseIds = {
+  'G1_MEMORY',
+  'G2_INHIBITION',
+  'G3_SWITCH',
+  'S1_GUIDED',
+  'S2_RHYTHM',
+  'M1_ALTERNATE',
+  'M2_DUAL_ZONE',
+};
+
 bool isWindowedTask(String id) => id == 'G2_INHIBITION' || id == 'G3_SWITCH';
 bool isCognitiveTask(String id) => id.startsWith('G');
 bool isBeatTask(String id) => id == 'S2_RHYTHM' || id == 'M1_ALTERNATE';

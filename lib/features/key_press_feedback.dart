@@ -4,6 +4,98 @@ import 'package:flutter/material.dart';
 
 import '../ui/qin_theme.dart';
 
+/// Paints all key particles after the row's faces, including adjacent keys.
+class KeyParticleLayer extends StatefulWidget {
+  const KeyParticleLayer({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<KeyParticleLayer> createState() => _KeyParticleLayerState();
+}
+
+class _KeyParticleLayerState extends State<KeyParticleLayer> {
+  final keys = <KeyPressFeedbackState>{};
+  final repaint = ValueNotifier(0);
+  late final painter = _KeyParticleRowPainter(this);
+
+  void invalidate() => repaint.value++;
+
+  void add(KeyPressFeedbackState key) {
+    keys.add(key);
+    key.animation.addListener(invalidate);
+    key.depression.addListener(invalidate);
+    invalidate();
+  }
+
+  void remove(KeyPressFeedbackState key) {
+    keys.remove(key);
+    key.animation.removeListener(invalidate);
+    key.depression.removeListener(invalidate);
+    invalidate();
+  }
+
+  @override
+  void dispose() {
+    repaint.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => _KeyParticleScope(
+    layer: this,
+    child: RepaintBoundary(
+      child: CustomPaint(
+        foregroundPainter: painter,
+        child: RepaintBoundary(child: widget.child),
+      ),
+    ),
+  );
+}
+
+class _KeyParticleScope extends InheritedWidget {
+  const _KeyParticleScope({required this.layer, required super.child});
+
+  final _KeyParticleLayerState layer;
+
+  @override
+  bool updateShouldNotify(_KeyParticleScope oldWidget) =>
+      layer != oldWidget.layer;
+}
+
+class _KeyParticleRowPainter extends CustomPainter {
+  _KeyParticleRowPainter(this.layer) : super(repaint: layer.repaint);
+
+  final _KeyParticleLayerState layer;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final row = layer.context.findRenderObject()! as RenderBox;
+    const padding = KeyParticlesPainter.padding;
+    for (final key in layer.keys) {
+      final progress = key.animation.value;
+      if (progress <= 0 || progress >= 1) continue;
+      final box = key.context.findRenderObject() as RenderBox?;
+      if (box == null || !box.attached || !box.hasSize) continue;
+      canvas.save();
+      canvas.transform(box.getTransformTo(row).storage);
+      canvas.translate(-padding, -padding);
+      key.particlePainter.paint(
+        canvas,
+        Size(box.size.width + 2 * padding, box.size.height + 2 * padding),
+      );
+      canvas.restore();
+    }
+  }
+
+  @override
+  bool hitTest(Offset position) => false;
+
+  @override
+  bool shouldRepaint(_KeyParticleRowPainter oldDelegate) =>
+      layer != oldDelegate.layer;
+}
+
 /// Local visual feedback; it neither handles input nor schedules sound.
 class KeyPressFeedback extends StatefulWidget {
   const KeyPressFeedback({
@@ -21,10 +113,10 @@ class KeyPressFeedback extends StatefulWidget {
   final bool enabled, pressed;
 
   @override
-  State<KeyPressFeedback> createState() => _KeyPressFeedbackState();
+  KeyPressFeedbackState createState() => KeyPressFeedbackState();
 }
 
-class _KeyPressFeedbackState extends State<KeyPressFeedback>
+class KeyPressFeedbackState extends State<KeyPressFeedback>
     with TickerProviderStateMixin {
   late final animation = AnimationController(
     vsync: this,
@@ -35,6 +127,12 @@ class _KeyPressFeedbackState extends State<KeyPressFeedback>
     duration: const Duration(milliseconds: 85),
     reverseDuration: const Duration(milliseconds: 120),
   );
+  _KeyParticleLayerState? _particleLayer;
+  late KeyParticlesPainter particlePainter = KeyParticlesPainter(
+    animation,
+    widget.color,
+    depression,
+  );
   bool motionAllowed = false, initialized = false;
   bool get held => widget.enabled && widget.pressed;
   bool get enabled => widget.enabled && motionAllowed;
@@ -42,6 +140,14 @@ class _KeyPressFeedbackState extends State<KeyPressFeedback>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final layer = context
+        .dependOnInheritedWidgetOfExactType<_KeyParticleScope>()
+        ?.layer;
+    if (layer != _particleLayer) {
+      _particleLayer?.remove(this);
+      _particleLayer = layer;
+      layer?.add(this);
+    }
     motionAllowed =
         !MediaQuery.disableAnimationsOf(context) &&
         TickerMode.valuesOf(context).enabled;
@@ -59,6 +165,14 @@ class _KeyPressFeedbackState extends State<KeyPressFeedback>
   @override
   void didUpdateWidget(KeyPressFeedback oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (widget.color != oldWidget.color) {
+      particlePainter = KeyParticlesPainter(
+        animation,
+        widget.color,
+        depression,
+      );
+      _particleLayer?.invalidate();
+    }
     final reset = widget.resetToken != oldWidget.resetToken;
     final strike = widget.pulse != null && widget.pulse != oldWidget.pulse;
     if (!enabled || reset) {
@@ -77,6 +191,13 @@ class _KeyPressFeedbackState extends State<KeyPressFeedback>
         depression.reverse();
       }
     }
+  }
+
+  @override
+  void deactivate() {
+    _particleLayer?.remove(this);
+    _particleLayer = null;
+    super.deactivate();
   }
 
   @override
@@ -129,25 +250,20 @@ class _KeyPressFeedbackState extends State<KeyPressFeedback>
             );
           },
         ),
-        Positioned(
-          left: -KeyParticlesPainter.padding,
-          right: -KeyParticlesPainter.padding,
-          top: -KeyParticlesPainter.padding,
-          bottom: -KeyParticlesPainter.padding,
-          child: IgnorePointer(
-            child: ExcludeSemantics(
-              child: RepaintBoundary(
-                child: CustomPaint(
-                  painter: KeyParticlesPainter(
-                    animation,
-                    widget.color,
-                    depression,
-                  ),
+        if (_particleLayer == null)
+          Positioned(
+            left: -KeyParticlesPainter.padding,
+            right: -KeyParticlesPainter.padding,
+            top: -KeyParticlesPainter.padding,
+            bottom: -KeyParticlesPainter.padding,
+            child: IgnorePointer(
+              child: ExcludeSemantics(
+                child: RepaintBoundary(
+                  child: CustomPaint(painter: particlePainter),
                 ),
               ),
             ),
           ),
-        ),
       ],
     );
   }

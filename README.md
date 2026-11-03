@@ -1,6 +1,10 @@
 # 琴伴 · Android 内部演示
 
-当前开发版本 **0.1.56+57**。[下载与发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [完整更新说明](docs/2026-11-02-0.1.56-更新说明.md) · [构建与验证](validation/release-0.1.56.md)。本次为内部测试版，完整测试套件尚未通过。
+当前本地版本 **0.1.59+60**，提供主应用通用 APK。分类栏、钢琴曲目列表和计划表单按可用空间调整布局，修复琴键粒子被相邻琴键遮挡的问题。四个舞蹈视频随 APK 打包，可直接离线播放。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md) · [未来开发计划](docs/未来开发计划.md)
+
+GitHub已发布版本仍是 **0.1.56+57**：[下载与发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [0.1.56更新说明](docs/2026-11-02-0.1.56-更新说明.md) · [历史构建与验证](validation/release-0.1.56.md)。内部测试版完整测试套件尚未通过。
+
+工作区新增 AI 训练助手，可从首页、练习完成页或历史详情进入。未配置在线服务的构建支持本机摘要和常用帮助。接入真实问答需要配置琴伴 HTTPS 服务和模型账号。[AI 训练助手设计与接入](docs/2026-11-03-AI训练助手设计.md#8-运行与接入)
 
 | 安装包 | 用途 |
 | --- | --- |
@@ -8,6 +12,8 @@
 | [旧预览版升级包](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.56/qinban-0.1.56-android-universal-preview-update.apk) | 覆盖此前 isolated 预览包，包名以 `.validation` 结尾 |
 
 请选择与原应用包名相同的安装包直接覆盖，保留本机记录；不要先卸载。两个包均包含ARM64、ARMv7和x86_64架构及四个离线视频。
+
+上表为 GitHub 上的 0.1.56 历史安装包。0.1.57 的 host-pending 下载原型已停用。0.1.58 起恢复随包视频。[0.1.58 构建记录](validation/bundled-videos-0.1.58.md)
 
 ## 0.1.56 舞蹈、训练计划与统一记录
 

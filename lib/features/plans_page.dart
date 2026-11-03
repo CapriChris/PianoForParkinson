@@ -401,6 +401,8 @@ class _PlansPageState extends State<PlansPage> with WidgetsBindingObserver {
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     child: LayoutBuilder(
       builder: (context, size) {
+        const gap = 8.0;
+        const horizontalPadding = 8.0;
         final style = Theme.of(context).textTheme.bodySmall!;
         double widthOf(String label) {
           final painter = TextPainter(
@@ -408,96 +410,120 @@ class _PlansPageState extends State<PlansPage> with WidgetsBindingObserver {
             textDirection: Directionality.of(context),
             textScaler: MediaQuery.textScalerOf(context),
           )..layout();
-          return painter.width;
+          final width = painter.width.ceilToDouble();
+          painter.dispose();
+          return width;
         }
 
         final all = selected.length == items.length;
-        final allLabel = c.text(
-          all ? '全不选' : '全选',
-          all ? 'Deselect all' : 'Select all',
-        );
+        final selectLabel = c.text('全选', 'Select all');
+        final deselectLabel = c.text('全不选', 'Deselect all');
         final countLabel = c.text(
           '已选 ${selected.length} 项',
           '${selected.length} selected',
         );
         final cancelLabel = c.text('取消', 'Cancel'),
             deleteLabel = c.text('删除', 'Delete');
+        double buttonWidth(String label) =>
+            (widthOf(label) + 2 * horizontalPadding).clamp(
+              kMinInteractiveDimension,
+              double.infinity,
+            );
         final rightWidth =
-            (widthOf(cancelLabel) + 16).clamp(48.0, double.infinity) +
-            (widthOf(deleteLabel) + 16).clamp(48.0, double.infinity) +
-            16;
-        final sideWidth = rightWidth > widthOf(allLabel) + 16
-            ? rightWidth
-            : widthOf(allLabel) + 16;
-        final width = (sideWidth * 2 + widthOf(countLabel) + 24).clamp(
-          size.maxWidth,
-          double.infinity,
-        );
+            buttonWidth(cancelLabel) + buttonWidth(deleteLabel) + gap;
+        final sideWidth = [
+          rightWidth,
+          buttonWidth(selectLabel),
+          buttonWidth(deselectLabel),
+        ].reduce((a, b) => a > b ? a : b);
         final buttonStyle = TextButton.styleFrom(
-          minimumSize: const Size(48, 48),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          minimumSize: const Size.square(kMinInteractiveDimension),
+          padding: const EdgeInsets.symmetric(horizontal: horizontalPadding),
           textStyle: style,
         );
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: SizedBox(
-            width: width,
-            height: (MediaQuery.textScalerOf(context).scale(18) * 1.4 + 16)
-                .clamp(48.0, double.infinity),
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Center(child: Text(countLabel, style: style)),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    QinTextButton(
-                      style: buttonStyle,
-                      onPressed: busy
-                          ? null
-                          : () => setState(() {
-                              all
-                                  ? selected.clear()
-                                  : selected.addAll(
-                                      items.map(
-                                        (v) => v['plan']['id'] as String,
-                                      ),
-                                    );
-                            }),
-                      child: Text(allLabel),
-                    ),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        QinTextButton(
-                          style: buttonStyle,
-                          onPressed: busy
-                              ? null
-                              : () => setState(() {
-                                  selecting = false;
-                                  selected.clear();
-                                }),
-                          child: Text(cancelLabel),
-                        ),
-                        const SizedBox(width: 16),
-                        QinFilledButton(
-                          style: FilledButton.styleFrom(
-                            minimumSize: const Size(48, 48),
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                            textStyle: style,
-                          ),
-                          onPressed: busy || selected.isEmpty
-                              ? null
-                              : deleteSelected,
-                          child: Text(deleteLabel),
-                        ),
-                      ],
-                    ),
-                  ],
+        final selectAll = QinTextButton(
+          style: buttonStyle,
+          onPressed: busy
+              ? null
+              : () => setState(() {
+                  all
+                      ? selected.clear()
+                      : selected.addAll(
+                          items.map((v) => v['plan']['id'] as String),
+                        );
+                }),
+          child: Text(
+            all ? deselectLabel : selectLabel,
+            textAlign: TextAlign.center,
+          ),
+        );
+        final count = Text(
+          countLabel,
+          style: style,
+          textAlign: TextAlign.center,
+        );
+        final actions = Wrap(
+          alignment: WrapAlignment.end,
+          spacing: gap,
+          runSpacing: gap,
+          children: [
+            QinTextButton(
+              style: buttonStyle,
+              onPressed: busy
+                  ? null
+                  : () => setState(() {
+                      selecting = false;
+                      selected.clear();
+                    }),
+              child: Text(cancelLabel),
+            ),
+            QinFilledButton(
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.square(kMinInteractiveDimension),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: horizontalPadding,
                 ),
+                textStyle: style,
+              ),
+              onPressed: busy || selected.isEmpty ? null : deleteSelected,
+              child: Text(deleteLabel),
+            ),
+          ],
+        );
+        if (size.maxWidth >= 2 * sideWidth + widthOf(countLabel) + 2 * gap) {
+          return Row(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: selectAll,
+                ),
+              ),
+              const SizedBox(width: gap),
+              count,
+              const SizedBox(width: gap),
+              Expanded(
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: actions,
+                ),
+              ),
+            ],
+          );
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Flexible(child: selectAll),
+                const SizedBox(width: gap),
+                Expanded(child: count),
               ],
             ),
-          ),
+            const SizedBox(height: gap),
+            Align(alignment: AlignmentDirectional.centerEnd, child: actions),
+          ],
         );
       },
     ),
@@ -707,6 +733,16 @@ class PlanEditor extends StatefulWidget {
 }
 
 class _PlanEditorState extends State<PlanEditor> {
+  static const _fieldLabelWidth = 100.0;
+  static const _fieldGap = 8.0;
+  static const _stepButtonWidth = kMinInteractiveDimension;
+  static const _stepLineWidth = 1.0;
+  static const _targetPadding = EdgeInsets.symmetric(
+    horizontal: 4,
+    vertical: 14,
+  );
+  static const _maxTarget = 1000;
+
   AppController get c => widget.c;
   late final title = TextEditingController(
     text: widget.plan?['title'] as String? ?? '',
@@ -825,13 +861,13 @@ class _PlanEditorState extends State<PlanEditor> {
     if (title.text.trim().isEmpty ||
         count == null ||
         count < 1 ||
-        count > 1000 ||
+        count > _maxTarget ||
         (end != null && end!.isBefore(start)) ||
         (kind == 'exercise' && trainingId == null)) {
       setState(
         () => error = c.text(
-          '请填写名称、1–1000次目标、有效日期，并选择练习内容。',
-          'Enter a name, 1–1000 sessions, valid dates and a training activity.',
+          '请填写名称、1–$_maxTarget次目标、有效日期，并选择练习内容。',
+          'Enter a name, 1–$_maxTarget sessions, valid dates and a training activity.',
         ),
       );
       return;
@@ -909,20 +945,33 @@ class _PlanEditorState extends State<PlanEditor> {
     return taskTitle(trainingId!, c.chinese);
   }
 
-  Widget fieldRow(String label, Widget field) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: LayoutBuilder(
-      builder: (context, size) {
-        return Row(
-          children: [
-            SizedBox(width: 100, child: Text(label)),
-            const SizedBox(width: 8),
-            Expanded(child: field),
-          ],
-        );
-      },
-    ),
-  );
+  Widget fieldRow(String label, Widget field, {double? minimumFieldWidth}) =>
+      Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: LayoutBuilder(
+          builder: (context, size) {
+            if (minimumFieldWidth != null &&
+                size.maxWidth <
+                    _fieldLabelWidth + _fieldGap + minimumFieldWidth) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(label),
+                  const SizedBox(height: _fieldGap),
+                  field,
+                ],
+              );
+            }
+            return Row(
+              children: [
+                SizedBox(width: _fieldLabelWidth, child: Text(label)),
+                const SizedBox(width: _fieldGap),
+                Expanded(child: field),
+              ],
+            );
+          },
+        ),
+      );
 
   Widget group(List<Widget> children) => QinPanel(
     padding: const EdgeInsets.all(16),
@@ -934,7 +983,7 @@ class _PlanEditorState extends State<PlanEditor> {
 
   void adjustTarget(int delta) {
     final value = ((int.tryParse(target.text) ?? 0) + delta)
-        .clamp(1, 1000)
+        .clamp(1, _maxTarget)
         .toString();
     target.value = TextEditingValue(
       text: value,
@@ -942,7 +991,7 @@ class _PlanEditorState extends State<PlanEditor> {
     );
   }
 
-  Widget targetStepper() {
+  Widget targetStepper(String unit) {
     final count = int.tryParse(target.text);
     const buttonStyle = ButtonStyle(
       minimumSize: WidgetStatePropertyAll(Size.zero),
@@ -955,7 +1004,10 @@ class _PlanEditorState extends State<PlanEditor> {
           child: Container(
             decoration: BoxDecoration(
               color: context.qin.surface,
-              border: Border.all(color: context.qin.edge),
+              border: Border.all(
+                color: context.qin.edge,
+                width: _stepLineWidth,
+              ),
               borderRadius: BorderRadius.circular(12),
             ),
             child: IntrinsicHeight(
@@ -963,7 +1015,7 @@ class _PlanEditorState extends State<PlanEditor> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   SizedBox(
-                    width: 48,
+                    width: _stepButtonWidth,
                     child: QinIconButton(
                       key: const ValueKey('plan-target-decrease'),
                       style: buttonStyle,
@@ -975,8 +1027,8 @@ class _PlanEditorState extends State<PlanEditor> {
                     ),
                   ),
                   VerticalDivider(
-                    width: 1,
-                    thickness: 1,
+                    width: _stepLineWidth,
+                    thickness: _stepLineWidth,
                     color: context.qin.line,
                   ),
                   Expanded(
@@ -992,25 +1044,22 @@ class _PlanEditorState extends State<PlanEditor> {
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
                         disabledBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 4,
-                          vertical: 14,
-                        ),
+                        contentPadding: _targetPadding,
                       ),
                     ),
                   ),
                   VerticalDivider(
-                    width: 1,
-                    thickness: 1,
+                    width: _stepLineWidth,
+                    thickness: _stepLineWidth,
                     color: context.qin.line,
                   ),
                   SizedBox(
-                    width: 48,
+                    width: _stepButtonWidth,
                     child: QinIconButton(
                       key: const ValueKey('plan-target-increase'),
                       style: buttonStyle,
                       tooltip: c.text('增加1次', 'Increase by one'),
-                      onPressed: saving || (count ?? 0) >= 1000
+                      onPressed: saving || (count ?? 0) >= _maxTarget
                           ? null
                           : () => adjustTarget(1),
                       icon: const Icon(Icons.add),
@@ -1021,39 +1070,46 @@ class _PlanEditorState extends State<PlanEditor> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
-        Tooltip(
-          message: c.text('次', 'sessions'),
-          child: Text(c.text('次', '×')),
-        ),
+        const SizedBox(width: _fieldGap),
+        Tooltip(message: c.text('次', 'sessions'), child: Text(unit)),
       ],
     );
   }
 
-  Widget targetRow() => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 8),
-    child: LayoutBuilder(
-      builder: (context, bounds) {
-        if (bounds.maxWidth < 320 ||
-            MediaQuery.textScalerOf(context).scale(1) > 1.5) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(c.text('目标', 'Target')),
-              const SizedBox(height: 8),
-              targetStepper(),
-            ],
-          );
-        }
-        return Row(
-          children: [
-            SizedBox(width: 100, child: Text(c.text('目标', 'Target'))),
-            const SizedBox(width: 8),
-            Expanded(child: targetStepper()),
-          ],
-        );
-      },
-    ),
+  Widget targetRow() => Builder(
+    builder: (context) {
+      final theme = Theme.of(context);
+      final inputStyle = theme.useMaterial3
+          ? theme.textTheme.bodyLarge
+          : theme.textTheme.titleMedium;
+      final unitStyle = DefaultTextStyle.of(context).style;
+      final unit = c.text('次', '×');
+      final painter = TextPainter(
+        textDirection: Directionality.of(context),
+        textScaler: MediaQuery.textScalerOf(context),
+        locale: Localizations.maybeLocaleOf(context),
+        maxLines: 1,
+      );
+      double widthOf(String text, TextStyle? style) {
+        painter.text = TextSpan(text: text, style: style);
+        painter.layout();
+        return painter.width.ceilToDouble();
+      }
+
+      final fieldWidth =
+          2 * _stepButtonWidth +
+          4 * _stepLineWidth + // Two dividers and both sides of the border.
+          _targetPadding.horizontal +
+          widthOf('$_maxTarget', inputStyle) +
+          _fieldGap +
+          widthOf(unit, unitStyle);
+      painter.dispose();
+      return fieldRow(
+        c.text('目标', 'Target'),
+        targetStepper(unit),
+        minimumFieldWidth: fieldWidth,
+      );
+    },
   );
 
   Widget get timePicker {
@@ -1526,6 +1582,9 @@ class _PlanRepeatPageState extends State<PlanRepeatPage> {
   @override
   Widget build(BuildContext context) {
     final c = widget.c;
+    final dayLabels = c.chinese
+        ? const ['一', '二', '三', '四', '五', '六', '日']
+        : const ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return Scaffold(
       appBar: AppBar(
         leading: Navigator.canPop(context) ? const QinBackButton() : null,
@@ -1570,41 +1629,28 @@ class _PlanRepeatPageState extends State<PlanRepeatPage> {
           if (mode == 'custom') ...[
             const SizedBox(height: 16),
             QinPanel(
-              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 12),
               child: Row(
+                spacing: 4,
                 children: [
                   for (var d = 1; d <= 7; d++)
                     Expanded(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 2),
-                        child: FilterChip(
-                          key: ValueKey('repeat-day-$d'),
-                          showCheckmark: false,
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 2,
-                          ),
-                          label: FittedBox(
+                      child: FilterChip(
+                        key: ValueKey('repeat-day-$d'),
+                        showCheckmark: false,
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        labelPadding: const EdgeInsets.symmetric(horizontal: 2),
+                        label: SizedBox(
+                          width: double.infinity,
+                          child: FittedBox(
                             fit: BoxFit.scaleDown,
-                            child: Text(
-                              c.chinese
-                                  ? ['一', '二', '三', '四', '五', '六', '日'][d - 1]
-                                  : [
-                                      'Mon',
-                                      'Tue',
-                                      'Wed',
-                                      'Thu',
-                                      'Fri',
-                                      'Sat',
-                                      'Sun',
-                                    ][d - 1],
-                            ),
+                            child: Text(dayLabels[d - 1]),
                           ),
-                          selected: custom.contains(d),
-                          onSelected: (value) => setState(() {
-                            value ? custom.add(d) : custom.remove(d);
-                          }),
                         ),
+                        selected: custom.contains(d),
+                        onSelected: (value) => setState(() {
+                          value ? custom.add(d) : custom.remove(d);
+                        }),
                       ),
                     ),
                 ],
@@ -1639,15 +1685,7 @@ class PlanTrainingPicker extends StatelessWidget {
           c.text('钢琴练习', 'Piano exercises'),
           style: Theme.of(context).textTheme.titleMedium,
         ),
-        for (final id in [
-          'G1_MEMORY',
-          'G2_INHIBITION',
-          'G3_SWITCH',
-          'S1_GUIDED',
-          'S2_RHYTHM',
-          'M1_ALTERNATE',
-          'M2_DUAL_ZONE',
-        ])
+        for (final id in exerciseIds)
           QinListTile(
             surfaceBuilder: (surface) => Card(child: surface),
             title: Text(taskTitle(id, c.chinese)),

@@ -109,7 +109,13 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   }
 
   Future<void> selectPart(int index) async {
-    if (busy || index < 0 || index >= course.parts.length) return;
+    if (!mounted ||
+        leaving ||
+        busy ||
+        index < 0 ||
+        index >= course.parts.length) {
+      return;
+    }
     sample(allowPrompt: false);
     scrubbing = false;
     resumeAfterScrub = false;
@@ -149,7 +155,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       wall = widget.nowMilliseconds?.call() ?? clock.elapsedMilliseconds;
       durations[index] = next.value.duration;
       setState(() => ready = true);
-      if (foreground && !dialogOpen) await next.play();
+      if (foreground && !dialogOpen && !leaving) await next.play();
     } catch (_) {
       if (video != next) await next.dispose();
       if (mounted && token == generation) {

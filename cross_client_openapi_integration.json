@@ -1,0 +1,6689 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PD-Rehab-Web",
+    "description": "帕金森病智能辅助识别、运动状态量化与数字康复训练平台。\n\n**医疗声明：** 本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。\n\n所有模型输出均来自真实模型；模型未配置时接口返回 `MODEL_NOT_CONFIGURED`，系统不会返回伪造结果。",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/integration/v1/bootstrap": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Bootstrap",
+        "description": "Explicitly bounded staff/patient snapshot; never returns passwords.",
+        "operationId": "bootstrap_api_integration_v1_bootstrap_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Bootstrap Api Integration V1 Bootstrap Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/bindings": {
+      "post": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Bind Profile",
+        "operationId": "bind_profile_api_integration_v1_bindings_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BindRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Bind Profile Api Integration V1 Bindings Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/integration/v1/records": {
+      "post": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Sync Record",
+        "operationId": "sync_record_api_integration_v1_records_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExternalRecordIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Sync Record Api Integration V1 Records Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "List Records",
+        "operationId": "list_records_api_integration_v1_records_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 200,
+              "minimum": 1,
+              "default": 50,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "include_payload",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Include Payload"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Records Api Integration V1 Records Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/records/{record_id}": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Record Detail",
+        "operationId": "record_detail_api_integration_v1_records__record_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "record_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Record Id"
+            }
+          },
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Record Detail Api Integration V1 Records  Record Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/capabilities": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Capabilities",
+        "operationId": "capabilities_api_integration_v1_capabilities_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Capabilities Api Integration V1 Capabilities Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/integration/v1/face/jobs": {
+      "post": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Submit Face Video",
+        "operationId": "submit_face_video_api_integration_v1_face_jobs_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_submit_face_video_api_integration_v1_face_jobs_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Submit Face Video Api Integration V1 Face Jobs Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/integration/v1/face/jobs/{job_id}/review": {
+      "post": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Review Face Job",
+        "operationId": "review_face_job_api_integration_v1_face_jobs__job_id__review_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FrameReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Review Face Job Api Integration V1 Face Jobs  Job Id  Review Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/face/jobs/{job_id}": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Face Job Status",
+        "operationId": "face_job_status_api_integration_v1_face_jobs__job_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Face Job Status Api Integration V1 Face Jobs  Job Id  Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/expert/chat": {
+      "post": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Expert Chat",
+        "operationId": "expert_chat_api_integration_v1_expert_chat_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpertQuestion"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Expert Chat Api Integration V1 Expert Chat Post"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ]
+      }
+    },
+    "/api/integration/v1/face/jobs/{job_id}/candidates": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Face Review Candidates",
+        "description": "Reviewed candidates, never auto-approve clinical frame boundaries.",
+        "operationId": "face_review_candidates_api_integration_v1_face_jobs__job_id__candidates_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Face Review Candidates Api Integration V1 Face Jobs  Job Id  Candidates Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/integration/v1/patient-data": {
+      "get": {
+        "tags": [
+          "Cross-client integration"
+        ],
+        "summary": "Patient Data",
+        "description": "Authorized Web→Flutter snapshot, namespaced by original entity type.\n\nFlutter saves this to a separate cache. These records MUST NOT be inserted\ninto its validated native practice.db tables: they use different formulas.",
+        "operationId": "patient_data_api_integration_v1_patient_data_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "patient_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Patient Id"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 30,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Patient Data Api Integration V1 Patient Data Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AffectedSide": {
+        "type": "string",
+        "enum": [
+          "LEFT",
+          "RIGHT",
+          "BILATERAL",
+          "UNKNOWN"
+        ],
+        "title": "AffectedSide"
+      },
+      "AssessmentSessionComplete": {
+        "properties": {
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "AssessmentSessionComplete"
+      },
+      "AssessmentSessionCreate": {
+        "properties": {
+          "session_type": {
+            "$ref": "#/components/schemas/AssessmentSessionType",
+            "default": "COMPREHENSIVE"
+          },
+          "medication_state": {
+            "$ref": "#/components/schemas/MedicationState",
+            "default": "UNKNOWN"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "type": "object",
+        "title": "AssessmentSessionCreate"
+      },
+      "AssessmentSessionDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "session_type": {
+            "type": "string",
+            "title": "Session Type"
+          },
+          "medication_state": {
+            "type": "string",
+            "title": "Medication State"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "micro_expression_results": {
+            "items": {
+              "$ref": "#/components/schemas/MicroExpressionResultRead"
+            },
+            "type": "array",
+            "title": "Micro Expression Results"
+          },
+          "finger_tapping_results": {
+            "items": {
+              "$ref": "#/components/schemas/FingerTappingResultRead"
+            },
+            "type": "array",
+            "title": "Finger Tapping Results"
+          },
+          "functional_assessments": {
+            "items": {
+              "$ref": "#/components/schemas/FunctionalAssessmentRead"
+            },
+            "type": "array",
+            "title": "Functional Assessments"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "session_type",
+          "medication_state",
+          "status",
+          "created_by",
+          "started_at",
+          "completed_at",
+          "notes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssessmentSessionDetail",
+        "description": "Session plus the child results attached to it."
+      },
+      "AssessmentSessionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "session_type": {
+            "type": "string",
+            "title": "Session Type"
+          },
+          "medication_state": {
+            "type": "string",
+            "title": "Medication State"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "session_type",
+          "medication_state",
+          "status",
+          "created_by",
+          "started_at",
+          "completed_at",
+          "notes",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "AssessmentSessionRead"
+      },
+      "AssessmentSessionType": {
+        "type": "string",
+        "enum": [
+          "COMPREHENSIVE",
+          "MICRO_EXPRESSION_ONLY",
+          "FINGER_TAPPING_ONLY",
+          "FUNCTIONAL_TEST"
+        ],
+        "title": "AssessmentSessionType"
+      },
+      "BindRequest": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Device Id"
+          },
+          "local_profile_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Local Profile Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Patient Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "local_profile_id",
+          "patient_id"
+        ],
+        "title": "BindRequest"
+      },
+      "Body_analyze_api_pose_sessions__session_id__analyze_post": {
+        "properties": {
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video",
+            "description": "一段完整的动作视频"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video"
+        ],
+        "title": "Body_analyze_api_pose_sessions__session_id__analyze_post"
+      },
+      "Body_analyze_finger_tapping_api_assessment_sessions__session_id__finger_tapping_post": {
+        "properties": {
+          "hand": {
+            "$ref": "#/components/schemas/Hand"
+          },
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video",
+            "description": "10-20 秒手指敲击视频"
+          },
+          "medication_state": {
+            "$ref": "#/components/schemas/MedicationState",
+            "default": "UNKNOWN"
+          },
+          "input_source": {
+            "type": "string",
+            "enum": [
+              "HUMAN_KEYBOARD",
+              "SYNTHETIC_SELFTEST",
+              "SEED_DEMO",
+              "UNLABELLED"
+            ],
+            "title": "Input Source",
+            "default": "HUMAN_KEYBOARD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "hand",
+          "video"
+        ],
+        "title": "Body_analyze_finger_tapping_api_assessment_sessions__session_id__finger_tapping_post"
+      },
+      "Body_analyze_micro_expression_api_assessment_sessions__session_id__micro_expression_post": {
+        "properties": {
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video",
+            "description": "mp4 / mov / avi"
+          },
+          "medication_state": {
+            "$ref": "#/components/schemas/MedicationState",
+            "default": "UNKNOWN"
+          },
+          "recorded_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recorded At"
+          },
+          "onset_frame": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1800.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onset Frame"
+          },
+          "apex_frame": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1800.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Apex Frame"
+          },
+          "offset_frame": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 1800.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Offset Frame"
+          },
+          "selection_source": {
+            "type": "string",
+            "title": "Selection Source",
+            "default": "MANUAL"
+          },
+          "selection_token": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 2048
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Token"
+          },
+          "review_confirmed": {
+            "type": "boolean",
+            "title": "Review Confirmed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "video"
+        ],
+        "title": "Body_analyze_micro_expression_api_assessment_sessions__session_id__micro_expression_post"
+      },
+      "Body_audio_api_guided_song_sessions__session_id__audio_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "title": "File"
+          },
+          "render_version": {
+            "type": "string",
+            "maxLength": 64,
+            "title": "Render Version",
+            "default": "1"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_audio_api_guided_song_sessions__session_id__audio_post"
+      },
+      "Body_micro_expression_keyframes_api_micro_expression_keyframes_post": {
+        "properties": {
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video"
+        ],
+        "title": "Body_micro_expression_keyframes_api_micro_expression_keyframes_post"
+      },
+      "Body_micro_expression_video_info_api_micro_expression_video_info_post": {
+        "properties": {
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video"
+          }
+        },
+        "type": "object",
+        "required": [
+          "video"
+        ],
+        "title": "Body_micro_expression_video_info_api_micro_expression_video_info_post"
+      },
+      "Body_submit_face_video_api_integration_v1_face_jobs_post": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "video": {
+            "type": "string",
+            "format": "binary",
+            "title": "Video"
+          },
+          "device_id": {
+            "type": "string",
+            "title": "Device Id"
+          },
+          "local_profile_id": {
+            "type": "string",
+            "title": "Local Profile Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "video",
+          "device_id",
+          "local_profile_id"
+        ],
+        "title": "Body_submit_face_video_api_integration_v1_face_jobs_post"
+      },
+      "CalibrationBaselineRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "baseline_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Accuracy"
+          },
+          "baseline_response_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Response Latency"
+          },
+          "baseline_response_latency_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Response Latency Cv"
+          },
+          "baseline_timing_mae": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Timing Mae"
+          },
+          "baseline_left_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Left Accuracy"
+          },
+          "baseline_right_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Right Accuracy"
+          },
+          "baseline_left_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Left Latency"
+          },
+          "baseline_right_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Right Latency"
+          },
+          "baseline_spontaneous_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Spontaneous Bpm"
+          },
+          "baseline_spontaneous_interval_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Spontaneous Interval Ms"
+          },
+          "baseline_spontaneous_interval_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Spontaneous Interval Cv"
+          },
+          "calibration_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Version"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithm Version"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active",
+            "default": true
+          },
+          "snapshot": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "baseline_accuracy",
+          "baseline_response_latency",
+          "baseline_response_latency_cv",
+          "baseline_timing_mae",
+          "baseline_left_accuracy",
+          "baseline_right_accuracy",
+          "baseline_left_latency",
+          "baseline_right_latency",
+          "created_at"
+        ],
+        "title": "CalibrationBaselineRead"
+      },
+      "DifficultyConfigSchema": {
+        "properties": {
+          "bpm": {
+            "type": "integer",
+            "maximum": 300.0,
+            "minimum": 20.0,
+            "title": "Bpm",
+            "default": 60
+          },
+          "judgement_window_ms": {
+            "type": "integer",
+            "maximum": 2000.0,
+            "minimum": 50.0,
+            "title": "Judgement Window Ms",
+            "default": 300
+          },
+          "sequence_length": {
+            "type": "integer",
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Sequence Length",
+            "default": 4
+          },
+          "note_density": {
+            "type": "number",
+            "maximum": 4.0,
+            "minimum": 0.25,
+            "title": "Note Density",
+            "default": 1.0
+          },
+          "hand_mode": {
+            "type": "string",
+            "enum": [
+              "SINGLE",
+              "ALTERNATING",
+              "BOTH"
+            ],
+            "title": "Hand Mode",
+            "default": "SINGLE"
+          },
+          "weak_side_ratio": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Weak Side Ratio",
+            "default": 0.5
+          },
+          "finger_complexity": {
+            "type": "integer",
+            "maximum": 3.0,
+            "minimum": 1.0,
+            "title": "Finger Complexity",
+            "default": 1
+          },
+          "session_duration_sec": {
+            "type": "integer",
+            "maximum": 900.0,
+            "minimum": 10.0,
+            "title": "Session Duration Sec",
+            "default": 60
+          },
+          "tempo_ceiling_bpm": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 160.0,
+                "minimum": 40.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tempo Ceiling Bpm"
+          }
+        },
+        "type": "object",
+        "title": "DifficultyConfigSchema",
+        "description": "The difficulty parameters actually used for a round."
+      },
+      "DominantHand": {
+        "type": "string",
+        "enum": [
+          "LEFT",
+          "RIGHT",
+          "AMBIDEXTROUS",
+          "UNKNOWN"
+        ],
+        "title": "DominantHand"
+      },
+      "EmotionStatus": {
+        "properties": {
+          "consent": {
+            "type": "boolean",
+            "title": "Consent"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "IDLE",
+              "CONSENT_REQUIRED",
+              "CONNECTING",
+              "MODEL_NOT_CONFIGURED",
+              "STREAMING",
+              "UNAVAILABLE",
+              "STOPPED",
+              "SIMULATED"
+            ],
+            "title": "Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "consent",
+          "status"
+        ],
+        "title": "EmotionStatus"
+      },
+      "ExerciseCueRead": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "beats": {
+            "type": "integer",
+            "title": "Beats"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text",
+          "beats"
+        ],
+        "title": "ExerciseCueRead",
+        "description": "One step of the counted phrase the patient follows."
+      },
+      "ExpertQuestion": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 3000,
+            "minLength": 1,
+            "title": "Question"
+          },
+          "patient_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Patient Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "question"
+        ],
+        "title": "ExpertQuestion"
+      },
+      "ExternalRecordIn": {
+        "properties": {
+          "device_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Device Id"
+          },
+          "local_profile_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 8,
+            "title": "Local Profile Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Patient Id"
+          },
+          "source_record_id": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Source Record Id"
+          },
+          "record_type": {
+            "type": "string",
+            "pattern": "^(PIANO_SESSION|PIECE_PERFORMANCE|DANCE_SESSION|TRAINING_PLAN|TRAINING_PLAN_EVENT|OTHER)$",
+            "title": "Record Type"
+          },
+          "schema_version": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Schema Version"
+          },
+          "task_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Task Version"
+          },
+          "metric_version": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Version"
+          },
+          "captured_at_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At Ms"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "device_id",
+          "local_profile_id",
+          "patient_id",
+          "source_record_id",
+          "record_type",
+          "schema_version"
+        ],
+        "title": "ExternalRecordIn"
+      },
+      "FingerTappingResultRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "assessment_session_id": {
+            "type": "string",
+            "title": "Assessment Session Id"
+          },
+          "media_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media File Id"
+          },
+          "hand": {
+            "type": "string",
+            "title": "Hand"
+          },
+          "input_source": {
+            "type": "string",
+            "title": "Input Source"
+          },
+          "tapping_frequency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tapping Frequency"
+          },
+          "avg_amplitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Amplitude"
+          },
+          "avg_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Speed"
+          },
+          "avg_cycle_duration": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Cycle Duration"
+          },
+          "amplitude_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amplitude Cv"
+          },
+          "speed_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Cv"
+          },
+          "cycle_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Cv"
+          },
+          "amplitude_slope": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amplitude Slope"
+          },
+          "speed_slope": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Speed Slope"
+          },
+          "cycle_slope": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Slope"
+          },
+          "interruptions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interruptions"
+          },
+          "valid_frame_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Frame Ratio"
+          },
+          "avg_landmark_confidence": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avg Landmark Confidence"
+          },
+          "severity_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Score"
+          },
+          "severity_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Severity Label"
+          },
+          "analyzer_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Analyzer Version"
+          },
+          "feature_schema_version": {
+            "type": "string",
+            "title": "Feature Schema Version"
+          },
+          "analysis_config_json": {
+            "title": "Analysis Config Json"
+          },
+          "quality_json": {
+            "title": "Quality Json"
+          },
+          "raw_features_json": {
+            "title": "Raw Features Json"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assessment_session_id",
+          "media_file_id",
+          "hand",
+          "input_source",
+          "tapping_frequency",
+          "avg_amplitude",
+          "avg_speed",
+          "avg_cycle_duration",
+          "amplitude_cv",
+          "speed_cv",
+          "cycle_cv",
+          "amplitude_slope",
+          "speed_slope",
+          "cycle_slope",
+          "interruptions",
+          "valid_frame_ratio",
+          "avg_landmark_confidence",
+          "severity_score",
+          "severity_label",
+          "analyzer_version",
+          "feature_schema_version",
+          "created_at"
+        ],
+        "title": "FingerTappingResultRead"
+      },
+      "FingerTappingSessionSummary": {
+        "properties": {
+          "session_id": {
+            "type": "string",
+            "title": "Session Id"
+          },
+          "left": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FingerTappingResultRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "right": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FingerTappingResultRead"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "comparisons": {
+            "items": {
+              "$ref": "#/components/schemas/LeftRightComparison"
+            },
+            "type": "array",
+            "title": "Comparisons"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session_id"
+        ],
+        "title": "FingerTappingSessionSummary"
+      },
+      "FollowUpRead": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "offset_minutes": {
+            "type": "integer",
+            "title": "Offset Minutes"
+          },
+          "is_showcase": {
+            "type": "boolean",
+            "title": "Is Showcase",
+            "default": false
+          },
+          "exercise_names": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Exercise Names"
+          },
+          "assessments": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentSessionRead"
+            },
+            "type": "array",
+            "title": "Assessments"
+          },
+          "tapping": {
+            "items": {
+              "$ref": "#/components/schemas/FingerTappingResultRead"
+            },
+            "type": "array",
+            "title": "Tapping"
+          },
+          "piano": {
+            "items": {
+              "$ref": "#/components/schemas/PianoTrainingSummary"
+            },
+            "type": "array",
+            "title": "Piano"
+          },
+          "pose": {
+            "items": {
+              "$ref": "#/components/schemas/PoseSessionRead"
+            },
+            "type": "array",
+            "title": "Pose"
+          },
+          "guided": {
+            "items": {
+              "$ref": "#/components/schemas/GuidedTrainingSummary"
+            },
+            "type": "array",
+            "title": "Guided"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "start_date",
+          "end_date",
+          "offset_minutes",
+          "exercise_names",
+          "assessments",
+          "tapping",
+          "piano",
+          "pose",
+          "guided"
+        ],
+        "title": "FollowUpRead"
+      },
+      "FrameReview": {
+        "properties": {
+          "onset_frame": {
+            "type": "integer",
+            "maximum": 1800.0,
+            "minimum": 1.0,
+            "title": "Onset Frame"
+          },
+          "apex_frame": {
+            "type": "integer",
+            "maximum": 1800.0,
+            "minimum": 1.0,
+            "title": "Apex Frame"
+          },
+          "offset_frame": {
+            "type": "integer",
+            "maximum": 1800.0,
+            "minimum": 1.0,
+            "title": "Offset Frame"
+          },
+          "review_confirmed": {
+            "type": "boolean",
+            "title": "Review Confirmed",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "onset_frame",
+          "apex_frame",
+          "offset_frame"
+        ],
+        "title": "FrameReview"
+      },
+      "FunctionalAssessmentRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "assessment_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assessment Session Id"
+          },
+          "test_type": {
+            "type": "string",
+            "title": "Test Type"
+          },
+          "hand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hand"
+          },
+          "value_primary": {
+            "type": "number",
+            "title": "Value Primary"
+          },
+          "value_secondary": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Secondary"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "medication_state": {
+            "type": "string",
+            "title": "Medication State"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "performed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Performed At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "assessment_session_id",
+          "test_type",
+          "hand",
+          "value_primary",
+          "value_secondary",
+          "unit",
+          "medication_state",
+          "notes",
+          "performed_at",
+          "created_by",
+          "created_at"
+        ],
+        "title": "FunctionalAssessmentRead"
+      },
+      "GuidedEvent": {
+        "properties": {
+          "seq": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Seq"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "CUE",
+              "DOWN",
+              "UP",
+              "SKIP",
+              "PAUSE",
+              "RESUME"
+            ],
+            "title": "Type"
+          },
+          "segment_index": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "Segment Index"
+          },
+          "note_index": {
+            "type": "integer",
+            "maximum": 31.0,
+            "minimum": 0.0,
+            "title": "Note Index"
+          },
+          "time_ms": {
+            "type": "number",
+            "maximum": 86400000.0,
+            "minimum": 0.0,
+            "title": "Time Ms"
+          },
+          "midi": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 71.0,
+                "minimum": 60.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Midi"
+          },
+          "press_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Press Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "seq",
+          "type",
+          "segment_index",
+          "note_index",
+          "time_ms"
+        ],
+        "title": "GuidedEvent"
+      },
+      "GuidedEvents": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/GuidedEvent"
+            },
+            "type": "array",
+            "maxItems": 20000,
+            "title": "Events"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "GuidedEvents"
+      },
+      "GuidedSongCreate": {
+        "properties": {
+          "patient_id": {
+            "type": "string",
+            "maxLength": 36,
+            "minLength": 1,
+            "title": "Patient Id"
+          },
+          "client_request_id": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Client Request Id"
+          },
+          "song_id": {
+            "type": "string",
+            "const": "two_tigers",
+            "title": "Song Id",
+            "default": "two_tigers"
+          },
+          "song_version": {
+            "type": "string",
+            "const": "1",
+            "title": "Song Version",
+            "default": "1"
+          },
+          "selected_hand": {
+            "type": "string",
+            "enum": [
+              "LEFT",
+              "RIGHT"
+            ],
+            "title": "Selected Hand"
+          },
+          "initial_difficulty": {
+            "type": "string",
+            "enum": [
+              "BEGINNER",
+              "INTERMEDIATE",
+              "ADVANCED"
+            ],
+            "title": "Initial Difficulty"
+          },
+          "input_source": {
+            "type": "string",
+            "enum": [
+              "HUMAN_KEYBOARD",
+              "SYNTHETIC_SELFTEST"
+            ],
+            "title": "Input Source",
+            "default": "HUMAN_KEYBOARD"
+          },
+          "is_simulation": {
+            "type": "boolean",
+            "title": "Is Simulation",
+            "default": false
+          },
+          "client_clock_origin_epoch_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 100000000000000.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Clock Origin Epoch Ms"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "patient_id",
+          "client_request_id",
+          "selected_hand",
+          "initial_difficulty"
+        ],
+        "title": "GuidedSongCreate"
+      },
+      "GuidedTrainingSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "started_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "song_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Song Id"
+          },
+          "selected_hand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Hand"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          },
+          "bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bpm"
+          },
+          "segment_1_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment 1 Bpm"
+          },
+          "segment_2_bpm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Segment 2 Bpm"
+          },
+          "metrics": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Metrics"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "status",
+          "started_at",
+          "completed_at",
+          "source",
+          "song_id",
+          "selected_hand",
+          "difficulty",
+          "bpm",
+          "version"
+        ],
+        "title": "GuidedTrainingSummary"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "Hand": {
+        "type": "string",
+        "enum": [
+          "LEFT",
+          "RIGHT"
+        ],
+        "title": "Hand"
+      },
+      "LeftRightComparison": {
+        "properties": {
+          "metric": {
+            "type": "string",
+            "title": "Metric"
+          },
+          "left": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left"
+          },
+          "right": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right"
+          },
+          "absolute_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Absolute Difference"
+          },
+          "asymmetry_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Asymmetry Ratio"
+          }
+        },
+        "type": "object",
+        "required": [
+          "metric",
+          "left",
+          "right",
+          "absolute_difference",
+          "asymmetry_ratio"
+        ],
+        "title": "LeftRightComparison",
+        "description": "Left/right summary for one session.\n\nComputed in the result layer; never stored on a single-hand row.\n`None` means one side is missing -- never substitute 0."
+      },
+      "LoginRequest": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "maxLength": 256,
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "LoginRequest"
+      },
+      "MedicationState": {
+        "type": "string",
+        "enum": [
+          "ON",
+          "OFF",
+          "UNKNOWN"
+        ],
+        "title": "MedicationState"
+      },
+      "Message": {
+        "properties": {
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "message"
+        ],
+        "title": "Message"
+      },
+      "MicroExpressionResultRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "assessment_session_id": {
+            "type": "string",
+            "title": "Assessment Session Id"
+          },
+          "media_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media File Id"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "model_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Version"
+          },
+          "feature_schema_version": {
+            "type": "string",
+            "title": "Feature Schema Version"
+          },
+          "predicted_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Predicted Class"
+          },
+          "pd_probability": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pd Probability"
+          },
+          "dominant_tag": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dominant Tag"
+          },
+          "tag_distribution": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TagScoreRead"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tag Distribution"
+          },
+          "raw_output_json": {
+            "title": "Raw Output Json"
+          },
+          "inference_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inference Time Ms"
+          },
+          "quality_json": {
+            "title": "Quality Json"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "assessment_session_id",
+          "media_file_id",
+          "model_name",
+          "model_version",
+          "feature_schema_version",
+          "predicted_class",
+          "pd_probability",
+          "dominant_tag",
+          "inference_time_ms",
+          "created_at"
+        ],
+        "title": "MicroExpressionResultRead"
+      },
+      "Page_AssessmentSessionRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AssessmentSessionRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[AssessmentSessionRead]"
+      },
+      "Page_PatientListItem_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PatientListItem"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[PatientListItem]"
+      },
+      "Page_PianoSessionRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PianoSessionRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[PianoSessionRead]"
+      },
+      "Page_PoseSessionRead_": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PoseSessionRead"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[PoseSessionRead]"
+      },
+      "Page_dict_": {
+        "properties": {
+          "items": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "page",
+          "page_size"
+        ],
+        "title": "Page[dict]"
+      },
+      "PatientCreate": {
+        "properties": {
+          "hospital_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hospital Number"
+          },
+          "name": {
+            "type": "string",
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Name"
+          },
+          "sex": {
+            "$ref": "#/components/schemas/Sex",
+            "default": "UNKNOWN"
+          },
+          "birthday": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthday"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Contact"
+          },
+          "emergency_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Phone"
+          },
+          "dominant_hand": {
+            "$ref": "#/components/schemas/DominantHand",
+            "default": "UNKNOWN"
+          },
+          "affected_side": {
+            "$ref": "#/components/schemas/AffectedSide",
+            "default": "UNKNOWN"
+          },
+          "diagnosis_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Date"
+          },
+          "disease_duration_years": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Duration Years"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "current_medications": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Medications"
+          },
+          "last_medication_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Medication Time"
+          },
+          "medication_state": {
+            "$ref": "#/components/schemas/MedicationState",
+            "default": "UNKNOWN"
+          },
+          "medical_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medical History"
+          },
+          "comorbidities": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comorbidities"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "surgery_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surgery History"
+          },
+          "rehab_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rehab History"
+          },
+          "doctor_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Notes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "title": "PatientCreate"
+      },
+      "PatientListItem": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "hospital_number": {
+            "type": "string",
+            "title": "Hospital Number"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sex": {
+            "type": "string",
+            "title": "Sex"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "affected_side": {
+            "type": "string",
+            "title": "Affected Side"
+          },
+          "dominant_hand": {
+            "type": "string",
+            "title": "Dominant Hand"
+          },
+          "disease_duration_years": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Duration Years"
+          },
+          "medication_state": {
+            "type": "string",
+            "title": "Medication State"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted",
+            "default": false
+          },
+          "last_assessment_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Assessment At"
+          },
+          "last_training_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Training At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "hospital_number",
+          "name",
+          "sex",
+          "affected_side",
+          "dominant_hand",
+          "disease_duration_years",
+          "medication_state"
+        ],
+        "title": "PatientListItem",
+        "description": "Row shape for the patient list table."
+      },
+      "PatientRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "hospital_number": {
+            "type": "string",
+            "title": "Hospital Number"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "sex": {
+            "type": "string",
+            "title": "Sex"
+          },
+          "birthday": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthday"
+          },
+          "age": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Age"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Contact"
+          },
+          "emergency_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Phone"
+          },
+          "dominant_hand": {
+            "type": "string",
+            "title": "Dominant Hand"
+          },
+          "affected_side": {
+            "type": "string",
+            "title": "Affected Side"
+          },
+          "diagnosis_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Date"
+          },
+          "disease_duration_years": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Duration Years"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "current_medications": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Medications"
+          },
+          "last_medication_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Medication Time"
+          },
+          "medication_state": {
+            "type": "string",
+            "title": "Medication State"
+          },
+          "medical_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medical History"
+          },
+          "comorbidities": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comorbidities"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "surgery_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surgery History"
+          },
+          "rehab_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rehab History"
+          },
+          "doctor_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Notes"
+          },
+          "is_deleted": {
+            "type": "boolean",
+            "title": "Is Deleted"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "hospital_number",
+          "name",
+          "sex",
+          "birthday",
+          "phone",
+          "address",
+          "emergency_contact",
+          "emergency_phone",
+          "dominant_hand",
+          "affected_side",
+          "diagnosis_date",
+          "disease_duration_years",
+          "current_stage",
+          "current_medications",
+          "last_medication_time",
+          "medication_state",
+          "medical_history",
+          "comorbidities",
+          "allergies",
+          "surgery_history",
+          "rehab_history",
+          "doctor_notes",
+          "is_deleted",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PatientRead"
+      },
+      "PatientUpdate": {
+        "properties": {
+          "hospital_number": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hospital Number"
+          },
+          "expected_updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Updated At"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sex": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Sex"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "birthday": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Birthday"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "address": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 255
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address"
+          },
+          "emergency_contact": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Contact"
+          },
+          "emergency_phone": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emergency Phone"
+          },
+          "dominant_hand": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DominantHand"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "affected_side": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AffectedSide"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "diagnosis_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diagnosis Date"
+          },
+          "disease_duration_years": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 100.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Disease Duration Years"
+          },
+          "current_stage": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Stage"
+          },
+          "current_medications": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Medications"
+          },
+          "last_medication_time": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Medication Time"
+          },
+          "medication_state": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MedicationState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "medical_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Medical History"
+          },
+          "comorbidities": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comorbidities"
+          },
+          "allergies": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allergies"
+          },
+          "surgery_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Surgery History"
+          },
+          "rehab_history": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rehab History"
+          },
+          "doctor_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Doctor Notes"
+          }
+        },
+        "type": "object",
+        "title": "PatientUpdate",
+        "description": "All fields optional for PATCH."
+      },
+      "PianoCalibrationRequest": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "client_request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
+          },
+          "duration_sec": {
+            "type": "integer",
+            "maximum": 60.0,
+            "minimum": 30.0,
+            "title": "Duration Sec",
+            "default": 45
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/DifficultyConfigSchema"
+          },
+          "input_source": {
+            "type": "string",
+            "enum": [
+              "HUMAN_KEYBOARD",
+              "SYNTHETIC_SELFTEST",
+              "SEED_DEMO"
+            ],
+            "title": "Input Source",
+            "default": "HUMAN_KEYBOARD"
+          }
+        },
+        "type": "object",
+        "title": "PianoCalibrationRequest",
+        "description": "Open a calibration round (30-60 s) used to set the personal baseline."
+      },
+      "PianoCompleteRequest": {
+        "properties": {
+          "difficulty_after": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DifficultyConfigSchema"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "adaptation": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adaptation"
+          },
+          "metrics_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Version"
+          },
+          "interrupted": {
+            "type": "boolean",
+            "title": "Interrupted",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "PianoCompleteRequest",
+        "description": "Close the round and record the adaptation decision."
+      },
+      "PianoEventIn": {
+        "properties": {
+          "event_index": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Event Index"
+          },
+          "cue_onset_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Onset Time Ms"
+          },
+          "target_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Time Ms"
+          },
+          "actual_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Time Ms"
+          },
+          "response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Latency Ms"
+          },
+          "timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Error Ms"
+          },
+          "key_code": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Code"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "hand": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LEFT",
+                  "RIGHT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hand"
+          },
+          "finger_hint": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "THUMB",
+                  "INDEX",
+                  "MIDDLE",
+                  "RING",
+                  "LITTLE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finger Hint"
+          },
+          "key_down_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Down Time Ms"
+          },
+          "key_up_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Up Time Ms"
+          },
+          "hold_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Duration Ms"
+          },
+          "is_correct": {
+            "type": "boolean",
+            "title": "Is Correct"
+          },
+          "is_missed": {
+            "type": "boolean",
+            "title": "Is Missed"
+          },
+          "is_wrong_key": {
+            "type": "boolean",
+            "title": "Is Wrong Key",
+            "default": false
+          },
+          "cue_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Index"
+          },
+          "sequence_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Position"
+          },
+          "sequence_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Length"
+          },
+          "is_prompt": {
+            "type": "boolean",
+            "title": "Is Prompt",
+            "default": false
+          },
+          "memory_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Group"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SFT_CUE_SYNC",
+                  "CFT_RHYTHM_HOLD",
+                  "BIMANUAL_SYNC",
+                  "ACCENT_GROUPING",
+                  "TEMPO_RAMP",
+                  "HOLD_RELEASE",
+                  "BIMANUAL_OFFSET",
+                  "REVERSE_SEQUENCE",
+                  "GO_NO_GO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "inter_hand_onset_diff_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inter Hand Onset Diff Ms"
+          },
+          "pair_role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PRIMARY",
+                  "SECONDARY"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Role"
+          },
+          "beat_in_bar": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 32.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Beat In Bar"
+          },
+          "is_accent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Accent"
+          },
+          "tempo_segment": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tempo Segment"
+          },
+          "target_hold_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Hold Ms"
+          },
+          "pair_id": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Id"
+          },
+          "target_offset_ms": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Offset Ms"
+          },
+          "cue_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "GO",
+                  "NO_GO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_index",
+          "is_correct",
+          "is_missed"
+        ],
+        "title": "PianoEventIn",
+        "description": "One raw key event.\n\n`cue_onset_time_ms` and `target_time_ms` are required because they are what\nmakes `response_latency_ms` and `timing_error_ms` interpretable; the backend\ndoes not recompute them from wall-clock time."
+      },
+      "PianoEventRead": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          },
+          "event_index": {
+            "type": "integer",
+            "title": "Event Index"
+          },
+          "cue_onset_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Onset Time Ms"
+          },
+          "target_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Time Ms"
+          },
+          "actual_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Time Ms"
+          },
+          "response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Latency Ms"
+          },
+          "timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Error Ms"
+          },
+          "key_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Code"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "hand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hand"
+          },
+          "finger_hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finger Hint"
+          },
+          "key_down_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Down Time Ms"
+          },
+          "key_up_time_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Up Time Ms"
+          },
+          "hold_duration_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Duration Ms"
+          },
+          "is_correct": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Correct"
+          },
+          "is_missed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Missed"
+          },
+          "is_wrong_key": {
+            "type": "boolean",
+            "title": "Is Wrong Key",
+            "default": false
+          },
+          "cue_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Index"
+          },
+          "sequence_position": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Position"
+          },
+          "sequence_length": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Length"
+          },
+          "is_prompt": {
+            "type": "boolean",
+            "title": "Is Prompt",
+            "default": false
+          },
+          "memory_group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Memory Group"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "inter_hand_onset_diff_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Inter Hand Onset Diff Ms"
+          },
+          "pair_role": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "PRIMARY",
+                  "SECONDARY"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Role"
+          },
+          "beat_in_bar": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Beat In Bar"
+          },
+          "is_accent": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Accent"
+          },
+          "tempo_segment": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tempo Segment"
+          },
+          "target_hold_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Hold Ms"
+          },
+          "pair_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pair Id"
+          },
+          "target_offset_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Offset Ms"
+          },
+          "cue_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "GO",
+                  "NO_GO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cue Type"
+          },
+          "created_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "event_index",
+          "cue_onset_time_ms",
+          "target_time_ms",
+          "actual_time_ms",
+          "response_latency_ms",
+          "timing_error_ms",
+          "key_code",
+          "note",
+          "hand",
+          "finger_hint",
+          "key_down_time_ms",
+          "key_up_time_ms",
+          "hold_duration_ms",
+          "is_correct",
+          "is_missed"
+        ],
+        "title": "PianoEventRead",
+        "description": "A raw event as returned to the frontend.\n\n`is_wrong_key`, `cue_index` and the sequence fields are not dedicated DB\ncolumns; they are persisted in the session's audit JSON and re-joined here so\nthe frontend can render wrong-key presses and replay a sequence exactly."
+      },
+      "PianoEventsBatch": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PianoEventIn"
+            },
+            "type": "array",
+            "maxItems": 5000,
+            "minItems": 1,
+            "title": "Events"
+          },
+          "planned_cues": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Cues"
+          },
+          "client_metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Metrics"
+          },
+          "input_latency_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Latency Note"
+          },
+          "spontaneous_tapping": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SpontaneousTapping"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "raw_presses": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/PianoRawPress"
+                },
+                "type": "array",
+                "maxItems": 5000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Raw Presses"
+          }
+        },
+        "type": "object",
+        "required": [
+          "events"
+        ],
+        "title": "PianoEventsBatch",
+        "description": "Raw events for a round, posted in one batch.\n\nRaw events are the primary record: they are stored before any summary metric\nis considered, so the metrics can always be recomputed from them."
+      },
+      "PianoRawPress": {
+        "properties": {
+          "key_code": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1,
+            "title": "Key Code"
+          },
+          "midi": {
+            "type": "integer",
+            "maximum": 127.0,
+            "minimum": 0.0,
+            "title": "Midi"
+          },
+          "key_down_time_ms": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Key Down Time Ms"
+          },
+          "key_up_time_ms": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Up Time Ms"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key_code",
+          "midi",
+          "key_down_time_ms"
+        ],
+        "title": "PianoRawPress",
+        "description": "Every captured press, including prompt-phase and extra input.\n\nTimes are relative to the round start, separate from scored cue rows."
+      },
+      "PianoSessionCreate": {
+        "properties": {
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "client_request_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 64,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Request Id"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "CALIBRATION",
+              "SINGLE_KEY_RHYTHM",
+              "ALTERNATING_HANDS",
+              "MAPPED_SEQUENCE",
+              "FOLLOW_THE_BEAT",
+              "MEMORY_RHYTHM"
+            ],
+            "title": "Mode"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "SFT_CUE_SYNC",
+                  "CFT_RHYTHM_HOLD",
+                  "BIMANUAL_SYNC",
+                  "ACCENT_GROUPING",
+                  "TEMPO_RAMP",
+                  "HOLD_RELEASE",
+                  "BIMANUAL_OFFSET",
+                  "REVERSE_SEQUENCE",
+                  "GO_NO_GO"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "round_number": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Round Number",
+            "default": 0
+          },
+          "training_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Plan Id"
+          },
+          "difficulty": {
+            "$ref": "#/components/schemas/DifficultyConfigSchema"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          },
+          "weak_hand": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "LEFT",
+                  "RIGHT"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weak Hand"
+          },
+          "input_source": {
+            "type": "string",
+            "enum": [
+              "HUMAN_KEYBOARD",
+              "SYNTHETIC_SELFTEST",
+              "SEED_DEMO"
+            ],
+            "title": "Input Source",
+            "default": "HUMAN_KEYBOARD"
+          }
+        },
+        "type": "object",
+        "required": [
+          "mode"
+        ],
+        "title": "PianoSessionCreate",
+        "description": "Open a training round. Returns the configuration the frontend must use."
+      },
+      "PianoSessionDetail": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "training_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Plan Id"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "input_source": {
+            "type": "string",
+            "title": "Input Source"
+          },
+          "bpm": {
+            "type": "integer",
+            "title": "Bpm"
+          },
+          "judgement_window_ms": {
+            "type": "integer",
+            "title": "Judgement Window Ms"
+          },
+          "sequence_length": {
+            "type": "integer",
+            "title": "Sequence Length"
+          },
+          "note_density": {
+            "type": "number",
+            "title": "Note Density"
+          },
+          "hand_mode": {
+            "type": "string",
+            "title": "Hand Mode"
+          },
+          "weak_side_ratio": {
+            "type": "number",
+            "title": "Weak Side Ratio"
+          },
+          "finger_complexity": {
+            "type": "integer",
+            "title": "Finger Complexity"
+          },
+          "session_duration_sec": {
+            "type": "integer",
+            "title": "Session Duration Sec"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "miss_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Miss Rate"
+          },
+          "mean_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Response Latency Ms"
+          },
+          "median_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Response Latency Ms"
+          },
+          "response_latency_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Latency Cv"
+          },
+          "mean_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Timing Error Ms"
+          },
+          "median_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Timing Error Ms"
+          },
+          "timing_mae_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Mae Ms"
+          },
+          "timing_error_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Error Cv"
+          },
+          "early_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Early Press Rate"
+          },
+          "late_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Press Rate"
+          },
+          "left_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Mean Latency"
+          },
+          "right_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Mean Latency"
+          },
+          "left_right_latency_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Right Latency Difference"
+          },
+          "left_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Accuracy"
+          },
+          "right_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Accuracy"
+          },
+          "weak_finger_error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weak Finger Error Rate"
+          },
+          "sequence_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Completion Rate"
+          },
+          "session_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Completion Rate"
+          },
+          "difficulty_before_json": {
+            "title": "Difficulty Before Json"
+          },
+          "difficulty_after_json": {
+            "title": "Difficulty After Json"
+          },
+          "adaptation_reason_json": {
+            "title": "Adaptation Reason Json"
+          },
+          "difficulty_engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Engine Version"
+          },
+          "metrics_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Version"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          },
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/PianoEventRead"
+            },
+            "type": "array",
+            "title": "Events"
+          },
+          "planned_cues": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planned Cues"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "training_plan_id",
+          "mode",
+          "recipe_id",
+          "round_number",
+          "input_source",
+          "bpm",
+          "judgement_window_ms",
+          "sequence_length",
+          "note_density",
+          "hand_mode",
+          "weak_side_ratio",
+          "finger_complexity",
+          "session_duration_sec",
+          "accuracy",
+          "miss_rate",
+          "mean_response_latency_ms",
+          "median_response_latency_ms",
+          "response_latency_cv",
+          "mean_timing_error_ms",
+          "median_timing_error_ms",
+          "timing_mae_ms",
+          "timing_error_cv",
+          "early_press_rate",
+          "late_press_rate",
+          "left_mean_latency",
+          "right_mean_latency",
+          "left_right_latency_difference",
+          "left_accuracy",
+          "right_accuracy",
+          "weak_finger_error_rate",
+          "sequence_completion_rate",
+          "session_completion_rate",
+          "difficulty_engine_version",
+          "metrics_version",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "PianoSessionDetail"
+      },
+      "PianoSessionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "training_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Plan Id"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "input_source": {
+            "type": "string",
+            "title": "Input Source"
+          },
+          "bpm": {
+            "type": "integer",
+            "title": "Bpm"
+          },
+          "judgement_window_ms": {
+            "type": "integer",
+            "title": "Judgement Window Ms"
+          },
+          "sequence_length": {
+            "type": "integer",
+            "title": "Sequence Length"
+          },
+          "note_density": {
+            "type": "number",
+            "title": "Note Density"
+          },
+          "hand_mode": {
+            "type": "string",
+            "title": "Hand Mode"
+          },
+          "weak_side_ratio": {
+            "type": "number",
+            "title": "Weak Side Ratio"
+          },
+          "finger_complexity": {
+            "type": "integer",
+            "title": "Finger Complexity"
+          },
+          "session_duration_sec": {
+            "type": "integer",
+            "title": "Session Duration Sec"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "miss_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Miss Rate"
+          },
+          "mean_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Response Latency Ms"
+          },
+          "median_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Response Latency Ms"
+          },
+          "response_latency_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Latency Cv"
+          },
+          "mean_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Timing Error Ms"
+          },
+          "median_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Timing Error Ms"
+          },
+          "timing_mae_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Mae Ms"
+          },
+          "timing_error_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Error Cv"
+          },
+          "early_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Early Press Rate"
+          },
+          "late_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Press Rate"
+          },
+          "left_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Mean Latency"
+          },
+          "right_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Mean Latency"
+          },
+          "left_right_latency_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Right Latency Difference"
+          },
+          "left_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Accuracy"
+          },
+          "right_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Accuracy"
+          },
+          "weak_finger_error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weak Finger Error Rate"
+          },
+          "sequence_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Completion Rate"
+          },
+          "session_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Completion Rate"
+          },
+          "difficulty_before_json": {
+            "title": "Difficulty Before Json"
+          },
+          "difficulty_after_json": {
+            "title": "Difficulty After Json"
+          },
+          "adaptation_reason_json": {
+            "title": "Adaptation Reason Json"
+          },
+          "difficulty_engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Engine Version"
+          },
+          "metrics_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Version"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "training_plan_id",
+          "mode",
+          "recipe_id",
+          "round_number",
+          "input_source",
+          "bpm",
+          "judgement_window_ms",
+          "sequence_length",
+          "note_density",
+          "hand_mode",
+          "weak_side_ratio",
+          "finger_complexity",
+          "session_duration_sec",
+          "accuracy",
+          "miss_rate",
+          "mean_response_latency_ms",
+          "median_response_latency_ms",
+          "response_latency_cv",
+          "mean_timing_error_ms",
+          "median_timing_error_ms",
+          "timing_mae_ms",
+          "timing_error_cv",
+          "early_press_rate",
+          "late_press_rate",
+          "left_mean_latency",
+          "right_mean_latency",
+          "left_right_latency_difference",
+          "left_accuracy",
+          "right_accuracy",
+          "weak_finger_error_rate",
+          "sequence_completion_rate",
+          "session_completion_rate",
+          "difficulty_engine_version",
+          "metrics_version",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "PianoSessionRead"
+      },
+      "PianoTrainingSummary": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "training_plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Training Plan Id"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "recipe_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipe Id"
+          },
+          "round_number": {
+            "type": "integer",
+            "title": "Round Number"
+          },
+          "input_source": {
+            "type": "string",
+            "title": "Input Source"
+          },
+          "bpm": {
+            "type": "integer",
+            "title": "Bpm"
+          },
+          "judgement_window_ms": {
+            "type": "integer",
+            "title": "Judgement Window Ms"
+          },
+          "sequence_length": {
+            "type": "integer",
+            "title": "Sequence Length"
+          },
+          "note_density": {
+            "type": "number",
+            "title": "Note Density"
+          },
+          "hand_mode": {
+            "type": "string",
+            "title": "Hand Mode"
+          },
+          "weak_side_ratio": {
+            "type": "number",
+            "title": "Weak Side Ratio"
+          },
+          "finger_complexity": {
+            "type": "integer",
+            "title": "Finger Complexity"
+          },
+          "session_duration_sec": {
+            "type": "integer",
+            "title": "Session Duration Sec"
+          },
+          "accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accuracy"
+          },
+          "miss_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Miss Rate"
+          },
+          "mean_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Response Latency Ms"
+          },
+          "median_response_latency_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Response Latency Ms"
+          },
+          "response_latency_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Response Latency Cv"
+          },
+          "mean_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mean Timing Error Ms"
+          },
+          "median_timing_error_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Median Timing Error Ms"
+          },
+          "timing_mae_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Mae Ms"
+          },
+          "timing_error_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Timing Error Cv"
+          },
+          "early_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Early Press Rate"
+          },
+          "late_press_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Late Press Rate"
+          },
+          "left_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Mean Latency"
+          },
+          "right_mean_latency": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Mean Latency"
+          },
+          "left_right_latency_difference": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Right Latency Difference"
+          },
+          "left_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Left Accuracy"
+          },
+          "right_accuracy": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Right Accuracy"
+          },
+          "weak_finger_error_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weak Finger Error Rate"
+          },
+          "sequence_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sequence Completion Rate"
+          },
+          "session_completion_rate": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Completion Rate"
+          },
+          "difficulty_before_json": {
+            "title": "Difficulty Before Json"
+          },
+          "difficulty_after_json": {
+            "title": "Difficulty After Json"
+          },
+          "adaptation_reason_json": {
+            "title": "Adaptation Reason Json"
+          },
+          "difficulty_engine_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty Engine Version"
+          },
+          "metrics_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics Version"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "training_plan_id",
+          "mode",
+          "recipe_id",
+          "round_number",
+          "input_source",
+          "bpm",
+          "judgement_window_ms",
+          "sequence_length",
+          "note_density",
+          "hand_mode",
+          "weak_side_ratio",
+          "finger_complexity",
+          "session_duration_sec",
+          "accuracy",
+          "miss_rate",
+          "mean_response_latency_ms",
+          "median_response_latency_ms",
+          "response_latency_cv",
+          "mean_timing_error_ms",
+          "median_timing_error_ms",
+          "timing_mae_ms",
+          "timing_error_cv",
+          "early_press_rate",
+          "late_press_rate",
+          "left_mean_latency",
+          "right_mean_latency",
+          "left_right_latency_difference",
+          "left_accuracy",
+          "right_accuracy",
+          "weak_finger_error_rate",
+          "sequence_completion_rate",
+          "session_completion_rate",
+          "difficulty_engine_version",
+          "metrics_version",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "PianoTrainingSummary"
+      },
+      "PoseAnalysisResponse": {
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/PoseSessionRead"
+          },
+          "accepted": {
+            "type": "boolean",
+            "title": "Accepted"
+          },
+          "gate_failures": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Gate Failures"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "quality": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Quality"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "type": "object",
+        "required": [
+          "session",
+          "accepted",
+          "message"
+        ],
+        "title": "PoseAnalysisResponse",
+        "description": "Result of analysing one recording.\n\n`accepted` is False when a quality gate refused the recording; the measured\nmetrics are still returned so the reason is visible, but the session is not\npresented as a valid measurement."
+      },
+      "PoseExerciseRead": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "name_zh": {
+            "type": "string",
+            "title": "Name Zh"
+          },
+          "name_en": {
+            "type": "string",
+            "title": "Name En"
+          },
+          "description": {
+            "type": "string",
+            "title": "Description"
+          },
+          "focus": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Focus"
+          },
+          "joints": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Joints"
+          },
+          "raw_metrics": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Raw Metrics"
+          },
+          "drive_series": {
+            "type": "string",
+            "title": "Drive Series"
+          },
+          "supported_modes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Supported Modes"
+          },
+          "mode_labels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "type": "object",
+            "title": "Mode Labels"
+          },
+          "default_bpm": {
+            "type": "integer",
+            "title": "Default Bpm"
+          },
+          "cues": {
+            "items": {
+              "$ref": "#/components/schemas/ExerciseCueRead"
+            },
+            "type": "array",
+            "title": "Cues"
+          },
+          "hold_beats": {
+            "type": "integer",
+            "title": "Hold Beats"
+          },
+          "total_beats": {
+            "type": "integer",
+            "title": "Total Beats"
+          },
+          "support_required": {
+            "type": "boolean",
+            "title": "Support Required"
+          },
+          "hold_time_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Time Sec"
+          },
+          "target_repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Repetitions"
+          },
+          "contraindications": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Contraindications"
+          },
+          "scores_available": {
+            "type": "boolean",
+            "title": "Scores Available"
+          },
+          "score_formulas": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "object",
+            "title": "Score Formulas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "name_zh",
+          "name_en",
+          "description",
+          "focus",
+          "joints",
+          "raw_metrics",
+          "drive_series",
+          "supported_modes",
+          "mode_labels",
+          "default_bpm",
+          "cues",
+          "hold_beats",
+          "total_beats",
+          "support_required",
+          "hold_time_sec",
+          "target_repetitions",
+          "contraindications",
+          "scores_available",
+          "score_formulas"
+        ],
+        "title": "PoseExerciseRead",
+        "description": "One ballet exercise, with its metrics, cues and honest score availability."
+      },
+      "PoseSessionCreate": {
+        "properties": {
+          "exercise_type": {
+            "type": "string",
+            "enum": [
+              "BALLET_PORT_DE_BRAS",
+              "BALLET_FIRST_POSITION",
+              "BALLET_TENDU",
+              "BALLET_DEMI_PLIE",
+              "BALLET_WEIGHT_SHIFT"
+            ],
+            "title": "Exercise Type"
+          },
+          "execution_mode": {
+            "type": "string",
+            "enum": [
+              "SEATED",
+              "STANDING_SUPPORTED"
+            ],
+            "title": "Execution Mode",
+            "default": "SEATED"
+          },
+          "input_source": {
+            "type": "string",
+            "enum": [
+              "HUMAN_KEYBOARD",
+              "SYNTHETIC_SELFTEST",
+              "SEED_DEMO"
+            ],
+            "title": "Input Source",
+            "default": "HUMAN_KEYBOARD"
+          },
+          "difficulty": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difficulty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "exercise_type"
+        ],
+        "title": "PoseSessionCreate",
+        "description": "Open a movement-training session for one exercise."
+      },
+      "PoseSessionRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "exercise_type": {
+            "type": "string",
+            "title": "Exercise Type"
+          },
+          "execution_mode": {
+            "type": "string",
+            "title": "Execution Mode"
+          },
+          "input_source": {
+            "type": "string",
+            "title": "Input Source"
+          },
+          "difficulty_json": {
+            "title": "Difficulty Json"
+          },
+          "completion_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completion Score"
+          },
+          "range_of_motion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Range Of Motion"
+          },
+          "symmetry_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symmetry Score"
+          },
+          "stability_score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stability Score"
+          },
+          "hold_time_sec": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hold Time Sec"
+          },
+          "repetition_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetition Count"
+          },
+          "movement_speed": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Movement Speed"
+          },
+          "valid_pose_frame_ratio": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid Pose Frame Ratio"
+          },
+          "raw_metrics_json": {
+            "title": "Raw Metrics Json"
+          },
+          "quality_json": {
+            "title": "Quality Json"
+          },
+          "algorithm_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Algorithm Version"
+          },
+          "exercise_definition_version": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exercise Definition Version"
+          },
+          "media_file_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media File Id"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "completed_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Completed At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "patient_id",
+          "exercise_type",
+          "execution_mode",
+          "input_source",
+          "completion_score",
+          "range_of_motion",
+          "symmetry_score",
+          "stability_score",
+          "hold_time_sec",
+          "repetition_count",
+          "movement_speed",
+          "valid_pose_frame_ratio",
+          "algorithm_version",
+          "exercise_definition_version",
+          "media_file_id",
+          "started_at",
+          "completed_at"
+        ],
+        "title": "PoseSessionRead"
+      },
+      "PoseThresholdsRead": {
+        "properties": {
+          "min_valid_frame_ratio": {
+            "type": "number",
+            "title": "Min Valid Frame Ratio"
+          },
+          "min_duration_sec": {
+            "type": "number",
+            "title": "Min Duration Sec"
+          },
+          "min_landmark_visibility": {
+            "type": "number",
+            "title": "Min Landmark Visibility"
+          },
+          "min_movement_range_deg": {
+            "type": "number",
+            "title": "Min Movement Range Deg"
+          },
+          "algorithm_version": {
+            "type": "string",
+            "title": "Algorithm Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "min_valid_frame_ratio",
+          "min_duration_sec",
+          "min_landmark_visibility",
+          "min_movement_range_deg",
+          "algorithm_version"
+        ],
+        "title": "PoseThresholdsRead",
+        "description": "The derivations behind the quality gates, so a refusal can be explained."
+      },
+      "Sex": {
+        "type": "string",
+        "enum": [
+          "MALE",
+          "FEMALE",
+          "OTHER",
+          "UNKNOWN"
+        ],
+        "title": "Sex"
+      },
+      "SpontaneousTapping": {
+        "properties": {
+          "window_ms": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Window Ms"
+          },
+          "tap_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tap Count"
+          },
+          "interval_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Ms"
+          },
+          "rate_hz": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rate Hz"
+          },
+          "interval_cv": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Cv"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "window_ms",
+          "tap_count"
+        ],
+        "title": "SpontaneousTapping",
+        "description": "The patient's own rhythm, measured with no cue present.\n\nA measurement, not a task: nothing here is scored right or wrong. It is what\n\"110% of baseline tempo\" is a percentage OF (see\ndocs/piano_training_plan.md P1)."
+      },
+      "StaffUserRead": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "display_name": {
+            "type": "string",
+            "title": "Display Name"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          },
+          "is_active": {
+            "type": "boolean",
+            "title": "Is Active"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "username",
+          "display_name",
+          "role",
+          "is_active",
+          "created_at"
+        ],
+        "title": "StaffUserRead"
+      },
+      "TagScoreRead": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "score": {
+            "type": "number",
+            "title": "Score"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "score"
+        ],
+        "title": "TagScoreRead"
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          },
+          "user": {
+            "$ref": "#/components/schemas/StaffUserRead"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in",
+          "user"
+        ],
+        "title": "TokenResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

@@ -36,53 +36,55 @@ class PiecePlaybackKeys extends StatelessWidget {
         );
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (var key = 0; key < piece.keyCount; key++) ...[
-                if (key > 0) const SizedBox(width: spacing),
-                KeyPressFeedback(
-                  key: ValueKey('playback-feedback-$key'),
-                  pressed: active.containsKey(key),
-                  pulse: active[key],
-                  color: NoteColors.degree(piece.keyStep(key)).fill,
-                  child: Container(
-                    width: width,
-                    height: 46,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: active.containsKey(key)
-                          ? NoteColors.degree(piece.keyStep(key)).pressed
-                          : context.qin.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: context.qin.highContrast
-                            ? context.qin.ink
-                            : NoteColors.degree(piece.keyStep(key)).fill,
-                        width: 2,
+          child: KeyParticleLayer(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (var key = 0; key < piece.keyCount; key++) ...[
+                  if (key > 0) const SizedBox(width: spacing),
+                  KeyPressFeedback(
+                    key: ValueKey('playback-feedback-$key'),
+                    pressed: active.containsKey(key),
+                    pulse: active[key],
+                    color: NoteColors.degree(piece.keyStep(key)).fill,
+                    child: Container(
+                      width: width,
+                      height: 46,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 5,
                       ),
-                    ),
-                    child: Center(
-                      child: FittedBox(
-                        child: NoteLabel(
-                          piece.keyLabel(key),
-                          style:
-                              (Theme.of(context).textTheme.bodySmall ??
-                                      const TextStyle(fontSize: 16))
-                                  .copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: context.qin.ink,
-                                  ),
+                      decoration: BoxDecoration(
+                        color: active.containsKey(key)
+                            ? NoteColors.degree(piece.keyStep(key)).pressed
+                            : context.qin.surface,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: context.qin.highContrast
+                              ? context.qin.ink
+                              : NoteColors.degree(piece.keyStep(key)).fill,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: FittedBox(
+                          child: NoteLabel(
+                            piece.keyLabel(key),
+                            style:
+                                (Theme.of(context).textTheme.bodySmall ??
+                                        const TextStyle(fontSize: 16))
+                                    .copyWith(
+                                      fontWeight: FontWeight.w700,
+                                      color: context.qin.ink,
+                                    ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
+                ],
               ],
-            ],
+            ),
           ),
         );
       },

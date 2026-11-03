@@ -11,6 +11,11 @@ class TrainingScheduleRepository {
   TrainingScheduleRepository(this.db, this.profileId);
   final Database db;
   final String profileId;
+  static const _recordTables = {
+    'dance': 'dance_sessions',
+    'piece': 'piece_performances',
+    'exercise': 'sessions',
+  };
   Future<List<Json>> plans() async => (await db.query(
     'training_plans',
     where: 'profile_id=?',
@@ -104,13 +109,15 @@ class TrainingScheduleRepository {
   }
 
   Future<List<Json>> summaries(DateTime date) async {
+    final activePlans = (await plans())
+        .where((p) => p['deleted'] != true)
+        .toList();
+    final progress = await automaticProgressFor([
+      for (final plan in activePlans) (plan: plan, date: date),
+    ]);
     final result = <Json>[];
-    for (final plan in await plans()) {
-      if (plan['deleted'] == true) continue;
-      result.add({
-        'plan': plan,
-        'progress': await automaticProgress(plan, date),
-      });
+    for (var i = 0; i < activePlans.length; i++) {
+      result.add({'plan': activePlans[i], 'progress': progress[i]});
     }
     result.sort((a, b) {
       final first = a['plan'] as Json, second = b['plan'] as Json;
@@ -119,6 +126,65 @@ class TrainingScheduleRepository {
       if (firstEnded != secondEnded) return firstEnded ? 1 : -1;
       return comparePlanSchedule(first, second);
     });
+    return result;
+  }
+
+  /// Reads each record table once for this refresh. Results and integrity
+  /// checks are shared only within the call, so edits and deletes stay visible.
+  Future<List<int>> automaticProgressFor(
+    List<({Json plan, DateTime date})> requests,
+  ) async {
+    final result = List<int>.filled(requests.length, 0);
+    final daysByKind = <String, Set<String>>{};
+    final due = <({int index, Json plan, String kind, String day})>[];
+    for (final (index, request) in requests.indexed) {
+      final (:plan, :date) = request;
+      if (plan['deleted'] == true || !planDue(plan, date)) continue;
+      final kind = plan['kind'] as String;
+      final day = localDay(date);
+      daysByKind.putIfAbsent(kind, () => {}).add(day);
+      due.add((index: index, plan: plan, kind: kind, day: day));
+    }
+
+    final rowsByDay = <(String, String), List<Map<String, Object?>>>{};
+    for (final entry in daysByKind.entries) {
+      final days = entry.value.toList()..sort();
+      final rows = await _recordsInRange(
+        db,
+        entry.key,
+        DateTime.parse(days.first),
+        _nextDay(DateTime.parse(days.last)),
+        excludeLinked: false,
+      );
+      for (final row in rows) {
+        final day = localDay(
+          DateTime.fromMillisecondsSinceEpoch(row['started_utc_ms'] as int),
+        );
+        if (entry.value.contains(day)) {
+          rowsByDay.putIfAbsent((entry.key, day), () => []).add(row);
+        }
+      }
+    }
+
+    final checked = Map<Map<String, Object?>, Json?>.identity();
+    final totals = <(String, String, Object?, Object?), int>{};
+    for (final request in due) {
+      final (:index, :plan, :kind, :day) = request;
+      final trainingId = kind == 'piece' ? null : plan['training_id'];
+      final key = (kind, day, trainingId, plan['target_type']);
+      result[index] = totals.putIfAbsent(key, () {
+        var total = 0;
+        for (final row in rowsByDay[(kind, day)] ?? const []) {
+          if (!_matchesPlan(plan, row)) continue;
+          final record = checked.putIfAbsent(
+            row,
+            () => _checkedRecord(kind, row),
+          );
+          if (record != null) total += _recordUnits(plan, record);
+        }
+        return total;
+      });
+    }
     return result;
   }
 
@@ -272,62 +338,77 @@ class TrainingScheduleRepository {
     final source = executor ?? db;
     final p = occurrence['plan'] as Json;
     final date = DateTime.parse(occurrence['local_date'] as String);
-    final start = date.millisecondsSinceEpoch,
-        end = DateTime(
-          date.year,
-          date.month,
-          date.day + 1,
-        ).millisecondsSinceEpoch;
     final kind = p['kind'] as String;
-    final table = {
-      'dance': 'dance_sessions',
-      'piece': 'piece_performances',
-      'exercise': 'sessions',
-    }[kind]!;
-    final rows = await source.rawQuery(
-      'SELECT * FROM $table r WHERE profile_id=? AND started_utc_ms>=? AND started_utc_ms<? ${excludeLinked ? 'AND NOT EXISTS(SELECT 1 FROM plan_links l WHERE l.record_kind=? AND l.record_id=r.session_id)' : ''} ORDER BY started_utc_ms, session_id',
-      [profileId, start, end, if (excludeLinked) kind],
+    final rows = await _recordsInRange(
+      source,
+      kind,
+      date,
+      _nextDay(date),
+      excludeLinked: excludeLinked,
     );
-    return rows
-        .where(
-          (r) =>
-              (kind != 'exercise' || r['status'] == 'COMPLETED') &&
-              (kind == 'piece' ||
-                  p['training_id'] == null ||
-                  r[kind == 'piece' ? 'content_id' : 'task_id'] ==
-                      p['training_id']),
-        )
-        .map((r) {
-          if (kind == 'dance') {
-            final d = jsonDecode(r['record_json'] as String) as Json;
-            if (digest(d) != r['record_hash']) {
-              throw StateError('E_RECORD_INTEGRITY');
-            }
-            return {
-              ...d,
-              'units': d['confirmed'] != true || (d['active_ms'] as int) <= 0
-                  ? 0
-                  : p['target_type'] == 'minutes'
-                  ? d['active_ms']
-                  : d['confirmed'] == true
-                  ? 1
-                  : 0,
-            };
-          }
-          if (kind == 'piece') {
-            final value = jsonDecode(r['record_json'] as String) as Json;
-            if (digest(value) != r['record_hash']) {
-              throw StateError('E_RECORD_INTEGRITY');
-            }
-            PiecePerformance.validate(value);
-          } else {
-            RecordIntegrity.session(Map<String, dynamic>.from(r));
-          }
-          return {...r, 'units': 1};
-        })
-        .where((r) => (r['units'] as int) > 0)
-        .toList();
+    final records = <Json>[];
+    for (final row in rows) {
+      if (!_matchesPlan(p, row)) continue;
+      final record = _checkedRecord(kind, row);
+      if (record != null) {
+        records.add({...record, 'units': _recordUnits(p, record)});
+      }
+    }
+    return records;
   }
+
+  static DateTime _nextDay(DateTime date) =>
+      DateTime(date.year, date.month, date.day + 1);
+
+  Future<List<Map<String, Object?>>> _recordsInRange(
+    DatabaseExecutor source,
+    String kind,
+    DateTime start,
+    DateTime end, {
+    required bool excludeLinked,
+  }) {
+    final table = _recordTables[kind]!;
+    return source.rawQuery(
+      'SELECT * FROM $table r WHERE profile_id=? AND started_utc_ms>=? AND started_utc_ms<? ${excludeLinked ? 'AND NOT EXISTS(SELECT 1 FROM plan_links l WHERE l.record_kind=? AND l.record_id=r.session_id)' : ''} ORDER BY started_utc_ms, session_id',
+      [
+        profileId,
+        start.millisecondsSinceEpoch,
+        end.millisecondsSinceEpoch,
+        if (excludeLinked) kind,
+      ],
+    );
+  }
+
+  static bool _matchesPlan(Json plan, Map<String, Object?> row) {
+    final kind = plan['kind'];
+    return (kind != 'exercise' || row['status'] == 'COMPLETED') &&
+        (kind == 'piece' ||
+            plan['training_id'] == null ||
+            row['task_id'] == plan['training_id']);
+  }
+
+  static Json? _checkedRecord(String kind, Map<String, Object?> row) {
+    if (kind == 'exercise') {
+      RecordIntegrity.session(row);
+      return row;
+    }
+    final record = jsonDecode(row['record_json'] as String) as Json;
+    if (digest(record) != row['record_hash']) {
+      throw StateError('E_RECORD_INTEGRITY');
+    }
+    if (kind == 'dance') {
+      return record['confirmed'] == true && (record['active_ms'] as int) > 0
+          ? record
+          : null;
+    }
+    PiecePerformance.validate(record);
+    return row;
+  }
+
+  static int _recordUnits(Json plan, Json record) =>
+      plan['kind'] == 'dance' && plan['target_type'] == 'minutes'
+      ? record['active_ms'] as int
+      : 1;
 
   Future<void> link(Json occurrence, String recordId) async =>
       db.transaction((tx) async {

@@ -27,16 +27,24 @@ class PianoPiecesPage extends StatelessWidget {
         QinSectionTitle(c.text('选择想弹的曲目', 'Choose a piece')),
         LayoutBuilder(
           builder: (context, constraints) {
+            const cardGap = 12.0;
+            const cardPadding = 12.0;
+            final titleSize =
+                Theme.of(context).textTheme.titleSmall?.fontSize ?? 20;
+            final scaledTitleSize = MediaQuery.textScalerOf(context)
+                .scale(titleSize)
+                .clamp(titleSize, double.infinity);
+            // Leave enough room for a short title line inside each card.
+            final minCardWidth = 2 * cardPadding + 6 * scaledTitleSize;
+            final twoColumnWidth = (constraints.maxWidth - cardGap) / 2;
             final columns =
-                constraints.maxWidth >= 340 &&
-                    MediaQuery.textScalerOf(context).scale(1) <= 1.3 &&
-                    !context.qin.highContrast
+                twoColumnWidth >= minCardWidth && !context.qin.highContrast
                 ? 2
                 : 1;
-            final width = (constraints.maxWidth - (columns - 1) * 12) / columns;
+            final width = columns == 2 ? twoColumnWidth : constraints.maxWidth;
             return Wrap(
-              spacing: 12,
-              runSpacing: 12,
+              spacing: cardGap,
+              runSpacing: cardGap,
               children: [
                 for (final piece in c.content.pieces)
                   SizedBox(
@@ -73,7 +81,7 @@ class PianoPiecesPage extends StatelessWidget {
                                   height: 140,
                                 ),
                                 Padding(
-                                  padding: const EdgeInsets.all(12),
+                                  padding: const EdgeInsets.all(cardPadding),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,

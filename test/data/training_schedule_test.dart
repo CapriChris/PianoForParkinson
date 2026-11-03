@@ -212,6 +212,20 @@ void main() {
             .millisecondsSinceEpoch,
       });
       await other.saveDance({...record, 'session_id': 'someone-else'});
+      final previousDay = DateTime(day.year, day.month, day.day - 1);
+      final recurring = {
+        ...plan,
+        'start': localDay(previousDay),
+        'days': [previousDay.weekday, day.weekday],
+      };
+      final requests = [
+        (plan: recurring, date: previousDay),
+        (plan: recurring, date: day),
+        (plan: {...recurring, 'target_type': 'minutes'}, date: day),
+        (plan: {...recurring, 'training_id': 'different'}, date: day),
+        (plan: {...recurring, 'paused': true}, date: day),
+      ];
+      expect(await store.automaticProgressFor(requests), [1, 1, 30000, 0, 0]);
       for (var refresh = 0; refresh < 2; refresh++) {
         final summaries = await store.summaries(day);
         expect(summaries.length, 5); // Include disabled and future plans.
@@ -233,12 +247,14 @@ void main() {
       ); // Old links do not hide or add records.
       expect(await store.automaticProgress(plan, day), 1);
       await store.saveDance({...record, 'session_id': 'second'});
+      expect(await store.automaticProgressFor(requests), [1, 2, 60000, 0, 0]);
       expect(await store.automaticProgress(plan, day), 2);
       expect(
         await store.automaticProgress({...plan, 'target_type': 'minutes'}, day),
         60000,
       );
       await store.deleteDance('second');
+      expect(await store.automaticProgressFor(requests), [1, 1, 30000, 0, 0]);
       expect(await store.automaticProgress(plan, day), 1);
       await store.deletePlans(['count', 'also-count', 'other-profile']);
       expect((await store.summaries(day)).length, 3);
