@@ -10,7 +10,8 @@ import 'dart:typed_data';
 class RemoteApiException implements Exception {
   final int status;
   final String message;
-  const RemoteApiException(this.status, this.message);
+  const RemoteApiException(this.status, this.message, {this.retryAfter});
+  final Duration? retryAfter;
   @override
   String toString() => message;
 }
@@ -26,6 +27,7 @@ class RemoteApi {
   }
   final Uri base;
   String? _token;
+  final _requests = <HttpClient>{};
   String? get currentToken => _token;
   bool get signedIn => _token != null;
 
@@ -40,10 +42,12 @@ class RemoteApi {
   }) async {
     final client = HttpClient()
       ..connectionTimeout = const Duration(seconds: 12);
+    _requests.add(client);
     try {
       final req = await client
           .openUrl(method, uri(path, query))
           .timeout(const Duration(seconds: 15));
+      req.followRedirects = false;
       req.headers.set(HttpHeaders.acceptHeader, 'application/json');
       if (_token != null) {
         req.headers.set(HttpHeaders.authorizationHeader, 'Bearer $_token');
@@ -69,12 +73,14 @@ class RemoteApi {
         throw RemoteApiException(
           res.statusCode,
           '$msg'.trim() == 'null' ? '请求失败 (${res.statusCode})' : '$msg',
+          retryAfter: _retryAfter(res.headers.value('retry-after')),
         );
       }
       return Map<String, dynamic>.from(jsonDecode(body) as Map);
     } on SocketException {
       throw const RemoteApiException(0, '无法连接到服务器。请检查网络后重试。');
     } finally {
+      _requests.remove(client);
       client.close(force: true);
     }
   }
@@ -89,7 +95,42 @@ class RemoteApi {
     return Map<String, dynamic>.from(result['user'] as Map);
   }
 
-  void signOut() => _token = null;
+  static Duration? _retryAfter(String? value) {
+    if (value == null) return null;
+    final seconds = int.tryParse(value);
+    if (seconds != null && seconds >= 0) {
+      return Duration(seconds: min(seconds, 86400));
+    }
+    try {
+      final wait = HttpDate.parse(value).difference(DateTime.now());
+      return Duration(seconds: wait.inSeconds.clamp(0, 86400));
+    } on FormatException {
+      return null;
+    }
+  }
+
+  void signOut() {
+    _token = null;
+    for (final client in _requests.toList()) {
+      client.close(force: true);
+    }
+  }
+
+  Future<Map<String, dynamic>> changes(
+    String patient,
+    String device,
+    String profile,
+    String? cursor,
+  ) => request(
+    'GET',
+    '/integration/v1/changes',
+    query: {
+      'patient_id': patient,
+      'device_id': device,
+      'local_profile_id': profile,
+      'cursor': ?cursor,
+    },
+  );
 
   Future<void> uploadCaptureChunk(
     String recordingId,

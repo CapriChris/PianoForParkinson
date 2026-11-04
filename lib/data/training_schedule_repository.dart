@@ -8,9 +8,10 @@ import '../domain/piece_performance.dart';
 import 'record_integrity.dart';
 
 class TrainingScheduleRepository {
-  TrainingScheduleRepository(this.db, this.profileId);
+  TrainingScheduleRepository(this.db, this.profileId, {this.onPlanChanged});
   final Database db;
   final String profileId;
+  final void Function()? onPlanChanged;
   static const _recordTables = {
     'dance': 'dance_sessions',
     'piece': 'piece_performances',
@@ -60,15 +61,19 @@ class TrainingScheduleRepository {
         [plan['id'], localDay(DateTime.now())],
       );
     });
+    onPlanChanged?.call();
   }
 
   Future<void> deletePlan(String id) => deletePlans([id]);
 
-  Future<void> deletePlans(Iterable<String> ids) => db.transaction((tx) async {
-    for (final id in ids.toSet()) {
-      await _deletePlan(tx, id);
-    }
-  });
+  Future<void> deletePlans(Iterable<String> ids) async {
+    await db.transaction((tx) async {
+      for (final id in ids.toSet()) {
+        await _deletePlan(tx, id);
+      }
+    });
+    onPlanChanged?.call();
+  }
 
   Future<void> _deletePlan(Transaction tx, String id) async {
     final rows = await tx.query(
@@ -132,8 +137,9 @@ class TrainingScheduleRepository {
   /// Reads each record table once for this refresh. Results and integrity
   /// checks are shared only within the call, so edits and deletes stay visible.
   Future<List<int>> automaticProgressFor(
-    List<({Json plan, DateTime date})> requests,
-  ) async {
+    List<({Json plan, DateTime date})> requests, {
+    int? notBeforeMs,
+  }) async {
     final result = List<int>.filled(requests.length, 0);
     final daysByKind = <String, Set<String>>{};
     final due = <({int index, Json plan, String kind, String day})>[];
@@ -152,7 +158,10 @@ class TrainingScheduleRepository {
       final rows = await _recordsInRange(
         db,
         entry.key,
-        DateTime.parse(days.first),
+        notBeforeMs != null &&
+                notBeforeMs > DateTime.parse(days.first).millisecondsSinceEpoch
+            ? DateTime.fromMillisecondsSinceEpoch(notBeforeMs)
+            : DateTime.parse(days.first),
         _nextDay(DateTime.parse(days.last)),
         excludeLinked: false,
       );

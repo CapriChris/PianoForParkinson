@@ -70,6 +70,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   @override
   void initState() {
     super.initState();
+    c.holdCloudSync();
     WidgetsBinding.instance.addObserver(this);
     timer = Timer.periodic(const Duration(milliseconds: 250), (_) => sample());
     unawaited(selectPart(0));
@@ -461,6 +462,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
 
   @override
   void dispose() {
+    c.releaseCloudSync();
     unawaited(widget.capture?.discard());
     timer?.cancel();
     generation++;

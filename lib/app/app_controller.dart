@@ -29,10 +29,21 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   bool _assistantRevoking = false;
   final previewInterruptions = ValueNotifier<int>(0);
   final trainingUpdates = ValueNotifier<int>(0);
+  int _syncTrainingViews = 0;
+  void holdCloudSync() => _syncTrainingViews++;
+  void releaseCloudSync() {
+    if (_syncTrainingViews > 0) _syncTrainingViews--;
+    if (!_disposed && initialized) cloudSync.trigger();
+  }
+
   late final cloudSync = AutoSync(
     repository,
     trainingUpdates,
-    () => initialized && (engine == null || engine!.ended),
+    () =>
+        initialized &&
+        _syncTrainingViews == 0 &&
+        (engine == null || engine!.ended),
+    authorizationLost: () => _captures?.disconnect(),
   );
   final activeSpeech = ValueNotifier<Object?>(null);
 
@@ -92,6 +103,10 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       (event) {
         if (_disposed) return;
         final kind = (event as Map)['kind'];
+        if (kind == 'CLOUD_NETWORK_AVAILABLE') {
+          if (initialized) cloudSync.trigger();
+          return;
+        }
         if ({'TTS_START', 'TTS_DONE', 'TTS_STOP', 'TTS_ERROR'}.contains(kind)) {
           if (event['generation'] == _generation &&
               event['speech_epoch'] == _speechEpoch) {

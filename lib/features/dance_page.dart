@@ -19,6 +19,7 @@ TrainingScheduleRepository scheduleStore(AppController c) =>
     TrainingScheduleRepository(
       c.repository.db,
       c.repository.profile['profile_id'] as String,
+      onPlanChanged: c.cloudSync.trigger,
     );
 
 class DancePage extends StatefulWidget {

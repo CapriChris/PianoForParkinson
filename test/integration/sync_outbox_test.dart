@@ -136,14 +136,15 @@ void main() {
       final db = await ffi.databaseFactoryFfi.openDatabase(
         ffi.inMemoryDatabasePath,
       );
-      final sidecar = SyncStore();
+      var clock = DateTime.now();
+      final sidecar = SyncStore(now: () => clock);
       await sidecar.open(dir.path);
       try {
         await db.execute(
-          'CREATE TABLE sessions (session_id TEXT, profile_id TEXT)',
+          'CREATE TABLE sessions (session_id TEXT, profile_id TEXT, started_utc_ms INTEGER)',
         );
         await db.execute(
-          'CREATE TABLE piece_performances (session_id TEXT, profile_id TEXT)',
+          'CREATE TABLE piece_performances (session_id TEXT, profile_id TEXT, started_utc_ms INTEGER)',
         );
         for (final sql in DatabaseSafety.migration4.split(';')) {
           if (sql.trim().isNotEmpty) await db.execute(sql);
@@ -187,13 +188,22 @@ void main() {
         final firstAttempt = network.attempts.single['source_record_id'];
         await schedule.saveDance({...record, 'session_id': 'second'});
         await sync.syncAll();
-        expect(network.attempts.last['source_record_id'], firstAttempt);
+        expect(
+          network.attempts.where((e) => e['source_record_id'] == firstAttempt),
+          hasLength(1),
+        );
         network.offline = false;
+        clock = clock.add(const Duration(minutes: 1));
         final result = await sync.syncAll();
         expect(result.errors, isEmpty);
         final plans = network.accepted
             .where((r) => r['record_type'] == 'TRAINING_PLAN')
             .toList();
+        plans.sort(
+          (a, b) => (a['payload']['snapshot_revision'] as int).compareTo(
+            b['payload']['snapshot_revision'] as int,
+          ),
+        );
         expect(plans.map((r) => r['payload']['snapshot_revision']), [1, 2]);
         expect(
           plans.map(

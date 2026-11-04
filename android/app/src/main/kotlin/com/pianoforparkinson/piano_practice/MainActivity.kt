@@ -2,6 +2,8 @@ package com.pianoforparkinson.piano_practice
 
 import android.content.Context
 import android.media.*
+import android.net.ConnectivityManager
+import android.net.Network
 import android.os.*
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
@@ -54,6 +56,10 @@ class MainActivity : FlutterActivity() {
     @Volatile private var foreground = true
     private var trainingFullscreen = false
     private var sink: EventChannel.EventSink? = null
+    private var connectivity: ConnectivityManager? = null
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) { publish("CLOUD_NETWORK_AVAILABLE") }
+    }
     private lateinit var audioManager: AudioManager
     private var tts: TextToSpeech? = null
     @Volatile private var ttsReady = false
@@ -75,6 +81,11 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        if (Build.VERSION.SDK_INT >= 24) {
+            val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            runCatching { manager.registerDefaultNetworkCallback(networkCallback) }
+                .onSuccess { connectivity = manager }
+        }
         audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
         if (Build.VERSION.SDK_INT >= 26) {
             focusRequest = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
@@ -430,6 +441,7 @@ class MainActivity : FlutterActivity() {
         tts?.stop(); publish("AUDIO_FOCUS_LOST"); super.onPause()
     }
     override fun onDestroy() {
+        if (Build.VERSION.SDK_INT >= 24) runCatching { connectivity?.unregisterNetworkCallback(networkCallback) }
         audioHandler.post {
             allOff(); piano.reset(); ready = false
             if (::audioManager.isInitialized && Build.VERSION.SDK_INT >= 26 && focusRequest != null) {

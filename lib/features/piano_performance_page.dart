@@ -64,6 +64,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
   @override
   void initState() {
     super.initState();
+    c.holdCloudSync();
     ticker = createTicker((_) => frame());
     c.previewInterruptions.addListener(pause);
     unawaited(enterDisplay());
@@ -252,6 +253,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
 
   @override
   void dispose() {
+    c.releaseCloudSync();
     disposed = true;
     unawaited(widget.capture?.discard());
     ++epoch;

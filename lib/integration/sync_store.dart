@@ -7,11 +7,13 @@ import 'dart:convert';
 import 'package:sqflite/sqflite.dart';
 
 class SyncStore {
+  SyncStore({DateTime Function()? now}) : _now = now ?? DateTime.now;
+  final DateTime Function() _now;
   late Database db;
   Future<void> open(String directory) async {
     db = await openDatabase(
       '$directory/pd_cloud_sync.db',
-      version: 3,
+      version: 4,
       singleInstance: false,
       onCreate: (db, _) async {
         await _captureSchema(db);
@@ -31,9 +33,14 @@ class SyncStore {
           'CREATE TABLE cloud_records (patient_id TEXT NOT NULL, kind TEXT NOT NULL, record_id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(patient_id,kind,record_id))',
         );
         await _createOutbox(db);
+        await _upgradeOrdinarySync(db);
       },
       onUpgrade: (db, oldVersion, _) async {
-        if (oldVersion < 3) { await _captureSchema(db); await _createOutbox(db); }
+        if (oldVersion < 3) {
+          await _captureSchema(db);
+          await _createOutbox(db);
+        }
+        if (oldVersion < 4) await _upgradeOrdinarySync(db);
       },
     );
   }
@@ -41,6 +48,78 @@ class SyncStore {
   static Future<void> _captureSchema(Database db) => db.execute(
     'CREATE TABLE IF NOT EXISTS training_captures (capture_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, record_id TEXT, payload TEXT NOT NULL)',
   );
+
+  static Future<void> _upgradeOrdinarySync(Database db) async {
+    await db.execute(
+      'ALTER TABLE sync_outbox ADD COLUMN retry_count INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE sync_outbox ADD COLUMN next_retry_ms INTEGER NOT NULL DEFAULT 0',
+    );
+    await db.execute(
+      'ALTER TABLE sync_outbox ADD COLUMN last_retry_status INTEGER',
+    );
+    await db.execute('ALTER TABLE sync_outbox ADD COLUMN server_ack_id TEXT');
+    await db.execute('ALTER TABLE sync_outbox ADD COLUMN server_ack_hash TEXT');
+    await db.execute(
+      'CREATE TABLE scoped_cloud (scope TEXT NOT NULL, kind TEXT NOT NULL, id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(scope,kind,id))',
+    );
+    // Older downloads had no account or binding scope. Do not migrate them.
+    for (final table in ['cloud_records', 'cloud_patients', 'cloud_staff']) {
+      final exists = await db.rawQuery(
+        'SELECT 1 FROM sqlite_master WHERE type=? AND name=?',
+        ['table', table],
+      );
+      if (exists.isNotEmpty) await db.delete(table);
+    }
+  }
+
+  Future<void> applyPage(
+    String scope,
+    Map<String, dynamic> page,
+    bool Function() current,
+  ) => db.transaction((tx) async {
+    if (!current()) return;
+    final cursor = page['next_cursor'] as String;
+    for (final raw in page['items'] as List) {
+      final item = raw as Map;
+      final kind = item['kind'] as String, id = item['id'] as String;
+      if (item['deleted'] == true) {
+        await tx.delete(
+          'scoped_cloud',
+          where: 'scope=? AND kind=? AND id=?',
+          whereArgs: [scope, kind, id],
+        );
+      } else {
+        await tx.insert('scoped_cloud', {
+          'scope': scope,
+          'kind': kind,
+          'id': id,
+          'payload': jsonEncode(item['data']),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    }
+    await tx.insert('kv', {
+      'name': 'cursor:$scope',
+      'value': cursor,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+  });
+
+  Future<void> clearScope(String scope) => db.transaction((tx) async {
+    await tx.delete('scoped_cloud', where: 'scope=?', whereArgs: [scope]);
+    await tx.delete('kv', where: 'name=?', whereArgs: ['cursor:$scope']);
+  });
+
+  Future<List<Map<String, dynamic>>> readScope(String scope) async => [
+    for (final row in await db.query(
+      'scoped_cloud',
+      where: 'scope=?',
+      whereArgs: [scope],
+      orderBy: 'rowid DESC',
+      limit: 300,
+    ))
+      {'kind': row['kind'], 'data': jsonDecode(row['payload'] as String)},
+  ];
 
   static Future<void> _createOutbox(Database db) async {
     await db.execute(
@@ -87,7 +166,8 @@ class SyncStore {
         where: 'scope=? AND plan=?',
         whereArgs: [scope, plan],
       );
-      if (previous.isNotEmpty && previous.single['fingerprint'] == fingerprint) {
+      if (previous.isNotEmpty &&
+          previous.single['fingerprint'] == fingerprint) {
         return;
       }
       final revision = previous.isEmpty
@@ -112,13 +192,53 @@ class SyncStore {
     });
   }
 
-  Future<List<Map<String, Object?>>> pending(String scope) => db.query(
-    'sync_outbox',
-    where: 'scope=? AND body IS NOT NULL AND error_status IS NULL',
-    whereArgs: [scope],
-    orderBy: 'seq',
-    limit: 60,
-  );
+  Future<List<Map<String, Object?>>> pending(String scope) async {
+    final now = _now().millisecondsSinceEpoch;
+    final hold = int.tryParse(await get('upload-hold:$scope') ?? '') ?? 0;
+    if (hold > now) return [];
+    return db.query(
+      'sync_outbox',
+      where: 'scope=? AND body IS NOT NULL AND error_status IS NULL AND next_retry_ms<=?',
+      whereArgs: [scope, now],
+      orderBy: 'seq',
+      limit: 60,
+    );
+  }
+
+  Future<void> postpone(
+    String scope,
+    int seq,
+    int attempts,
+    int status,
+    Duration delay,
+  ) async {
+    final until = _now().add(delay).millisecondsSinceEpoch;
+    await db.transaction((tx) async {
+      await tx.update(
+        'sync_outbox',
+        {
+          'retry_count': attempts,
+          'last_retry_status': status,
+          'next_retry_ms': until,
+        },
+        where: 'scope=? AND seq=?',
+        whereArgs: [scope, seq],
+      );
+      if (status == 429) {
+        await tx.insert('kv', {
+          'name': 'upload-hold:$scope',
+          'value': '$until',
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    });
+  }
+
+  Future<int> queuedCount(String scope) async =>
+      (await db.rawQuery(
+            'SELECT COUNT(*) AS n FROM sync_outbox WHERE scope=? AND body IS NOT NULL AND error_status IS NULL',
+            [scope],
+          )).single['n']
+          as int;
 
   Future<void> reject(String scope, int seq, int status) async {
     await db.update(
@@ -136,10 +256,18 @@ class SyncStore {
           )).single['count']
           as int;
 
-  Future<void> acknowledge(String scope, int seq) async {
+  Future<void> acknowledge(
+    String scope,
+    int seq, {
+    Map<String, dynamic>? receipt,
+  }) async {
     await db.update(
       'sync_outbox',
-      {'body': null},
+      {
+        'body': null,
+        'server_ack_id': receipt?['id'],
+        'server_ack_hash': receipt?['payload_sha256'],
+      },
       where: 'scope=? AND seq=?',
       whereArgs: [scope, seq],
     );
