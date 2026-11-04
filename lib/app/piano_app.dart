@@ -1,3 +1,4 @@
+import '../features/capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -1318,10 +1319,18 @@ class _DualZoneEntryPageState extends State<DualZoneEntryPage> {
         );
 }
 
-class InstructionPage extends StatelessWidget {
+class InstructionPage extends StatefulWidget {
   const InstructionPage({super.key, required this.c, required this.taskId});
   final AppController c;
   final String taskId;
+  @override
+  State<InstructionPage> createState() => _InstructionPageState();
+}
+
+class _InstructionPageState extends State<InstructionPage> {
+  AppController get c => widget.c;
+  String get taskId => widget.taskId;
+  final captureKey = GlobalKey<CapturePreparationState>();
   @override
   Widget build(BuildContext context) {
     final blocked =
@@ -1356,7 +1365,11 @@ class InstructionPage extends StatelessWidget {
                 ? null
                 : () => Navigator.of(context).push(
                     MaterialPageRoute(
-                      builder: (_) => TrainingPage(c: c, taskId: taskId),
+                      builder: (_) => TrainingPage(
+                        c: c,
+                        taskId: taskId,
+                        capture: captureKey.currentState?.claim(),
+                      ),
                     ),
                   ),
             icon: const Icon(Icons.play_arrow),
@@ -1402,6 +1415,7 @@ class InstructionPage extends StatelessWidget {
             const SizedBox(height: 20),
           ],
           PracticeStepsPanel(c: c, steps: steps),
+          CapturePreparation(key: captureKey, c: c),
           const SizedBox(height: 16),
           if (taskId == 'G3_SWITCH') ...[
             QinOutlinedButton.icon(
@@ -2270,6 +2284,7 @@ class ResultPage extends StatelessWidget {
               summary != null &&
               record['session_id'] is String) ...[
             const SizedBox(height: 12),
+            CaptureResultCard(c: c, recordId: record['session_id'] as String),
             AssistantReviewCard(
               c: c,
               recordId: record['session_id'] as String,
@@ -3002,6 +3017,25 @@ class SettingsPage extends StatelessWidget {
                                         ),
                                         const SizedBox(height: 8),
                                         AssistantPrivacyTile(c: c),
+                                        const SizedBox(height: 12),
+                                        QinOutlinedButton.icon(
+                                          onPressed: () => Navigator.push(
+                                            context,
+                                            MaterialPageRoute<void>(
+                                              builder: (_) =>
+                                                  CaptureLibraryPage(c: c),
+                                            ),
+                                          ),
+                                          icon: const Icon(
+                                            Icons.videocam_outlined,
+                                          ),
+                                          label: Text(
+                                            c.text(
+                                              '面部采集与上传',
+                                              'Face recordings and uploads',
+                                            ),
+                                          ),
+                                        ),
                                         const SizedBox(height: 16),
                                         QinOutlinedButton.icon(
                                           onPressed:

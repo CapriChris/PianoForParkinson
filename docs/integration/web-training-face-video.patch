@@ -1,0 +1,1896 @@
+diff --git a/backend/alembic/versions/l8a0b2c4d6e8_training_face_recordings.py b/backend/alembic/versions/l8a0b2c4d6e8_training_face_recordings.py
+new file mode 100644
+index 0000000..f90319e
+--- /dev/null
++++ b/backend/alembic/versions/l8a0b2c4d6e8_training_face_recordings.py
+@@ -0,0 +1,30 @@
++"""Resumable training video parents, without changing native practice records."""
++from alembic import op
++import sqlalchemy as sa
++revision = 'l8a0b2c4d6e8'
++down_revision = 'k7f9a1b3c5d7'
++branch_labels = None
++depends_on = None
++
++
++def upgrade():
++    op.create_table('face_recordings',
++        sa.Column('id', sa.String(36), primary_key=True),
++        sa.Column('patient_id', sa.String(36), sa.ForeignKey('patients.id'), nullable=False),
++        sa.Column('operator_id', sa.String(36), sa.ForeignKey('staff_users.id'), nullable=False),
++        sa.Column('device_id', sa.String(100), nullable=False),
++        sa.Column('local_profile_id', sa.String(100), nullable=False),
++        sa.Column('client_capture_id', sa.String(36), nullable=False),
++        sa.Column('external_record_id', sa.String(36), sa.ForeignKey('external_practice_records.id'), nullable=False),
++        sa.Column('status', sa.String(32), nullable=False),
++        sa.Column('manifest_sha256', sa.String(64), nullable=False),
++        sa.Column('data_json', sa.Text(), nullable=False),
++        sa.Column('created_at', sa.DateTime(), nullable=False),
++        sa.Column('updated_at', sa.DateTime(), nullable=False),
++        sa.UniqueConstraint('device_id', 'client_capture_id', name='uq_face_capture_source'))
++    for column in ['patient_id', 'external_record_id', 'status']:
++        op.create_index('ix_face_recordings_' + column, 'face_recordings', [column])
++
++
++def downgrade():
++    op.drop_table('face_recordings')
+diff --git a/backend/app/api/face_recordings.py b/backend/app/api/face_recordings.py
+new file mode 100644
+index 0000000..2e73496
+--- /dev/null
++++ b/backend/app/api/face_recordings.py
+@@ -0,0 +1,308 @@
++"""Authenticated, resumable, immutable training-video uploads (protocol 1.2).
++
++No implicit frame approval. The single-process media dispatcher owns decoding.
++"""
++from __future__ import annotations
++import hashlib
++import json
++import math
++import os
++import shutil
++import threading
++import uuid
++from datetime import timedelta
++from pathlib import Path
++
++from fastapi import APIRouter, Request, Query
++from fastapi.responses import Response
++from pydantic import BaseModel, Field
++from sqlalchemy import select, func
++from sqlalchemy.exc import IntegrityError
++
++from app.api.deps import CurrentUser, DbSession
++from app.core.config import settings
++from app.core.errors import APIError, conflict, not_found
++from app.db.base import utcnow
++from app.db.models import ExternalPracticeRecord, MobileFaceJob
++from app.db.models.face_recording import FaceRecording
++from app.services import integration_access as access
++
++router = APIRouter(prefix='/integration/v1/face/recordings', tags=['Training face recordings'])
++CHUNK = 4 * 1024 * 1024
++MAX_SIZE = 400 * 1024 * 1024
++gate = threading.RLock()
++TERMINAL = {'SUCCESS', 'PARTIAL_SUCCESS', 'NO_VALID_SEGMENTS', 'FAILED', 'CANCELLED', 'DELETED'}
++
++
++def available():
++    return settings.training_video_enabled and settings.micro_expression_entry == 'causalnet' and bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
++
++
++def root(row):
++    # IDs are server UUIDs, never user-controlled paths.
++    return settings.upload_path / 'training-face' / str(uuid.UUID(row.id))
++
++
++def owned(db, user, identifier):
++    row = db.get(FaceRecording, str(identifier))
++    if row is None: raise not_found('录像任务不存在。')
++    access.patient(db, row.patient_id, user)
++    if row.operator_id != user.id and user.role != 'ADMIN':
++        raise APIError(403, 'FORBIDDEN', '无权读取其他账号的录像。')
++    from app.db.models import StaffUser
++    operator = db.get(StaffUser, row.operator_id)
++    if operator is None or not operator.is_active:
++        raise APIError(403, 'FORBIDDEN', '录像账号已停用。')
++    access.bound(db, row.device_id, row.local_profile_id, row.patient_id, operator)
++    return row
++
++
++def public(row, *, include_segments=False):
++    data = json.loads(row.data_json)
++    files = data['manifest']['files']
++    uploaded = {}
++    for file in files:
++        directory = root(row) / file['file_id']
++        uploaded[file['file_id']] = [i for i in range(file['chunk_count']) if (directory / f'{i}.part').is_file()]
++    segments = data.get('segments', [])
++    result = dict(recording_id=row.id, status=row.status, external_record_id=row.external_record_id, upload_complete=bool(data.get('upload_complete')),
++        uploaded_chunks=uploaded, media_deleted=bool(data.get('media_deleted')), error=data.get('error'), created_at=row.created_at.isoformat() + 'Z',
++        expires_at=(row.created_at+timedelta(days=7)).isoformat()+'Z',
++        summary=f"有效结果 {sum(s['status']=='SUCCESS' for s in segments)} / {len(segments)} 段",
++        results=[dict(s.get('result') or {}, source_file_id=s['file_id'], source_start_seconds=s['start_seconds'])
++                 for s in segments if s['status']=='SUCCESS'])
++    if include_segments:
++        result['segments'] = [{k:v for k,v in s.items() if k != 'stored_path'} for s in segments]
++    return result
++
++
++class VideoFile(BaseModel):
++    file_id: uuid.UUID
++    sequence: int = Field(ge=0, le=99)
++    size_bytes: int = Field(gt=0, le=MAX_SIZE)
++    sha256: str = Field(pattern=r'^[a-f0-9]{64}$')
++    chunk_count: int = Field(ge=1, le=100)
++    mime_type: str = Field(pattern=r'^video/mp4$')
++    duration_ms: int = Field(gt=0, le=1800000)
++
++
++class CreateRecording(BaseModel):
++    client_capture_id: uuid.UUID
++    device_id: str = Field(min_length=8, max_length=100)
++    local_profile_id: str = Field(min_length=8, max_length=100)
++    patient_id: uuid.UUID
++    external_record_id: uuid.UUID
++    consent_version: str = Field(pattern=r'^face-capture-v1$')
++    agreed_at_ms: int = Field(gt=0)
++    files: list[VideoFile] = Field(min_length=1, max_length=100)
++    timeline: list[dict] = Field(default_factory=list, max_length=10000)
++
++
++@router.post('', status_code=201)
++def create(payload: CreateRecording, db: DbSession, user: CurrentUser):
++    from app.api.integration import limit_request
++    limit_request(user,'training-create',6)
++    if not available(): raise APIError(503, 'RECORDING_UNAVAILABLE', '训练视频服务尚未配置。')
++    access.bound(db,payload.device_id,payload.local_profile_id,str(payload.patient_id),user)
++    source=db.get(ExternalPracticeRecord,str(payload.external_record_id))
++    if source is None or (source.device_id,source.local_profile_id,source.patient_id) != (
++            payload.device_id,payload.local_profile_id,str(payload.patient_id)) or source.record_type not in (
++                'PIANO_SESSION','PIECE_PERFORMANCE','DANCE_SESSION'):
++        raise APIError(403,'SOURCE_MISMATCH','录像与训练记录归属不一致。')
++    files=payload.files
++    if sum(f.size_bytes for f in files)>MAX_SIZE or sum(f.duration_ms for f in files)>1800000:
++        raise APIError(413,'FILE_TOO_LARGE','本次录像超过大小或时长限制。')
++    if len({f.file_id for f in files})!=len(files) or sorted(f.sequence for f in files)!=list(range(len(files))):
++        raise APIError(422,'INVALID_MANIFEST','文件编号或顺序无效。')
++    if any(f.chunk_count!=math.ceil(f.size_bytes/CHUNK) for f in files):
++        raise APIError(422,'INVALID_MANIFEST','分块数量与文件大小不一致。')
++    manifest=payload.model_dump(mode='json')
++    raw=json.dumps(manifest,ensure_ascii=False,sort_keys=True,separators=(',',':'),allow_nan=False)
++    if len(raw.encode())>1024*1024:raise APIError(413,'FILE_TOO_LARGE','录像清单过大。')
++    digest=hashlib.sha256(raw.encode()).hexdigest()
++    with gate:
++        existing=db.scalar(select(FaceRecording).where(FaceRecording.device_id==payload.device_id,
++                         FaceRecording.client_capture_id==str(payload.client_capture_id)))
++        if existing:
++            owned(db,user,existing.id)
++            if existing.manifest_sha256!=digest:raise conflict('同一次采集对应不同内容。')
++            return public(existing)
++        count=db.scalar(select(func.count()).select_from(FaceRecording).where(FaceRecording.status.not_in(TERMINAL)))
++        if count>=8:raise APIError(429,'QUEUE_FULL','录像处理队列已满。',headers={'Retry-After':'60'})
++        row=FaceRecording(patient_id=str(payload.patient_id),operator_id=user.id,device_id=payload.device_id,
++            local_profile_id=payload.local_profile_id,client_capture_id=str(payload.client_capture_id),
++            external_record_id=source.id,status='UPLOADING',manifest_sha256=digest,
++            data_json=json.dumps({'manifest':manifest,'segments':[]}))
++        db.add(row)
++        try:db.commit()
++        except IntegrityError:db.rollback();raise conflict('录像任务已创建，请重试读取。')
++        db.refresh(row);root(row).mkdir(parents=True,exist_ok=True)
++        return public(row)
++
++
++@router.get('')
++def listing(external_record_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    source=db.get(ExternalPracticeRecord,str(external_record_id))
++    if source is None:raise not_found('训练记录不存在。')
++    access.patient(db,source.patient_id,user)
++    rows=db.scalars(select(FaceRecording).where(FaceRecording.external_record_id==source.id,
++        FaceRecording.status!='DELETED').order_by(FaceRecording.created_at.desc()).limit(100)).all()
++    visible=[]
++    for row in rows:
++        try:visible.append(public(owned(db,user,row.id)))
++        except APIError as error:
++            if error.status_code not in (403,404):raise
++    return {'items':visible}
++
++
++@router.get('/{recording_id}')
++def status(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    return public(owned(db,user,recording_id))
++
++
++@router.put('/{recording_id}/files/{file_id}/chunks/{index}')
++async def chunk(recording_id:uuid.UUID,file_id:uuid.UUID,index:int,request:Request,db:DbSession,user:CurrentUser):
++    from app.api.integration import limit_request
++    limit_request(user,'training-chunk',180)
++    row=owned(db,user,recording_id)
++    if row.status!='UPLOADING':raise conflict('当前任务不再接收视频。')
++    manifest=json.loads(row.data_json)['manifest']
++    file=next((f for f in manifest['files'] if f['file_id']==str(file_id)),None)
++    if file is None or not 0<=index<file['chunk_count']:raise APIError(422,'INVALID_CHUNK','无效的视频分块。')
++    expected=min(CHUNK,file['size_bytes']-index*CHUNK)
++    expected_digest=request.headers.get('x-chunk-sha256','')
++    if len(expected_digest)!=64:raise APIError(422,'INVALID_CHUNK','缺少分块摘要。')
++    directory=root(row)/str(file_id);directory.mkdir(parents=True,exist_ok=True)
++    temporary=directory/f'{index}.{uuid.uuid4()}.tmp';final=directory/f'{index}.part'
++    size=0;digest=hashlib.sha256()
++    try:
++        with temporary.open('xb') as target:
++            os.chmod(temporary,0o600)
++            async for block in request.stream():
++                size+=len(block)
++                if size>expected:raise APIError(413,'FILE_TOO_LARGE','分块超过预定大小。')
++                digest.update(block);target.write(block)
++        if size!=expected or digest.hexdigest()!=expected_digest:raise APIError(422,'CHUNK_HASH_MISMATCH','分块长度或摘要不一致。')
++        with gate:
++            db.expire_all();row=owned(db,user,recording_id)
++            if row.status!='UPLOADING':raise conflict('录像已取消或停止接收。')
++            if final.exists():
++                if hashlib.sha256(final.read_bytes()).hexdigest()!=expected_digest:raise conflict('该分块已包含不同内容。')
++            else:temporary.replace(final)
++        return {'accepted':True,'index':index}
++    finally:temporary.unlink(missing_ok=True)
++
++
++@router.post('/{recording_id}/complete',status_code=202)
++def complete(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    with gate:
++        row=owned(db,user,recording_id)
++        if row.status in {'CANCELLED','DELETED','FAILED'}:raise conflict('任务已结束，不能继续提交。')
++        if row.status!='UPLOADING':return public(row)
++        data=json.loads(row.data_json)
++        for file in data['manifest']['files']:
++            directory=root(row)/file['file_id'];output=directory/'video.mp4';temporary=directory/'assembling.tmp'
++            if not directory.is_dir():raise conflict('视频分块尚未完整上传。')
++            digest=hashlib.sha256();size=0
++            try:
++                with temporary.open('wb') as target:
++                    os.chmod(temporary,0o600)
++                    for index in range(file['chunk_count']):
++                        part=directory/f'{index}.part'
++                        if not part.is_file():raise conflict('视频分块尚未完整上传。')
++                        with part.open('rb') as source:
++                            while block:=source.read(1024*1024):digest.update(block);size+=len(block);target.write(block)
++                if size!=file['size_bytes'] or digest.hexdigest()!=file['sha256']:
++                    raise APIError(422,'FILE_HASH_MISMATCH','视频完整性校验失败。')
++                temporary.replace(output)
++            finally:temporary.unlink(missing_ok=True)
++        data['upload_complete']=True;row.data_json=json.dumps(data,ensure_ascii=False)
++        row.status='PROCESSING';db.commit();db.refresh(row)
++        # Keep confirmed chunk indices until successful assembly; complete is idempotent.
++        for file in data['manifest']['files']:
++            for part in (root(row)/file['file_id']).glob('*.part'):part.unlink(missing_ok=True)
++        return public(row)
++
++
++@router.get('/{recording_id}/segments')
++def segments(recording_id:uuid.UUID,db:DbSession,user:CurrentUser,offset:int=Query(0,ge=0),limit:int=Query(20,ge=1,le=50)):
++    result=public(owned(db,user,recording_id),include_segments=True)
++    items=result.pop('segments');return {'items':items[offset:offset+limit],
++        'next_offset':offset+limit if offset+limit<len(items) else None}
++
++
++@router.post('/{recording_id}/retry',status_code=202)
++def retry(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    with gate:
++        row=owned(db,user,recording_id);data=json.loads(row.data_json)
++        if row.status not in ('FAILED','PARTIAL_SUCCESS') or not data.get('upload_complete') or data.get('media_deleted'):
++            raise conflict('当前录像无法重试分析。')
++        if data.get('retry_count',0)>=2 or row.created_at<utcnow()-timedelta(days=7):
++            raise conflict('录像重试次数或保留时间已用尽。')
++        count=db.scalar(select(func.count()).select_from(FaceRecording).where(FaceRecording.status.not_in(TERMINAL)))
++        if count>=8:raise APIError(429,'QUEUE_FULL','录像处理队列已满。',headers={'Retry-After':'60'})
++        for segment in data.get('segments',[]):
++            if segment['status']=='FAILED':segment['status']='NEW';segment.pop('job_id',None);segment.pop('error',None)
++        data['retry_count']=data.get('retry_count',0)+1;data.pop('error',None)
++        row.status='PROCESSING';row.data_json=json.dumps(data,ensure_ascii=False);db.commit();db.refresh(row)
++        return public(row)
++
++
++class Review(BaseModel):
++    candidate_id:str|None=Field(default=None,max_length=200)
++    review_confirmed:bool=False
++    reject:bool=False
++
++
++@router.post('/{recording_id}/segments/{segment_id}/review',status_code=202)
++def review(recording_id:uuid.UUID,segment_id:uuid.UUID,payload:Review,db:DbSession,user:CurrentUser):
++    with gate:
++        row=owned(db,user,recording_id);data=json.loads(row.data_json)
++        segment=next((s for s in data['segments'] if s['id']==str(segment_id)),None)
++        if row.status in TERMINAL or segment is None or segment['status']!='REVIEW_REQUIRED':raise conflict('当前片段无法复核。')
++        if payload.reject:segment['status']='REJECTED'
++        else:
++            if not payload.review_confirmed:raise APIError(422,'REVIEW_REQUIRED','请先预览并确认关键帧。')
++            candidates=segment.get('candidates',[])
++            candidate=next((c for c in candidates if str(c['id'])==payload.candidate_id),None)
++            if candidate is None:raise APIError(422,'INVALID_CANDIDATE','候选片段已变化，请刷新。')
++            indices=[candidate[k] for k in ('onset_frame','apex_frame','offset_frame')]
++            if not 1<=indices[0]<indices[1]<indices[2]<=1800:raise APIError(422,'INVALID_CANDIDATE','关键帧无效。')
++            count=db.scalar(select(func.count()).select_from(MobileFaceJob).where(MobileFaceJob.status.in_(['PENDING','RUNNING'])))
++            if count>=8:raise APIError(429,'QUEUE_FULL','分析队列已满，请稍后复核。',headers={'Retry-After':'60'})
++            job=MobileFaceJob(patient_id=row.patient_id,operator_id=row.operator_id,device_id=row.device_id,
++                local_profile_id=row.local_profile_id,stored_path=segment['stored_path'],source_filename='training-segment.mp4',
++                status='PENDING',indices_json=json.dumps(indices),size_bytes=(settings.upload_path/segment['stored_path']).stat().st_size)
++            db.add(job);db.flush();segment['job_id']=job.id;segment['status']='PENDING'
++        row.data_json=json.dumps(data,ensure_ascii=False);db.commit();return public(row)
++
++
++@router.get('/{recording_id}/segments/{segment_id}/frames/{which}')
++def frame(recording_id:uuid.UUID,segment_id:uuid.UUID,which:str,db:DbSession,user:CurrentUser,candidate_id:str):
++    import subprocess
++    from app.api.integration import limit_request
++    limit_request(user,'training-preview',30)
++    row=owned(db,user,recording_id);data=json.loads(row.data_json)
++    segment=next((s for s in data['segments'] if s['id']==str(segment_id)),None)
++    if segment is None or segment['status']!='REVIEW_REQUIRED':raise not_found('复核画面已失效。')
++    candidate=next((c for c in segment.get('candidates',[]) if str(c['id'])==candidate_id),None)
++    if candidate is None or which not in ('onset','apex','offset'):raise not_found('候选画面不存在。')
++    path=settings.upload_path/segment['stored_path']
++    output=subprocess.run(['ffmpeg','-v','error','-i',str(path),'-vf',f"select=eq(n\\,{candidate[which+'_frame']-1}),scale=480:-2",
++        '-frames:v','1','-f','image2pipe','-c:v','mjpeg','pipe:1'],capture_output=True,timeout=30,check=True)
++    return Response(output.stdout,media_type='image/jpeg',headers={'Cache-Control':'no-store'})
++
++
++@router.delete('/{recording_id}')
++def delete(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    from app.services.training_face_jobs import erase
++    with gate:
++        row=owned(db,user,recording_id)
++        row.status='DELETED';db.commit()
++        erase(db,row)
++        return {'deleted':True,'recording_id':row.id}
++
++
++@router.post('/{recording_id}/cancel')
++def cancel(recording_id:uuid.UUID,db:DbSession,user:CurrentUser):
++    return delete(recording_id,db,user)
+diff --git a/backend/app/api/integration.py b/backend/app/api/integration.py
+index f55c23d..c3d13e6 100644
+--- a/backend/app/api/integration.py
++++ b/backend/app/api/integration.py
+@@ -278,11 +278,12 @@ def record_detail(record_id: str, patient_id: str, db: DbSession, user: CurrentU
+ @router.get("/capabilities")
+ def capabilities(user: CurrentUser) -> dict:
+     from app.ml.micro_expression.adapter import analyzer
++    from app.api.face_recordings import available
+     state = analyzer.refresh_status()
+-    return {"face_model_ready": bool(state.is_ready),
++    return {"face_recordings_ready": available(), "face_recording_chunk_bytes": 4*1024*1024, "face_recording_max_bytes": 400*1024*1024, "face_recording_retention_days": 7, "face_model_ready": bool(state.is_ready),
+             "face_model_state": str(state.state),
+             "face_needs_keyframes": settings.micro_expression_entry == "causalnet",
+-            "ai_assistant_ready": True, "knowledge_ready": True, "ai_provider_ready": bool(settings.expert_llm_base_url and settings.expert_llm_model), "protocol_revision": "1.1"}
++            "ai_assistant_ready": True, "knowledge_ready": True, "ai_provider_ready": bool(settings.expert_llm_base_url and settings.expert_llm_model), "protocol_revision": "1.2" if available() else "1.1"}
+ 
+ 
+ def _face_out(job: MobileFaceJob) -> dict:
+diff --git a/backend/app/api/router.py b/backend/app/api/router.py
+index 2b4d181..0b05abb 100644
+--- a/backend/app/api/router.py
++++ b/backend/app/api/router.py
+@@ -6,7 +6,10 @@ from fastapi import APIRouter
+ 
+ from app.api import integration, active_training, assessment_sessions, auth, followup, guided_song, jobs, live_emotion, patients, piano, pose, system
+ 
++from app.api import face_recordings
++
+ api_router = APIRouter()
++api_router.include_router(face_recordings.router)
+ api_router.include_router(active_training.router)
+ api_router.include_router(auth.router)
+ api_router.include_router(patients.router)
+diff --git a/backend/app/core/config.py b/backend/app/core/config.py
+index 1c0f9f9..a75fd06 100644
+--- a/backend/app/core/config.py
++++ b/backend/app/core/config.py
+@@ -42,6 +42,7 @@ class Settings(BaseSettings):
+     access_token_expire_minutes: int = 480
+ 
+     # ---------- storage ----------
++    training_video_enabled: bool = False
+     upload_dir: str = "./data/uploads"
+     output_dir: str = "./data/outputs"
+     report_dir: str = "./data/reports"
+diff --git a/backend/app/db/models/__init__.py b/backend/app/db/models/__init__.py
+index 1d2c3db..835af71 100644
+--- a/backend/app/db/models/__init__.py
++++ b/backend/app/db/models/__init__.py
+@@ -4,6 +4,7 @@ Importing this package registers every table on Base.metadata, which is what
+ Alembic autogenerate relies on.
+ """
+ 
++from app.db.models.face_recording import FaceRecording
+ from app.db.base import Base
+ from app.db.models.assessment import (
+     AssessmentSession,
+@@ -41,6 +42,7 @@ __all__ = [
+ 
+ # The original 13 domain tables plus isolated guided-song sessions.
+ EXPECTED_TABLES = [
++    "face_recordings",
+     "staff_users",
+     "patients",
+     "patient_number_allocations",
+diff --git a/backend/app/db/models/face_recording.py b/backend/app/db/models/face_recording.py
+new file mode 100644
+index 0000000..cd31728
+--- /dev/null
++++ b/backend/app/db/models/face_recording.py
+@@ -0,0 +1,18 @@
++"""Training-linked recording parents; originals remain immutable."""
++from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
++from sqlalchemy.orm import Mapped, mapped_column
++from app.db.base import Base, UUIDPk, Timestamped
++
++
++class FaceRecording(Base, UUIDPk, Timestamped):
++    __tablename__ = 'face_recordings'
++    __table_args__ = (UniqueConstraint('device_id', 'client_capture_id', name='uq_face_capture_source'),)
++    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey('patients.id'), nullable=False, index=True)
++    operator_id: Mapped[str] = mapped_column(String(36), ForeignKey('staff_users.id'), nullable=False)
++    device_id: Mapped[str] = mapped_column(String(100), nullable=False)
++    local_profile_id: Mapped[str] = mapped_column(String(100), nullable=False)
++    client_capture_id: Mapped[str] = mapped_column(String(36), nullable=False)
++    external_record_id: Mapped[str] = mapped_column(String(36), ForeignKey('external_practice_records.id'), nullable=False, index=True)
++    status: Mapped[str] = mapped_column(String(32), default='UPLOADING', nullable=False, index=True)
++    manifest_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
++    data_json: Mapped[str] = mapped_column(Text, nullable=False)
+diff --git a/backend/app/services/integration_jobs.py b/backend/app/services/integration_jobs.py
+index be853b8..d0e5e85 100644
+--- a/backend/app/services/integration_jobs.py
++++ b/backend/app/services/integration_jobs.py
+@@ -77,7 +77,11 @@ def run_face(job_id):
+             result,_=assessment_service.analyze_micro_expression(db,session.id,patient_id=job.patient_id,original_filename=job.source_filename,content=path.read_bytes(),payload=payload,created_by=user.id)
+             # Re-check permission before publishing after slow inference.
+             db.expire_all();access.bound(db,job.device_id,job.local_profile_id,job.patient_id,user)
+-            job=db.get(MobileFaceJob,job_id);job.result_id=result.id;job.status='SUCCESS'
++            job=db.get(MobileFaceJob,job_id)
++            from app.services.training_face_jobs import cancelled, erase_job_result
++            if cancelled(db,job_id):
++                erase_job_result(db,job);db.commit();return
++            job.result_id=result.id;job.status='SUCCESS'
+             erase_video(job);db.commit()
+         except Exception as exc:
+             db.rollback();job=db.get(MobileFaceJob,job_id)
+@@ -97,6 +101,9 @@ async def dispatcher_loop():
+             now=asyncio.get_running_loop().time()
+             if now-last>60:await run_in_threadpool(expire_jobs);last=now
+             had=await run_in_threadpool(process_next)
++            if settings.training_video_enabled:
++                from app.services.training_face_jobs import step
++                had = await run_in_threadpool(step) or had
+             if not had:await asyncio.sleep(1)
+         except asyncio.CancelledError:raise
+         except Exception:
+diff --git a/backend/app/services/training_face_jobs.py b/backend/app/services/training_face_jobs.py
+new file mode 100644
+index 0000000..bac9548
+--- /dev/null
++++ b/backend/app/services/training_face_jobs.py
+@@ -0,0 +1,179 @@
++"""Bounded single-instance dispatcher for training video decoding and review.
++
++One short segment per pass, alongside the existing inference dispatcher.
++"""
++from __future__ import annotations
++import json
++import math
++import shutil
++import subprocess
++import uuid
++from datetime import timedelta
++from pathlib import Path
++from sqlalchemy import select, delete
++
++from app.core.config import settings
++from app.db.base import utcnow
++from app.db.session import SessionLocal
++from app.db.models import MobileFaceJob, MicroExpressionResult, MediaFile, AssessmentSession, StaffUser
++from app.db.models.face_recording import FaceRecording
++from app.services import integration_access as access
++
++
++def _path(raw):
++    path=(settings.upload_path/raw).resolve()
++    if not path.is_relative_to(settings.upload_path.resolve()):raise ValueError('invalid media path')
++    return path
++
++
++def erase_job_result(db,job):
++    """Only media/results created by this training job, never its practice record."""
++    if not job.assessment_session_id:return
++    results=db.scalars(select(MicroExpressionResult).where(MicroExpressionResult.assessment_session_id==job.assessment_session_id)).all()
++    for result in results:
++        media=db.get(MediaFile,result.media_file_id)
++        db.delete(result);db.flush()
++        if media:
++            _path(media.stored_path).unlink(missing_ok=True);db.delete(media)
++    db.flush()
++    session=db.get(AssessmentSession,job.assessment_session_id)
++    if session:db.delete(session)
++    job.result_id=None;job.assessment_session_id=None
++
++
++def erase(db,row,*,media_only=False):
++    from app.api.face_recordings import root
++    data=json.loads(row.data_json)
++    for segment in data.get('segments',[]):
++        job=db.get(MobileFaceJob,segment.get('job_id')) if segment.get('job_id') else None
++        if job:
++            if not media_only:job.status='CANCELLED';erase_job_result(db,job)
++            elif job.assessment_session_id:
++                # Keep structured results, remove every owned original-video copy.
++                for media in db.scalars(select(MediaFile).where(MediaFile.assessment_session_id==job.assessment_session_id)).all():
++                    _path(media.stored_path).unlink(missing_ok=True)
++            if job.stored_path:_path(job.stored_path).unlink(missing_ok=True)
++            job.stored_path=None
++    shutil.rmtree(root(row),ignore_errors=True)
++    data['media_deleted']=True
++    if not media_only:data['segments']=[];data['manifest']['timeline']=[]
++    row.data_json=json.dumps(data,ensure_ascii=False);db.commit()
++
++
++def cancelled(db,job_id):
++    job=db.get(MobileFaceJob,job_id,populate_existing=True)
++    return job is not None and job.status=='CANCELLED'
++
++
++def _probe(path):
++    response=subprocess.run(['ffprobe','-v','error','-select_streams','v:0','-show_entries',
++        'stream=codec_name,width,height,avg_frame_rate:format=duration','-of','json',str(path)],
++        capture_output=True,check=True,timeout=30)
++    value=json.loads(response.stdout);video=value['streams'][0]
++    numerator,denominator=video['avg_frame_rate'].split('/')
++    fps=float(numerator)/float(denominator);duration=float(value['format']['duration'])
++    if not math.isfinite(fps) or not 1<=fps<=240 or not math.isfinite(duration) or not 0<duration<=1805:
++        raise ValueError('invalid duration or fps')
++    if video['width']*video['height']>3840*2160:raise ValueError('resolution limit')
++    return fps,duration
++
++
++def _status(data):
++    segments=data.get('segments',[])
++    if not segments:return 'NO_VALID_SEGMENTS'
++    if any(s['status']=='NEW' for s in segments):return 'PROCESSING'
++    if any(s['status']=='REVIEW_REQUIRED' for s in segments):return 'REVIEW_REQUIRED'
++    if any(s['status'] in ('PENDING','RUNNING') for s in segments):return 'RUNNING'
++    successes=sum(s['status']=='SUCCESS' for s in segments)
++    if successes:return 'SUCCESS' if successes==len(segments) else 'PARTIAL_SUCCESS'
++    return 'FAILED' if any(s['status']=='FAILED' for s in segments) else 'NO_VALID_SEGMENTS'
++
++
++def step():
++    from app.api.face_recordings import root,gate,TERMINAL
++    from app.ml.micro_expression.adapter import analyzer
++    with SessionLocal() as db:
++        rows=db.scalars(select(FaceRecording).where(FaceRecording.status!='DELETED').order_by(FaceRecording.created_at)).all()
++        for row in rows:
++            prepared_segments=None;preparation_error=False
++            snapshot=json.loads(row.data_json)
++            if row.status=='PROCESSING' and not snapshot.get('segments'):
++                # Probing may be slow; cancellation and chunk transfers keep their API lock.
++                try:
++                    prepared_segments=[]
++                    for file in snapshot['manifest']['files']:
++                        fps,duration=_probe(root(row)/file['file_id']/'video.mp4')
++                        interval=min(20.0,1700.0/fps);start=0.0
++                        while start<duration:
++                            length=min(interval,duration-start)
++                            if length<1:break
++                            ident=str(uuid.uuid4())
++                            prepared_segments.append(dict(id=ident,file_id=file['file_id'],start_seconds=start,
++                                duration_seconds=length,fps=fps,status='NEW',
++                                stored_path=str((root(row)/f'{ident}.mp4').relative_to(settings.upload_path))))
++                            start+=max(1,interval-1)
++                except Exception:preparation_error=True
++            with gate:
++                db.expire_all();row=db.get(FaceRecording,row.id)
++                if row is None or row.status=='DELETED':continue
++                data=json.loads(row.data_json)
++                if row.created_at<utcnow()-(timedelta(hours=24) if row.status=='UPLOADING' else timedelta(days=7)) and row.status not in TERMINAL:
++                    row.status='FAILED';data['error']='录像等待超时。';row.data_json=json.dumps(data);erase(db,row,media_only=True);continue
++                if row.status in TERMINAL:
++                    if row.updated_at<utcnow()-timedelta(hours=24) and not data.get('media_deleted'):erase(db,row,media_only=True)
++                    continue
++                if row.status=='UPLOADING':continue
++                operator=db.get(StaffUser,row.operator_id)
++                try:
++                    if operator is None or not operator.is_active:raise ValueError('inactive account')
++                    access.bound(db,row.device_id,row.local_profile_id,row.patient_id,operator)
++                except Exception:
++                    row.status='FAILED';data['error']='录像授权已失效。';row.data_json=json.dumps(data);erase(db,row,media_only=True);continue
++                if not data.get('segments'):
++                    if preparation_error:
++                        row.status='FAILED';data['error']='录像格式或解码检查未通过。';row.data_json=json.dumps(data);db.commit();continue
++                    if prepared_segments is None:continue
++                    data['segments']=prepared_segments
++                    row.data_json=json.dumps(data);db.commit()
++                # Reconcile completed child jobs without rewriting raw practice metrics.
++                for segment in data['segments']:
++                    if not segment.get('job_id'):continue
++                    job=db.get(MobileFaceJob,segment['job_id'],populate_existing=True)
++                    if job:
++                        segment['status']=job.status
++                        if job.status=='SUCCESS' and job.result_id:
++                            result=db.get(MicroExpressionResult,job.result_id)
++                            if result:
++                                segment['result']=dict(model_name=result.model_name,model_version=result.model_version,
++                                    predicted_class=result.predicted_class,dominant_tag=result.dominant_tag,
++                                    tag_distribution=json.loads(result.tag_distribution_json) if result.tag_distribution_json else None,
++                                    quality=json.loads(result.quality_json) if result.quality_json else None,
++                                    inference_time_ms=result.inference_time_ms)
++                row.status=_status(data);row.data_json=json.dumps(data,ensure_ascii=False);db.commit()
++                pending=next((s for s in data['segments'] if s['status']=='NEW'),None)
++                if pending is None:continue
++            # Expensive decoding happens outside the API lock. Cancellation wins on publication.
++            try:
++                source=root(row)/pending['file_id']/'video.mp4';target=_path(pending['stored_path'])
++                subprocess.run(['ffmpeg','-v','error','-y','-ss',str(pending['start_seconds']),'-i',str(source),
++                    '-t',str(pending['duration_seconds']),'-an','-vf','scale=720:-2','-fps_mode','passthrough',
++                    '-c:v','libx264','-crf','18',str(target)],capture_output=True,check=True,timeout=120)
++                target.chmod(0o600)
++                result=analyzer.spot(str(target))
++                candidates=result.get('candidates',[])
++                pending['candidates']=candidates
++                pending['status']='REVIEW_REQUIRED' if candidates else 'NO_VALID_SEGMENTS'
++                # No candidate or classifier score is ever used as automatic consent.
++            except Exception:
++                pending['status']='FAILED';pending['error']='该片段未能完成候选定位。'
++            with gate:
++                db.expire_all();fresh=db.get(FaceRecording,row.id)
++                if fresh is None or fresh.status in ('DELETED','CANCELLED'):
++                    _path(pending['stored_path']).unlink(missing_ok=True);return True
++                # Preserve reviews submitted while this segment was decoded.
++                latest=json.loads(fresh.data_json)
++                for segment in latest['segments']:
++                    if segment['id']==pending['id']:segment.update(pending)
++                fresh.status=_status(latest);fresh.data_json=json.dumps(latest,ensure_ascii=False);db.commit()
++            return True
++    return False
+diff --git a/backend/tests/test_training_face_recordings.py b/backend/tests/test_training_face_recordings.py
+new file mode 100644
+index 0000000..cf1f19a
+--- /dev/null
++++ b/backend/tests/test_training_face_recordings.py
+@@ -0,0 +1,212 @@
++"""Isolated protocol, privacy and lifecycle checks, without model fabrication."""
++import hashlib
++import json
++import uuid
++import pytest
++from app.db.models import Patient, MobileFaceJob
++from app.db.models.face_recording import FaceRecording
++from app.api import face_recordings as api
++
++
++@pytest.fixture
++def setup_recording(app_client, auth_headers, staff_user, db, monkeypatch, tmp_path):
++    staff_user.role='ADMIN';db.commit()
++    monkeypatch.setattr(api,'available',lambda:True)
++    monkeypatch.setattr(api.settings,'upload_dir',str(tmp_path))
++    patient=Patient(hospital_number='FACE-001',name='Face Test',sex='UNKNOWN')
++    db.add(patient);db.commit();db.refresh(patient)
++    binding={'device_id':'capture-device-1','local_profile_id':'capture-profile-1','patient_id':patient.id}
++    link=app_client.post('/api/integration/v1/bindings',json=binding,headers=auth_headers)
++    assert link.status_code==200
++    record=app_client.post('/api/integration/v1/records',json={**binding,'source_record_id':'training-1',
++        'record_type':'PIECE_PERFORMANCE','schema_version':'flutter-v4','payload':{'original':True}},headers=auth_headers)
++    assert record.status_code==201
++    content=b'fake-media-for-protocol-tests-only'
++    manifest={**binding,'client_capture_id':str(uuid.uuid4()),'external_record_id':record.json()['id'],
++        'consent_version':'face-capture-v1','agreed_at_ms':123,
++        'files':[{'file_id':str(uuid.uuid4()),'sequence':0,'size_bytes':len(content),
++            'sha256':hashlib.sha256(content).hexdigest(),'chunk_count':1,'mime_type':'video/mp4','duration_ms':2000}],
++        'timeline':[]}
++    return manifest,content,link.json()
++
++
++def create(client,headers,manifest):
++    response=client.post('/api/integration/v1/face/recordings',json=manifest,headers=headers)
++    assert response.status_code==201,response.text
++    return response.json()['recording_id']
++
++
++def send(client,headers,identifier,manifest,content,digest=None,index=0):
++    return client.put(f"/api/integration/v1/face/recordings/{identifier}/files/{manifest['files'][0]['file_id']}/chunks/{index}",
++        content=content,headers={**headers,'X-Chunk-SHA256':digest or hashlib.sha256(content).hexdigest(),
++            'Content-Type':'application/octet-stream'})
++
++
++def test_parent_idempotency_and_manifest_conflict(app_client,auth_headers,setup_recording):
++    manifest,_,_=setup_recording
++    ident=create(app_client,auth_headers,manifest)
++    assert create(app_client,auth_headers,manifest)==ident
++    changed={**manifest,'timeline':[{'event':'CHANGED'}]}
++    assert app_client.post('/api/integration/v1/face/recordings',json=changed,headers=auth_headers).status_code==409
++
++
++def test_chunks_retry_hash_and_bounds(app_client,auth_headers,setup_recording):
++    manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==200
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==200
++    other=b'x'*len(content)
++    assert send(app_client,auth_headers,ident,manifest,other).status_code==409
++    assert send(app_client,auth_headers,ident,manifest,content,index=10000).status_code==422
++    assert send(app_client,auth_headers,ident,manifest,content+b'x').status_code==413
++    assert send(app_client,auth_headers,ident,manifest,content,digest='0'*64).status_code==422
++
++
++def test_resume_and_complete_do_not_duplicate_analysis(app_client,auth_headers,setup_recording):
++    manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    path=f'/api/integration/v1/face/recordings/{ident}'
++    assert app_client.post(path+'/complete',headers=auth_headers).status_code==409
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==200
++    assert app_client.get(path,headers=auth_headers).json()['uploaded_chunks'][manifest['files'][0]['file_id']]==[0]
++    first=app_client.post(path+'/complete',headers=auth_headers)
++    assert first.status_code==202 and first.json()['status']=='PROCESSING'
++    assert app_client.post(path+'/complete',headers=auth_headers).json()['recording_id']==ident
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==409
++
++
++def test_whole_file_hash_is_checked(app_client,auth_headers,setup_recording):
++    manifest,content,_=setup_recording;manifest['files'][0]['sha256']='0'*64
++    ident=create(app_client,auth_headers,manifest)
++    send(app_client,auth_headers,ident,manifest,content)
++    assert app_client.post(f'/api/integration/v1/face/recordings/{ident}/complete',headers=auth_headers).status_code==422
++
++
++def test_cancel_blocks_completion_and_removes_bytes(app_client,auth_headers,setup_recording,db):
++    manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    send(app_client,auth_headers,ident,manifest,content)
++    assert app_client.delete(f'/api/integration/v1/face/recordings/{ident}',headers=auth_headers).json()['deleted']
++    assert not api.root(db.get(FaceRecording,ident)).exists()
++    assert app_client.post(f'/api/integration/v1/face/recordings/{ident}/complete',headers=auth_headers).status_code==409
++
++
++def test_binding_revocation_applies_to_every_path(app_client,auth_headers,setup_recording):
++    manifest,content,link=setup_recording;ident=create(app_client,auth_headers,manifest)
++    app_client.delete('/api/integration/v1/bindings/'+link['binding_id'],headers=auth_headers)
++    assert app_client.get(f'/api/integration/v1/face/recordings/{ident}',headers=auth_headers).status_code==403
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==403
++    assert app_client.get(f'/api/integration/v1/face/recordings/{ident}/segments',headers=auth_headers).status_code==403
++
++
++def test_no_auth_or_wrong_training_source(app_client,auth_headers,setup_recording):
++    manifest,_,_=setup_recording
++    assert app_client.post('/api/integration/v1/face/recordings',json=manifest).status_code==401
++    manifest['external_record_id']=str(uuid.uuid4())
++    assert app_client.post('/api/integration/v1/face/recordings',json=manifest,headers=auth_headers).status_code==403
++
++
++def test_manifest_prevents_sparse_chunks_and_duplicate_files(app_client,auth_headers,setup_recording):
++    manifest,_,_=setup_recording
++    manifest['files'][0]['chunk_count']=99
++    assert app_client.post('/api/integration/v1/face/recordings',json=manifest,headers=auth_headers).status_code==422
++    manifest['files'][0]['chunk_count']=1;manifest['files']*=2
++    assert app_client.post('/api/integration/v1/face/recordings',json=manifest,headers=auth_headers).status_code==422
++
++
++def test_review_requires_explicit_confirmation(app_client,auth_headers,setup_recording,db):
++    manifest,_,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    row=db.get(FaceRecording,ident);data=json.loads(row.data_json)
++    sid=str(uuid.uuid4());data['segments']=[{'id':sid,'file_id':manifest['files'][0]['file_id'],'start_seconds':0,
++        'status':'REVIEW_REQUIRED','stored_path':'not-used.mp4','candidates':[{'id':'candidate','onset_frame':1,'apex_frame':2,'offset_frame':3}]}]
++    row.status='REVIEW_REQUIRED';row.data_json=json.dumps(data);db.commit()
++    path=f'/api/integration/v1/face/recordings/{ident}/segments/{sid}/review'
++    assert app_client.post(path,json={'candidate_id':'candidate'},headers=auth_headers).status_code==422
++    rejected=app_client.post(path,json={'reject':True},headers=auth_headers)
++    assert rejected.status_code==202
++    assert app_client.post(path,json={'reject':True},headers=auth_headers).status_code==409
++
++
++def test_review_creates_only_one_inference_job(app_client,auth_headers,setup_recording,db):
++    manifest,_,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    row=db.get(FaceRecording,ident);data=json.loads(row.data_json);sid=str(uuid.uuid4())
++    clip=api.root(row)/'clip.mp4';clip.write_bytes(b'protocol-test-only')
++    data['segments']=[{'id':sid,'file_id':manifest['files'][0]['file_id'],'start_seconds':0,
++        'status':'REVIEW_REQUIRED','stored_path':str(clip.relative_to(api.settings.upload_path)),
++        'candidates':[{'id':'candidate','onset_frame':1,'apex_frame':2,'offset_frame':3}]}]
++    row.status='REVIEW_REQUIRED';row.data_json=json.dumps(data);db.commit()
++    path=f'/api/integration/v1/face/recordings/{ident}/segments/{sid}/review'
++    body={'candidate_id':'candidate','review_confirmed':True}
++    assert app_client.post(path,json=body,headers=auth_headers).status_code==202
++    assert app_client.post(path,json=body,headers=auth_headers).status_code==409
++    from sqlalchemy import select
++    jobs=db.scalars(select(MobileFaceJob)).all()
++    assert len(jobs)==1 and jobs[0].status=='PENDING' and json.loads(jobs[0].indices_json)==[1,2,3]
++    assert app_client.delete(f'/api/integration/v1/face/recordings/{ident}',headers=auth_headers).status_code==200
++    db.expire_all();assert db.get(MobileFaceJob,jobs[0].id).status=='CANCELLED'
++
++
++def test_expired_upload_is_cleaned_without_analysis(app_client,auth_headers,setup_recording,db,engine,monkeypatch):
++    from datetime import timedelta
++    from sqlalchemy.orm import sessionmaker
++    from app.db.base import utcnow
++    from app.services import training_face_jobs as worker
++    manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    send(app_client,auth_headers,ident,manifest,content)
++    row=db.get(FaceRecording,ident);row.created_at=utcnow()-timedelta(hours=25);db.commit()
++    monkeypatch.setattr(worker,'SessionLocal',sessionmaker(bind=engine))
++    worker.step();db.expire_all()
++    assert db.get(FaceRecording,ident).status=='FAILED'
++    assert not api.root(row).exists()
++
++
++def test_real_video_is_split_without_automatic_approval(app_client,auth_headers,setup_recording,db,engine,monkeypatch,tmp_path):
++    """Real encoder/decoder, synthetic non-patient video; no classifier result is faked."""
++    ffmpeg=pytest.importorskip('imageio_ffmpeg').get_ffmpeg_exe()
++    cv2=pytest.importorskip('cv2')
++    import subprocess
++    from sqlalchemy.orm import sessionmaker
++    from app.services import training_face_jobs as worker
++    from app.ml.micro_expression.adapter import analyzer
++    original=subprocess.run
++    source=tmp_path/'synthetic-source.mp4'
++    original([ffmpeg,'-v','error','-f','lavfi','-i','testsrc2=size=64x64:rate=30','-t','23',
++        '-an','-c:v','libx264',str(source)],check=True,capture_output=True)
++    content=source.read_bytes();manifest,_,_=setup_recording
++    manifest['files'][0].update(size_bytes=len(content),sha256=hashlib.sha256(content).hexdigest(),duration_ms=23000)
++    ident=create(app_client,auth_headers,manifest)
++    assert send(app_client,auth_headers,ident,manifest,content).status_code==200
++    assert app_client.post(f'/api/integration/v1/face/recordings/{ident}/complete',headers=auth_headers).status_code==202
++    def probe(path):
++        cap=cv2.VideoCapture(str(path))
++        try:
++            fps=cap.get(cv2.CAP_PROP_FPS);return fps,cap.get(cv2.CAP_PROP_FRAME_COUNT)/fps
++        finally:cap.release()
++    def run(command,**kwargs):
++        if command[0]=='ffmpeg':command=[ffmpeg,*command[1:]]
++        return original(command,**kwargs)
++    inspected=[]
++    def spot(path):
++        fps,duration=probe(path);inspected.append(duration)
++        assert duration<=20.1 and duration*fps<=1800
++        return {'candidates':[]}
++    monkeypatch.setattr(worker,'SessionLocal',sessionmaker(bind=engine))
++    monkeypatch.setattr(worker,'_probe',probe)
++    monkeypatch.setattr(subprocess,'run',run)
++    monkeypatch.setattr(analyzer,'spot',spot)
++    assert worker.step();assert worker.step();worker.step()
++    db.expire_all();row=db.get(FaceRecording,ident);data=json.loads(row.data_json)
++    assert [s['start_seconds'] for s in data['segments']]==[0,19]
++    assert len(inspected)==2 and row.status=='NO_VALID_SEGMENTS'
++    assert all('job_id' not in s for s in data['segments'])
++
++
++def test_failed_analysis_retries_received_video_without_new_upload(app_client,auth_headers,setup_recording,db):
++    manifest,content,_=setup_recording;ident=create(app_client,auth_headers,manifest)
++    send(app_client,auth_headers,ident,manifest,content)
++    base=f'/api/integration/v1/face/recordings/{ident}'
++    assert app_client.post(base+'/complete',headers=auth_headers).status_code==202
++    for _ in range(2):
++        row=db.get(FaceRecording,ident,populate_existing=True);row.status='FAILED';db.commit()
++        response=app_client.post(base+'/retry',headers=auth_headers)
++        assert response.status_code==202 and response.json()['upload_complete'] is True
++        assert app_client.post(base+'/retry',headers=auth_headers).status_code==409
++    row=db.get(FaceRecording,ident,populate_existing=True);row.status='FAILED';db.commit()
++    assert app_client.post(base+'/retry',headers=auth_headers).status_code==409
+diff --git a/docs/TRAINING_FACE_VIDEO_HANDOFF.md b/docs/TRAINING_FACE_VIDEO_HANDOFF.md
+new file mode 100644
+index 0000000..7d5b747
+--- /dev/null
++++ b/docs/TRAINING_FACE_VIDEO_HANDOFF.md
+@@ -0,0 +1,38 @@
++# Training face recordings, protocol 1.2
++
++Local implementation dated 2026-11-04, based on `cb75a00dbb75d41aa180e452ead64179e96baab4`. This is not a production deployment.
++
++## Scope
++
++`/api/integration/v1/face/recordings` accepts resumable 4 MiB chunks associated with one existing immutable Flutter training record and its device/profile/patient binding. Whole-file hashes must match before processing. Original Flutter metrics are never rewritten.
++
++The dispatcher handles one bounded short segment per pass, with overlap and source file/time information. Candidates require explicit preview and confirmation in **Follow-up → Mobile records → Details → Training face recordings** before a real CausalNet job is submitted. No automatic approval or aggregate mood/clinical score is provided.
++
++## Prerequisites
++
++- Back up the database and media before applying the migration through your established release procedure.
++- Use the existing Python environment and model configuration.
++- Install system `ffmpeg` and `ffprobe` with H.264 encoding support.
++- Run `python -m alembic upgrade head` from `backend`; expected revision `l8a0b2c4d6e8`.
++- Set `TRAINING_VIDEO_ENABLED=true` and `MICRO_EXPRESSION_ENTRY=causalnet` in the server environment.
++- Build and deploy the updated frontend. Keep the existing authenticated HTTPS reverse proxy.
++- Run the backend as the existing **single instance/dispatcher**. This patch does not implement distributed leases.
++
++`capabilities` reports `face_recordings_ready` only when the configuration and tools are available. `face_model_ready` separately checks the actual model. No new LLM provider configuration is needed; videos are not sent to the chat provider.
++
++## Lifecycle
++
++Uploads expire after 24 hours; review expires after 7 days. Terminal-task source videos and owned assessment media copies are removed after 24 hours by the dispatcher. Structured model output remains until explicit deletion. `DELETE` cancels children, deletes owned results/media and leaves the original Flutter training record intact. Late inference checks cancellation before publication.
++
++Failed analysis can be retried at most twice within retention, using the already received source video, through `POST /{id}/retry`. Frames and all task operations require object authorization. Tokens, private paths and raw media are not returned as public URLs.
++
++## Validation
++
++- App lifecycle and sidecar migration tests, Android native compilation.
++- 32 selected backend tests including upload resume, immutable manifest, hash mismatches, binding revocation, explicit review, cancellation, expiry and actual synthetic-video segmentation.
++- 339 frontend tests and production frontend build.
++- Fresh temporary SQLite migration to the new revision.
++
++Physical front-camera capture and actual deployed-model inference still require joint acceptance with the App developer. The optional synthetic-media test uses `imageio-ffmpeg` when present, never patient media or fabricated classifier results. Use the project requirements and actual deployed model environment for release verification.
++
++See `training_face_openapi-v1.2.json` for request definitions. Keep the original v1 short-clip endpoints intact.
+diff --git a/docs/training_face_openapi-v1.2.json b/docs/training_face_openapi-v1.2.json
+new file mode 100644
+index 0000000..552b7b2
+--- /dev/null
++++ b/docs/training_face_openapi-v1.2.json
+@@ -0,0 +1,844 @@
++{
++  "openapi": "3.1.0",
++  "info": {
++    "title": "Training face recordings integration contract",
++    "description": "帕金森病智能辅助识别、运动状态量化与数字康复训练平台。\n\n**医疗声明：** 本系统用于科研、辅助评估及康复训练展示，不能替代专业医生诊断和标准临床量表。\n\n所有模型输出均来自真实模型；模型未配置时接口返回 `MODEL_NOT_CONFIGURED`，系统不会返回伪造结果。",
++    "version": "1.2"
++  },
++  "paths": {
++    "/api/integration/v1/face/recordings": {
++      "post": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Create",
++        "operationId": "create_api_integration_v1_face_recordings_post",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "requestBody": {
++          "required": true,
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/CreateRecording"
++              }
++            }
++          }
++        },
++        "responses": {
++          "201": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      },
++      "get": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Listing",
++        "operationId": "listing_api_integration_v1_face_recordings_get",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "external_record_id",
++            "in": "query",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "External Record Id"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}": {
++      "get": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Status",
++        "operationId": "status_api_integration_v1_face_recordings__recording_id__get",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      },
++      "delete": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Delete",
++        "operationId": "delete_api_integration_v1_face_recordings__recording_id__delete",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/files/{file_id}/chunks/{index}": {
++      "put": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Chunk",
++        "operationId": "chunk_api_integration_v1_face_recordings__recording_id__files__file_id__chunks__index__put",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          },
++          {
++            "name": "file_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "File Id"
++            }
++          },
++          {
++            "name": "index",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "integer",
++              "title": "Index"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/complete": {
++      "post": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Complete",
++        "operationId": "complete_api_integration_v1_face_recordings__recording_id__complete_post",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          }
++        ],
++        "responses": {
++          "202": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/segments": {
++      "get": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Segments",
++        "operationId": "segments_api_integration_v1_face_recordings__recording_id__segments_get",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          },
++          {
++            "name": "offset",
++            "in": "query",
++            "required": false,
++            "schema": {
++              "type": "integer",
++              "minimum": 0,
++              "default": 0,
++              "title": "Offset"
++            }
++          },
++          {
++            "name": "limit",
++            "in": "query",
++            "required": false,
++            "schema": {
++              "type": "integer",
++              "maximum": 50,
++              "minimum": 1,
++              "default": 20,
++              "title": "Limit"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/retry": {
++      "post": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Retry",
++        "operationId": "retry_api_integration_v1_face_recordings__recording_id__retry_post",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          }
++        ],
++        "responses": {
++          "202": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/segments/{segment_id}/review": {
++      "post": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Review",
++        "operationId": "review_api_integration_v1_face_recordings__recording_id__segments__segment_id__review_post",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          },
++          {
++            "name": "segment_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Segment Id"
++            }
++          }
++        ],
++        "requestBody": {
++          "required": true,
++          "content": {
++            "application/json": {
++              "schema": {
++                "$ref": "#/components/schemas/Review"
++              }
++            }
++          }
++        },
++        "responses": {
++          "202": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/segments/{segment_id}/frames/{which}": {
++      "get": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Frame",
++        "operationId": "frame_api_integration_v1_face_recordings__recording_id__segments__segment_id__frames__which__get",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          },
++          {
++            "name": "segment_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Segment Id"
++            }
++          },
++          {
++            "name": "which",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "title": "Which"
++            }
++          },
++          {
++            "name": "candidate_id",
++            "in": "query",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "title": "Candidate Id"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/face/recordings/{recording_id}/cancel": {
++      "post": {
++        "tags": [
++          "Training face recordings"
++        ],
++        "summary": "Cancel",
++        "operationId": "cancel_api_integration_v1_face_recordings__recording_id__cancel_post",
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ],
++        "parameters": [
++          {
++            "name": "recording_id",
++            "in": "path",
++            "required": true,
++            "schema": {
++              "type": "string",
++              "format": "uuid",
++              "title": "Recording Id"
++            }
++          }
++        ],
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {}
++              }
++            }
++          },
++          "422": {
++            "description": "Validation Error",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "$ref": "#/components/schemas/HTTPValidationError"
++                }
++              }
++            }
++          }
++        }
++      }
++    },
++    "/api/integration/v1/capabilities": {
++      "get": {
++        "tags": [
++          "Cross-client integration"
++        ],
++        "summary": "Capabilities",
++        "operationId": "capabilities_api_integration_v1_capabilities_get",
++        "responses": {
++          "200": {
++            "description": "Successful Response",
++            "content": {
++              "application/json": {
++                "schema": {
++                  "additionalProperties": true,
++                  "type": "object",
++                  "title": "Response Capabilities Api Integration V1 Capabilities Get"
++                }
++              }
++            }
++          }
++        },
++        "security": [
++          {
++            "HTTPBearer": []
++          }
++        ]
++      }
++    }
++  },
++  "components": {
++    "schemas": {
++      "CreateRecording": {
++        "properties": {
++          "client_capture_id": {
++            "type": "string",
++            "format": "uuid",
++            "title": "Client Capture Id"
++          },
++          "device_id": {
++            "type": "string",
++            "maxLength": 100,
++            "minLength": 8,
++            "title": "Device Id"
++          },
++          "local_profile_id": {
++            "type": "string",
++            "maxLength": 100,
++            "minLength": 8,
++            "title": "Local Profile Id"
++          },
++          "patient_id": {
++            "type": "string",
++            "format": "uuid",
++            "title": "Patient Id"
++          },
++          "external_record_id": {
++            "type": "string",
++            "format": "uuid",
++            "title": "External Record Id"
++          },
++          "consent_version": {
++            "type": "string",
++            "pattern": "^face-capture-v1$",
++            "title": "Consent Version"
++          },
++          "agreed_at_ms": {
++            "type": "integer",
++            "exclusiveMinimum": 0.0,
++            "title": "Agreed At Ms"
++          },
++          "files": {
++            "items": {
++              "$ref": "#/components/schemas/VideoFile"
++            },
++            "type": "array",
++            "maxItems": 100,
++            "minItems": 1,
++            "title": "Files"
++          },
++          "timeline": {
++            "items": {
++              "additionalProperties": true,
++              "type": "object"
++            },
++            "type": "array",
++            "maxItems": 10000,
++            "title": "Timeline"
++          }
++        },
++        "type": "object",
++        "required": [
++          "client_capture_id",
++          "device_id",
++          "local_profile_id",
++          "patient_id",
++          "external_record_id",
++          "consent_version",
++          "agreed_at_ms",
++          "files"
++        ],
++        "title": "CreateRecording"
++      },
++      "HTTPValidationError": {
++        "properties": {
++          "detail": {
++            "items": {
++              "$ref": "#/components/schemas/ValidationError"
++            },
++            "type": "array",
++            "title": "Detail"
++          }
++        },
++        "type": "object",
++        "title": "HTTPValidationError"
++      },
++      "Review": {
++        "properties": {
++          "candidate_id": {
++            "anyOf": [
++              {
++                "type": "string",
++                "maxLength": 200
++              },
++              {
++                "type": "null"
++              }
++            ],
++            "title": "Candidate Id"
++          },
++          "review_confirmed": {
++            "type": "boolean",
++            "title": "Review Confirmed",
++            "default": false
++          },
++          "reject": {
++            "type": "boolean",
++            "title": "Reject",
++            "default": false
++          }
++        },
++        "type": "object",
++        "title": "Review"
++      },
++      "ValidationError": {
++        "properties": {
++          "loc": {
++            "items": {
++              "anyOf": [
++                {
++                  "type": "string"
++                },
++                {
++                  "type": "integer"
++                }
++              ]
++            },
++            "type": "array",
++            "title": "Location"
++          },
++          "msg": {
++            "type": "string",
++            "title": "Message"
++          },
++          "type": {
++            "type": "string",
++            "title": "Error Type"
++          },
++          "input": {
++            "title": "Input"
++          },
++          "ctx": {
++            "type": "object",
++            "title": "Context"
++          }
++        },
++        "type": "object",
++        "required": [
++          "loc",
++          "msg",
++          "type"
++        ],
++        "title": "ValidationError"
++      },
++      "VideoFile": {
++        "properties": {
++          "file_id": {
++            "type": "string",
++            "format": "uuid",
++            "title": "File Id"
++          },
++          "sequence": {
++            "type": "integer",
++            "maximum": 99.0,
++            "minimum": 0.0,
++            "title": "Sequence"
++          },
++          "size_bytes": {
++            "type": "integer",
++            "maximum": 419430400.0,
++            "exclusiveMinimum": 0.0,
++            "title": "Size Bytes"
++          },
++          "sha256": {
++            "type": "string",
++            "pattern": "^[a-f0-9]{64}$",
++            "title": "Sha256"
++          },
++          "chunk_count": {
++            "type": "integer",
++            "maximum": 100.0,
++            "minimum": 1.0,
++            "title": "Chunk Count"
++          },
++          "mime_type": {
++            "type": "string",
++            "pattern": "^video/mp4$",
++            "title": "Mime Type"
++          },
++          "duration_ms": {
++            "type": "integer",
++            "maximum": 1800000.0,
++            "exclusiveMinimum": 0.0,
++            "title": "Duration Ms"
++          }
++        },
++        "type": "object",
++        "required": [
++          "file_id",
++          "sequence",
++          "size_bytes",
++          "sha256",
++          "chunk_count",
++          "mime_type",
++          "duration_ms"
++        ],
++        "title": "VideoFile"
++      }
++    },
++    "securitySchemes": {
++      "HTTPBearer": {
++        "type": "http",
++        "scheme": "bearer"
++      }
++    }
++  }
++}
+\ No newline at end of file
+diff --git a/frontend/src/components/ExternalRecordsPanel.vue b/frontend/src/components/ExternalRecordsPanel.vue
+index e7b7747..6ce6dcb 100644
+--- a/frontend/src/components/ExternalRecordsPanel.vue
++++ b/frontend/src/components/ExternalRecordsPanel.vue
+@@ -1,6 +1,7 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+ import { http, notifyError } from '@/api/client'
++import TrainingFaceRecordings from './TrainingFaceRecordings.vue'
+ 
+ const props = defineProps<{patientId: string}>()
+ type External = {
+@@ -192,6 +193,7 @@ function changeHistory(row: External | null) {
+         <dt>任务 / 指标版本</dt><dd>{{ detail.task_version || '未记录' }} / {{ detail.metric_version || '未记录' }}</dd>
+         <dt>来源 / 记录编号</dt><dd>{{ detail.origin }} · {{ detail.source_record_id }}</dd>
+       </dl>
++      <TrainingFaceRecordings v-if="detail && !detail.record_type.startsWith('TRAINING_PLAN')" :key="detail.id" :record-id="detail.id"/>
+       <details v-if="detail" :key="detail.id">
+         <summary>查看原始 JSON</summary>
+         <pre class="external-panel__json">{{ JSON.stringify(detail.payload, null, 2) }}</pre>
+diff --git a/frontend/src/components/TrainingFaceRecordings.vue b/frontend/src/components/TrainingFaceRecordings.vue
+new file mode 100644
+index 0000000..81b6340
+--- /dev/null
++++ b/frontend/src/components/TrainingFaceRecordings.vue
+@@ -0,0 +1,105 @@
++<script setup lang="ts">
++import {onUnmounted, ref, watch} from 'vue'
++import {http, notifyError} from '@/api/client'
++
++const props = defineProps<{recordId: string}>()
++type Candidate = {id: string; onset_frame: number; apex_frame: number; offset_frame: number}
++type Segment = {id: string; status: string; start_seconds: number; file_id: string; candidates?: Candidate[]}
++type Recording = {recording_id: string; status: string; summary: string; expires_at: string; results: Array<Record<string, unknown>>}
++const recordings = ref<Recording[]>([]), segments = ref<Segment[]>([])
++const busy = ref(false), error = ref(''), selected = ref('')
++const previews = ref<string[]>([]), previewKey = ref('')
++let epoch = 0
++function clearPreview() { previews.value.forEach(URL.revokeObjectURL); previews.value = []; previewKey.value = '' }
++function reset() { epoch++; clearPreview(); recordings.value = []; segments.value = []; selected.value = ''; error.value = ''; busy.value = false }
++async function load() {
++  const version = ++epoch, id = props.recordId
++  clearPreview(); busy.value = true; error.value = ''
++  try {
++    const {data} = await http.get<{items: Recording[]}>('/integration/v1/face/recordings', {params: {external_record_id: id}})
++    if (version !== epoch) return
++    recordings.value = data.items
++  } catch (e) { if (version === epoch) error.value = '面部录像读取失败，请刷新重试。' }
++  finally { if (version === epoch) busy.value = false }
++}
++async function show(row: Recording) {
++  const version = ++epoch; clearPreview(); segments.value = []; selected.value = row.recording_id; busy.value = true
++  try {
++    let offset: number | null = 0
++    const items: Segment[] = []
++    while (offset !== null) {
++      const {data}: {data: {items: Segment[]; next_offset: number | null}} = await http.get(`/integration/v1/face/recordings/${row.recording_id}/segments`, {params: {offset}})
++      if (version !== epoch) return
++      items.push(...data.items); offset = data.next_offset
++    }
++    segments.value = items
++  } catch (e) { if (version === epoch) notifyError(e) }
++  finally { if (version === epoch) busy.value = false }
++}
++async function preview(segment: Segment, candidate: Candidate) {
++  const version = ++epoch; clearPreview(); busy.value = true
++  const urls: string[] = []
++  try {
++    for (const which of ['onset', 'apex', 'offset']) {
++      const {data} = await http.get<Blob>(`/integration/v1/face/recordings/${selected.value}/segments/${segment.id}/frames/${which}`, {
++        params: {candidate_id: candidate.id}, responseType: 'blob',
++      })
++      urls.push(URL.createObjectURL(data))
++    }
++    if (version !== epoch) { urls.forEach(URL.revokeObjectURL); return }
++    previews.value = urls; previewKey.value = `${segment.id}/${candidate.id}`
++  } catch (e) { urls.forEach(URL.revokeObjectURL); if (version === epoch) notifyError(e) }
++  finally { if (version === epoch) busy.value = false }
++}
++async function review(segment: Segment, candidate?: Candidate) {
++  const version = epoch, recordingId = selected.value
++  busy.value = true
++  try {
++    await http.post(`/integration/v1/face/recordings/${recordingId}/segments/${segment.id}/review`, {
++      candidate_id: candidate?.id, review_confirmed: !!candidate, reject: !candidate,
++    })
++    if (version !== epoch) return
++    clearPreview(); segment.status = candidate ? 'PENDING' : 'REJECTED'
++  } catch (e) { if (version === epoch) notifyError(e) }
++  finally { if (version === epoch) busy.value = false }
++}
++watch(() => props.recordId, () => { reset(); void load() }, {immediate: true})
++onUnmounted(reset)
++</script>
++
++<template>
++  <section class="training-face">
++    <header><h3>训练面部录像</h3><el-button :loading="busy" @click="load">刷新</el-button></header>
++    <p v-if="error" role="alert">{{error}}</p>
++    <p v-else-if="!busy && !recordings.length">本条训练暂无面部录像。</p>
++    <article v-for="row in recordings" :key="row.recording_id" class="pd-card recording">
++      <p>{{row.status}} · {{row.summary}}</p>
++      <p>素材有效期至 {{new Date(row.expires_at).toLocaleString()}}。片段输出不代表病情或真实情绪。</p>
++      <el-button :disabled="busy" @click="show(row)">查看片段与复核</el-button>
++      <template v-if="selected === row.recording_id">
++        <article v-for="segment in segments" :key="segment.id" class="segment">
++          <h4>原视频 {{segment.start_seconds.toFixed(1)}} 秒起 · {{segment.status}}</h4>
++          <template v-if="segment.status === 'REVIEW_REQUIRED'">
++            <div v-for="candidate in segment.candidates" :key="candidate.id" class="candidate">
++              <el-button :disabled="busy" @click="preview(segment, candidate)">预览开始、峰值、结束</el-button>
++              <div v-if="previewKey === `${segment.id}/${candidate.id}`" class="frames">
++                <figure v-for="(image, index) in previews" :key="image">
++                  <img :src="image" :alt="['开始','变化最明显','结束'][index]"><figcaption>{{['开始','变化最明显','结束'][index]}}</figcaption>
++                </figure>
++              </div>
++              <el-button type="primary" :disabled="busy || previewKey !== `${segment.id}/${candidate.id}`" @click="review(segment, candidate)">确认此片段并分析</el-button>
++            </div>
++            <el-button :disabled="busy" @click="review(segment)">拒绝本段候选</el-button>
++          </template>
++        </article>
++        <details v-if="row.results.length"><summary>查看已完成的模型输出</summary><pre>{{JSON.stringify(row.results, null, 2)}}</pre></details>
++      </template>
++    </article>
++  </section>
++</template>
++
++<style scoped>
++.training-face{margin:20px 0;min-width:0}.training-face header{display:flex;justify-content:space-between;align-items:center;gap:12px}
++.recording,.segment{padding:16px;margin-top:12px;border:1px solid var(--el-border-color);border-radius:12px}.recording p{overflow-wrap:anywhere}
++.candidate{margin:12px 0;display:flex;flex-wrap:wrap;gap:12px}.frames{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;flex-basis:100%}.frames figure{margin:0}.frames img{width:100%;object-fit:contain;border-radius:8px}.frames figcaption{font-size:12px;text-align:center}.training-face pre{white-space:pre-wrap;overflow-wrap:anywhere}
++</style>

@@ -1,3 +1,4 @@
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -130,6 +131,7 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
   AppController get c => widget.c;
   late int tempo = c.pieceTempo(widget.piece.id, widget.piece.tempo);
   final previewKey = GlobalKey<PieceSheetPreviewState>();
+  final captureKey = GlobalKey<CapturePreparationState>();
   bool busy = false;
 
   Future<void> rememberTempo(int value) async {
@@ -250,8 +252,12 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
       if (!mounted) return;
       await Navigator.of(context).push(
         MaterialPageRoute<void>(
-          builder: (_) =>
-              PianoPerformancePage(c: c, piece: widget.piece, tempo: tempo),
+          builder: (_) => PianoPerformancePage(
+            c: c,
+            piece: widget.piece,
+            tempo: tempo,
+            capture: captureKey.currentState?.claim(),
+          ),
         ),
       );
     } finally {
@@ -278,6 +284,7 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
         ],
         children: [
           pieceIntroductionCard(),
+          CapturePreparation(key: captureKey, c: c),
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 16),

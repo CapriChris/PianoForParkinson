@@ -61,6 +61,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
       final saved = await s.get('base_url');
       if (saved != null) base.text = saved;
       final chosen = await s.get('patient_id');
+      remote = widget.controller.captures.api;
       patients = await s.patients();
       patientId = chosen;
       if (mounted) setState(() {});
@@ -86,6 +87,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
     final account = await service.login(username.text.trim(), password.text);
     password.clear();
     remote = service;
+    widget.controller.captures.connect(service, account['id'] as String);
     await sidecar?.put('base_url', base.text.trim());
     setState(() => status = '已登录：${account['display_name']}。正在获取云端档案…');
     await refreshPatients();
@@ -126,6 +128,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
     }
     final response = await service.bindPatient(deviceId, profileId, id);
     await sidecar?.put('patient_id', id);
+    widget.controller.captures.bind(id, response['binding_id'] as String);
     setState(() => status = '已绑定 ${response['name']}，既有本地训练暂未上传。');
   });
 
@@ -264,15 +267,30 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
     base.dispose();
     username.dispose();
     password.dispose();
-    // Access token is only in this widget's RemoteApi object; never persisted.
-    remote?.signOut();
+    // The application session owns the in-memory token across training routes.
     if (sidecar != null) unawaited(sidecar!.db.close());
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('云端数据与 AI 服务')),
+    appBar: AppBar(
+      title: const Text('云端数据与 AI 服务'),
+      actions: [
+        if (remote?.signedIn == true)
+          IconButton(
+            tooltip: '退出登录',
+            icon: const Icon(Icons.logout),
+            onPressed: () {
+              widget.controller.captures.disconnect();
+              setState(() {
+                remote = null;
+                status = '已退出登录。';
+              });
+            },
+          ),
+      ],
+    ),
     body: SafeArea(
       child: ListView(
         padding: const EdgeInsets.all(18),

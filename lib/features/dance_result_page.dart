@@ -1,3 +1,4 @@
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -56,6 +57,7 @@ class _DanceResultPageState extends State<DanceResultPage> {
           c.repository.profile['profile_id'] as String,
         ).saveDance(widget.record);
       }
+      unawaited(c.captures.recordSaved(widget.record['session_id'] as String));
       c.syncPlanReminders();
       if (mounted) setState(() => saved = true);
       if (widget.saveRecord == null) unawaited(c.refreshHistory());
@@ -416,6 +418,10 @@ class _DanceResultPageState extends State<DanceResultPage> {
                       widget.showAssistant &&
                       r['session_id'] is String) ...[
                     const SizedBox(height: 12),
+                    CaptureResultCard(
+                      c: c,
+                      recordId: widget.record['session_id'] as String,
+                    ),
                     AssistantReviewCard(
                       c: c,
                       recordId: r['session_id'] as String,

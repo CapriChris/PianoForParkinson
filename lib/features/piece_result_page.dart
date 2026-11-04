@@ -1,3 +1,4 @@
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -47,6 +48,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
     setState(() => saving = true);
     try {
       await c.repository.savePiecePerformance(widget.record);
+      unawaited(c.captures.recordSaved(widget.record['session_id'] as String));
       c.syncPlanReminders();
       if (!mounted) return;
       setState(() => saved = true);
@@ -223,6 +225,10 @@ class _PieceResultPageState extends State<PieceResultPage> {
                     widget.showAssistant &&
                     r['session_id'] is String) ...[
                   const SizedBox(height: 12),
+                  CaptureResultCard(
+                    c: c,
+                    recordId: widget.record['session_id'] as String,
+                  ),
                   AssistantReviewCard(
                     c: c,
                     recordId: r['session_id'] as String,

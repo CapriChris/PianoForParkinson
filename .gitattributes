@@ -2,3 +2,5 @@
 # stable across Windows and other platforms.
 assets/config/schema.sql text eol=lf
 lib/data/database_safety.dart text eol=lf
+# Preserve the Web repository's original CRLF patch context byte-for-byte.
+docs/integration/*.patch -text -whitespace

@@ -7,6 +7,7 @@ import '../data/content_repository.dart';
 import '../data/practice_repository.dart';
 import '../data/training_schedule_repository.dart';
 import '../platform/plan_reminders.dart';
+import '../integration/training_capture.dart';
 import '../platform/assistant_gateway.dart';
 import '../domain/contracts.dart';
 import '../domain/cognitive_tasks.dart';
@@ -20,6 +21,9 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final PracticeRepository repository;
   final platform = PlatformService();
   final AssistantGateway assistant;
+  TrainingCaptureService? _captures;
+  TrainingCaptureService get captures =>
+      _captures ??= TrainingCaptureService(repository);
   int _assistantConsentRevision = 0;
   bool _assistantRevoking = false;
   final previewInterruptions = ValueNotifier<int>(0);
@@ -865,6 +869,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _disposed = true;
+    _captures?.dispose();
     _historyRevision++;
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();

@@ -11,8 +11,10 @@ class SyncStore {
   Future<void> open(String directory) async {
     db = await openDatabase(
       '$directory/pd_cloud_sync.db',
-      version: 1,
+      version: 2,
+      singleInstance: false,
       onCreate: (db, _) async {
+        await _captureSchema(db);
         await db.execute(
           'CREATE TABLE synced_records (record_type TEXT NOT NULL, record_id TEXT NOT NULL, patient_id TEXT NOT NULL, completed_ms INTEGER NOT NULL, PRIMARY KEY(record_type,record_id,patient_id))',
         );
@@ -29,8 +31,15 @@ class SyncStore {
           'CREATE TABLE cloud_records (patient_id TEXT NOT NULL, kind TEXT NOT NULL, record_id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(patient_id,kind,record_id))',
         );
       },
+      onUpgrade: (db, oldVersion, _) async {
+        if (oldVersion < 2) await _captureSchema(db);
+      },
     );
   }
+
+  static Future<void> _captureSchema(Database db) => db.execute(
+    'CREATE TABLE training_captures (capture_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, record_id TEXT, payload TEXT NOT NULL)',
+  );
 
   Future<void> put(String key, String value) async {
     await db.insert('kv', {

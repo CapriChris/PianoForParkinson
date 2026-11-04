@@ -1,5 +1,11 @@
 # 琴伴 · Android 内部演示
 
+## 训练视频采集开发进度
+
+当前工作区已实现训练时可选的无声前摄采集、视频加密保存、完成后断点上传及 Web 端候选复核。此功能尚未包含在已发布的 v0.1.59 安装包中；需要先部署配套 Web 接口，再进行真机验收。
+
+详见 [实施与 Web 交接](docs/2026-11-04-训练视频采集实施与Web交接.md) 和 [设计文档](docs/2026-11-04-训练视频采集与Web面部分析设计.md)。
+
 ## 下载 0.1.59（构建 60）
 
 当前 Android 内测版已发布到 GitHub。通用 APK 约 631 MiB，支持 ARM64、ARMv7 和 x86_64，最低支持 Android 7.0（API 24）。四段舞蹈视频随包提供，可离线播放。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.59/qinban-0.1.59-android-universal.apk) · [发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.59) · [SHA-256 校验文件](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.59/SHA256SUMS-0.1.59.txt)

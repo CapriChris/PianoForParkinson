@@ -1,3 +1,5 @@
+import '../integration/training_capture.dart';
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -19,9 +21,11 @@ class DancePlayerPage extends StatefulWidget {
     super.key,
     required this.c,
     this.saveRecord,
+    this.capture,
     this.nowMilliseconds,
   });
   final AppController c;
+  final TrainingCapture? capture;
   final Future<void> Function(Json)? saveRecord;
   final int Function()? nowMilliseconds;
   @override
@@ -47,6 +51,8 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   VideoPlayerController? video;
   Timer? timer;
   int selected = 0, generation = 0, previous = 0, wall = 0;
+  bool? captureRunning;
+  bool changingDisplay = false;
   bool wasPlaying = false,
       ready = false,
       foreground = true,
@@ -96,6 +102,18 @@ class _DancePlayerPageState extends State<DancePlayerPage>
         }
       });
     }
+    final recording =
+        value.isPlaying &&
+        !value.isBuffering &&
+        foreground &&
+        !changingDisplay &&
+        !scrubbing &&
+        !busy &&
+        !dialogOpen;
+    if (recording != captureRunning) {
+      captureRunning = recording;
+      unawaited(widget.capture?.setRunning(recording));
+    }
     if (value.isCompleted) completed[selected] = true;
     if (allowPrompt &&
         value.isCompleted &&
@@ -117,6 +135,8 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       return;
     }
     sample(allowPrompt: false);
+    widget.capture?.event('DANCE_PART', {'part_index': index});
+    unawaited(widget.capture?.setRunning(false));
     scrubbing = false;
     resumeAfterScrub = false;
     scrubController = null;
@@ -221,6 +241,10 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (controller == null || busy) return;
     sample(allowPrompt: false);
     wasPlaying = false;
+    widget.capture?.event('DANCE_SEEK', {
+      'part_index': selected,
+      'position_ms': position.inMilliseconds,
+    });
     await controller.seekTo(position);
     if (video != controller) return;
     previous = controller.value.position.inMilliseconds;
@@ -263,6 +287,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     final controller = video;
     if (controller == null || busy) return;
     sample(allowPrompt: false);
+    widget.capture?.event('DANCE_RATE', {'rate': rate});
     await controller.setPlaybackSpeed(rate);
     if (mounted) setState(() {});
   }
@@ -282,6 +307,10 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   }
 
   Future<void> setFullscreen(bool value) async {
+    changingDisplay = true;
+    captureRunning = false;
+    await widget.capture?.interrupt();
+    if (!mounted) return;
     setState(() => fullscreen = value);
     await SystemChrome.setPreferredOrientations(
       value
@@ -291,6 +320,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     await SystemChrome.setEnabledSystemUIMode(
       value ? SystemUiMode.immersiveSticky : SystemUiMode.edgeToEdge,
     );
+    changingDisplay = false;
   }
 
   Future<void> requestExit() async {
@@ -409,6 +439,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
           },
       ],
     };
+    unawaited(widget.capture?.finish(id, 'DANCE_SESSION'));
     // Replacing this route prevents a second save or a return to a sealed session.
     timer?.cancel();
     generation++;
@@ -430,6 +461,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
 
   @override
   void dispose() {
+    unawaited(widget.capture?.discard());
     timer?.cancel();
     generation++;
     WidgetsBinding.instance.removeObserver(this);
@@ -479,9 +511,21 @@ class _DancePlayerPageState extends State<DancePlayerPage>
           : AppBar(
               leading: BackButton(onPressed: requestExit),
               title: Text(c.text('舞蹈跟练', 'Dance practice')),
+              actions: [CaptureIndicator(capture: widget.capture)],
             ),
       body: fullscreen
-          ? SafeArea(child: player())
+          ? SafeArea(
+              child: Stack(
+                children: [
+                  Positioned.fill(child: player()),
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: CaptureIndicator(capture: widget.capture),
+                  ),
+                ],
+              ),
+            )
           : QinPageList(
               children: [
                 if (course.parts.length > 1)

@@ -5,6 +5,7 @@ library;
 import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
+import 'dart:typed_data';
 
 class RemoteApiException implements Exception {
   final int status;
@@ -81,6 +82,42 @@ class RemoteApi {
   }
 
   void signOut() => _token = null;
+
+  Future<void> uploadCaptureChunk(
+    String recordingId,
+    String fileId,
+    int index,
+    Uint8List bytes,
+    String digest,
+  ) async {
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 12);
+    try {
+      final request = await client.putUrl(
+        uri(
+          '/integration/v1/face/recordings/$recordingId/files/$fileId/chunks/$index',
+        ),
+      );
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $_token');
+      request.headers.set('X-Chunk-SHA256', digest);
+      request.headers.contentType = ContentType.binary;
+      request.contentLength = bytes.length;
+      request.add(bytes);
+      final response = await request.close().timeout(
+        const Duration(minutes: 2),
+      );
+      final body = await utf8.decoder.bind(response).join();
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        final parsed = jsonDecode(body) as Map;
+        throw RemoteApiException(
+          response.statusCode,
+          '${(parsed['error'] as Map?)?['message'] ?? '视频上传失败'}',
+        );
+      }
+    } finally {
+      client.close(force: true);
+    }
+  }
 
   Future<Map<String, dynamic>> bootstrap({int offset = 0}) => request(
     'GET',

@@ -1,3 +1,4 @@
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -30,6 +31,7 @@ class DancePage extends StatefulWidget {
 
 class _DancePageState extends State<DancePage> {
   AppController get c => widget.c;
+  final captureKey = GlobalKey<CapturePreparationState>();
   late Future<List<Json>> records = scheduleStore(c).dances();
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -170,7 +172,10 @@ class _DancePageState extends State<DancePage> {
                   await Navigator.push(
                     context,
                     MaterialPageRoute<void>(
-                      builder: (_) => DancePlayerPage(c: c),
+                      builder: (_) => DancePlayerPage(
+                        c: c,
+                        capture: captureKey.currentState?.claim(),
+                      ),
                     ),
                   );
                   if (mounted && widget.history) {
@@ -197,6 +202,7 @@ class _DancePageState extends State<DancePage> {
                 ),
                 const SizedBox(height: 20),
               ],
+              CapturePreparation(key: captureKey, c: c),
               Text(
                 danceCourseFor(c.chinese).title,
                 style: Theme.of(context).textTheme.titleLarge,

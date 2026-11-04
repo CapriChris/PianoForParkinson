@@ -1,3 +1,5 @@
+import '../integration/training_capture.dart';
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -21,15 +23,22 @@ import 'rhythm_timeline.dart';
 import 'response_countdown.dart';
 
 class TrainingPage extends StatefulWidget {
-  const TrainingPage({super.key, required this.c, required this.taskId});
+  const TrainingPage({
+    super.key,
+    required this.c,
+    required this.taskId,
+    this.capture,
+  });
   final AppController c;
   final String taskId;
+  final TrainingCapture? capture;
   @override
   State<TrainingPage> createState() => _TrainingPageState();
 }
 
 class _TrainingPageState extends State<TrainingPage> {
   AppController get c => widget.c;
+  bool? captureRunning;
   bool ready = false, started = false, starting = false, navigated = false;
   bool allowLeave = false, ending = false, orientationRequested = false;
   Animation<double>? routeAnimation;
@@ -131,7 +140,15 @@ class _TrainingPageState extends State<TrainingPage> {
 
   void updated() {
     if (!mounted) return;
+    if (started && !c.saved) {
+      final running = c.engine?.phase != 'paused' && c.engine?.ended == false;
+      if (captureRunning != running) {
+        captureRunning = running;
+        unawaited(widget.capture?.setRunning(running));
+      }
+    }
     if (started && c.saved && !navigated) {
+      unawaited(widget.capture?.finish(c.engine!.id, 'PIANO_SESSION'));
       navigated = true;
       c.repository.detail(c.engine!.id).then((record) {
         if (mounted && record != null) {
@@ -161,6 +178,8 @@ class _TrainingPageState extends State<TrainingPage> {
           reader: MediaQuery.of(context).accessibleNavigation,
         );
         if (mounted) setState(() => started = true);
+        captureRunning = true;
+        unawaited(widget.capture?.setRunning(true));
       } catch (e) {
         if (mounted) setState(() => error = '$e');
       }
@@ -230,6 +249,7 @@ class _TrainingPageState extends State<TrainingPage> {
 
   @override
   void dispose() {
+    unawaited(widget.capture?.discard());
     routeAnimation?.removeStatusListener(routeStatus);
     c.removeListener(updated);
     c.trainingUpdates.removeListener(updated);
@@ -693,6 +713,7 @@ class _TrainingPageState extends State<TrainingPage> {
             overflow: TextOverflow.ellipsis,
           ),
           actions: [
+            CaptureIndicator(capture: widget.capture),
             if (!paused)
               QinTextButton.icon(
                 key: const ValueKey('pause-toggle'),

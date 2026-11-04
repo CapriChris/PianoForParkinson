@@ -1,3 +1,5 @@
+import '../integration/training_capture.dart';
+import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -24,10 +26,12 @@ class PianoPerformancePage extends StatefulWidget {
     required this.c,
     required this.piece,
     required this.tempo,
+    this.capture,
   });
   final AppController c;
   final PianoPiece piece;
   final int tempo;
+  final TrainingCapture? capture;
   @override
   State<PianoPerformancePage> createState() => _PianoPerformancePageState();
 }
@@ -133,6 +137,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       keyboardInterruptions.value++;
       autoStopped.clear();
       player.start();
+      unawaited(widget.capture?.setRunning(true));
       await backing.start(player);
       if (!mounted || token != epoch) return;
       started = DateTime.now();
@@ -178,6 +183,12 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       player,
       started ?? DateTime.now(),
     );
+    unawaited(
+      widget.capture?.finish(
+        record['session_id'] as String,
+        'PIECE_PERFORMANCE',
+      ),
+    );
     await audio.stop().catchError((_) {});
     await backing.stop().catchError((_) {});
     if (!mounted) return;
@@ -195,6 +206,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       player.start();
     }
     player.pause();
+    unawaited(widget.capture?.setRunning(false));
     if (ticker.isActive) ticker.stop();
     keyboardInterruptions.value++;
     unawaited(audio.stop().catchError((_) {}));
@@ -212,6 +224,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       await backing.prepare(widget.tempo);
       if (!mounted || token != epoch) return;
       player.resume();
+      unawaited(widget.capture?.setRunning(true));
       await backing.start(player);
       if (!mounted || token != epoch) return;
       backing.sync(player);
@@ -240,6 +253,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
   @override
   void dispose() {
     disposed = true;
+    unawaited(widget.capture?.discard());
     ++epoch;
     routeAnimation?.removeStatusListener(routeStatus);
     c.previewInterruptions.removeListener(pause);
@@ -283,6 +297,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                         onPressed: () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.arrow_back),
                       ),
+                      CaptureIndicator(capture: widget.capture),
                       const Spacer(),
                       if (player.mode == ScrollPieceMode.running ||
                           player.mode == ScrollPieceMode.paused)
