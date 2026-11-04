@@ -515,10 +515,10 @@ class _IntroLessonPageState extends State<IntroLessonPage>
   );
 
   Widget compactRhythm(BuildContext context, BoxConstraints constraints) {
-    final keyHeight = constraints.maxHeight < 400
-        ? 96.0
-        : (constraints.maxHeight * .30).clamp(96.0, 144.0);
     final scale = MediaQuery.textScalerOf(context).scale(1);
+    final keyHeight = constraints.maxHeight < 300 && scale <= 1.5
+        ? 72.0
+        : (constraints.maxHeight * .30).clamp(96.0, 144.0);
     final columns = math.min(
       4,
       math.max(1, ((constraints.maxWidth - 24) / (120 * scale + 48)).floor()),
@@ -528,31 +528,33 @@ class _IntroLessonPageState extends State<IntroLessonPage>
     // The observation-only first page reserves the same space without keys,
     // so paging controls keep the same position throughout this lesson.
     final keyboardBudget = keyHeight + 18;
-    final upper = <Widget>[
+    final instructions = <Widget>[
       guidance(compact: true),
       if (!c.soundEnabled || !c.audioReady || audioFailed) ...[
         audioNotice(),
         const SizedBox(height: 4),
       ],
-      LessonBeatTimeline(
-        page: page,
-        elapsedMs: demoPositionMs,
-        running: demonstrating,
-        chinese: c.chinese,
-        compact: true,
-      ),
       if (saveError != null) QinStatus(text: saveError!, tone: QinTone.error),
     ];
+    final timeline = LessonBeatTimeline(
+      page: page,
+      elapsedMs: demoPositionMs,
+      running: demonstrating,
+      chinese: c.chinese,
+      compact: true,
+    );
     // In exceptionally short windows the whole lesson remains reachable.
     // Normal landscapes reserve the action row and keyboard outside scrolling.
-    if (constraints.maxHeight < actionBudget + keyboardBudget + 64) {
+    if (constraints.maxHeight <
+        actionBudget + keyboardBudget + 64 * scale + 12) {
       return SingleChildScrollView(
         controller: scroll,
         padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            ...upper,
+            ...instructions,
+            timeline,
             const SizedBox(height: 4),
             lessonActions(),
             if (page > 0) ...[
@@ -574,10 +576,11 @@ class _IntroLessonPageState extends State<IntroLessonPage>
               controller: scroll,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: upper,
+                children: instructions,
               ),
             ),
           ),
+          timeline,
           const SizedBox(height: 4),
           lessonActions(),
           const SizedBox(height: 4),

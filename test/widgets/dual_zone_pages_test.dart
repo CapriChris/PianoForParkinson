@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:piano_practice/features/touch_check_page.dart';
@@ -5,14 +7,30 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/app/app_controller.dart';
 import 'package:piano_practice/app/piano_app.dart';
 import 'package:piano_practice/domain/contracts.dart';
+import 'package:piano_practice/data/practice_repository.dart';
+import 'package:piano_practice/ui/qin_components.dart';
 import 'package:piano_practice/features/keyboard.dart';
 import 'package:piano_practice/features/training_page.dart';
+import 'package:piano_practice/ui/qin_press.dart';
 
 import '../domain/dual_zone_test.dart' show dual;
 import '../domain/task_engine_test.dart' show ready;
 import 'cognitive_pages_test.dart' show mocks;
 
+class DualTestRepository extends PracticeRepository {
+  @override
+  Future<void> settingsUpdate({
+    String? locale,
+    String? mode,
+    Json? settings,
+    bool onboard = false,
+  }) async {
+    if (settings != null) profile['settings_json'] = jsonEncode(settings);
+  }
+}
+
 class DualController extends AppController {
+  DualController() : super(repository: DualTestRepository());
   @override
   Future<void> flush() async {}
   @override
@@ -104,11 +122,21 @@ void main() {
             'max_verified_touch_points': 0,
           };
           await tester.pumpWidget(PianoApp(controller: c));
-          final entry = find.text(c.text('练习双区', 'Practice two zones'));
+          await tester.tap(
+            find.descendant(
+              of: find.byType(QinNavigationBar),
+              matching: find.text(c.text('练习', 'Practice')),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final entry = find.text(c.text('双区配合', 'Two-zone coordination'));
           await tester.scrollUntilVisible(
-            entry.hitTestable(),
-            400,
-            scrollable: find.byType(Scrollable).first,
+            entry,
+            150,
+            scrollable: find.descendant(
+              of: find.byKey(const ValueKey(1)),
+              matching: find.byType(Scrollable),
+            ),
           );
           expect(
             find.text(c.text('双区配合', 'Two-zone coordination')),
@@ -118,6 +146,9 @@ void main() {
             find.text(c.text('检查双触点支持', 'Check two-touch support')),
             findsNothing,
           );
+          await tester.ensureVisible(entry);
+          await tester.pumpAndSettle();
+          expect(entry.hitTestable(), findsOneWidget);
           await tester.tap(entry);
           await tester.pumpAndSettle();
           expect(find.byType(TouchCheckPage), findsOneWidget);
@@ -129,10 +160,10 @@ void main() {
           tester.view.physicalSize = const Size(800, 360);
           await tester.pumpAndSettle();
           final finish = find.widgetWithText(
-            FilledButton,
+            QinFilledButton,
             c.text('完成检查，继续', 'Continue after check'),
           );
-          expect(tester.widget<FilledButton>(finish).onPressed, isNull);
+          expect(tester.widget<QinFilledButton>(finish).onPressed, isNull);
           final left = find.byKey(const ValueKey('touch-check-left'));
           final right = find.byKey(const ValueKey('touch-check-right'));
           await tester.ensureVisible(left);
@@ -148,7 +179,7 @@ void main() {
             );
             await tester.pumpAndSettle();
             expect(
-              tester.widget<FilledButton>(finish).onPressed,
+              tester.widget<QinFilledButton>(finish).onPressed,
               nativePoints >= 2 ? isNotNull : isNull,
             );
             await a.up();

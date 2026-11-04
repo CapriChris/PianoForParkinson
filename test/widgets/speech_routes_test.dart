@@ -5,8 +5,10 @@ import 'package:piano_practice/app/app_controller.dart';
 import 'package:piano_practice/app/piano_app.dart';
 import 'package:piano_practice/features/intro_lessons_page.dart';
 import 'package:piano_practice/domain/intro_lessons.dart';
+import 'package:piano_practice/domain/contracts.dart';
+import 'package:piano_practice/features/lesson_beat_timeline.dart';
 
-import 'intro_lessons_test.dart' show LessonRepository;
+import 'intro_lessons_test.dart' show LessonRepository, setInstructionSong;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -46,6 +48,7 @@ void main() {
           'settings_json': '{"speech_enabled":true,"speech_gain_permille":1000,"sound_enabled":false,"gain_permille":0}',
         };
         final c = AppController(repository: repo)..initialized = true;
+        setInstructionSong(c);
         await tester.pumpWidget(PianoApp(controller: c));
         final nav = tester.state<NavigatorState>(find.byType(Navigator));
         for (final action in ['back', 'cover', 'background']) {
@@ -106,7 +109,8 @@ void main() {
             }
             return null;
           });
-      final c = AppController(repository: LessonRepository())
+      final clock = ManualClock();
+      final c = AppController(repository: LessonRepository(), clock: clock)
         ..initialized = true;
       c.repository.profile = {
         'locale': 'en',
@@ -123,9 +127,20 @@ void main() {
         'DeviceOrientation.landscapeRight',
       ]);
       final positions = [
-        for (var i = 1; i <= 4; i++) tester.getTopLeft(find.text('$i')),
+        for (var i = 1; i <= 4; i++) tester.getTopLeft(find.text('$i Beat')),
       ];
       expect(positions.map((p) => p.dy).toSet().length, 1);
+      await tester.tap(find.text('Watch example').hitTestable());
+      await tester.pumpAndSettle();
+      expect(find.text('Stop example').hitTestable(), findsOneWidget);
+      clock.now += 1500000;
+      await tester.pump(const Duration(milliseconds: 40));
+      expect(
+        tester
+            .widget<LessonBeatTimeline>(find.byType(LessonBeatTimeline))
+            .elapsedMs,
+        1500,
+      );
       await tester.pumpWidget(const SizedBox());
       c.dispose();
     },

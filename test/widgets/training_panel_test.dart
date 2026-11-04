@@ -8,6 +8,7 @@ import 'package:piano_practice/app/piano_app.dart';
 import 'package:piano_practice/domain/contracts.dart';
 import 'package:piano_practice/domain/task_engine.dart';
 import 'package:piano_practice/features/training_page.dart';
+import 'package:piano_practice/features/keyboard.dart';
 
 import '../domain/task_engine_test.dart' show create;
 
@@ -114,22 +115,30 @@ void main() {
             find.text(locale == 'zh-Hans' ? '返回首页' : 'Home'),
             findsNothing,
           );
-          expect(find.text('继续练习'), findsNothing);
+          expect(find.byKey(const ValueKey('resume-practice')), findsOneWidget);
           expect(
             find.descendant(
-              of: find.byKey(const ValueKey('pause-toggle')),
-              matching: find.text(locale == 'zh-Hans' ? '继续' : 'Continue'),
+              of: find.byKey(const ValueKey('resume-practice')),
+              matching: find.text(
+                locale == 'zh-Hans' ? '继续练习' : 'Continue practice',
+              ),
             ),
             findsOneWidget,
           );
-          final panelRect = tester.getRect(
-            find.byKey(const ValueKey('pause-menu')),
+          final viewport = tester.getRect(
+            find
+                .ancestor(
+                  of: find.byKey(const ValueKey('pause-menu')),
+                  matching: find.byType(SingleChildScrollView),
+                )
+                .first,
           );
-          final keyboard = c.layout!['keyboard_rect'] as List;
-          if (scale == 1) {
-            expect(panelRect.bottom, lessThanOrEqualTo(keyboard[1] / 1000));
-          }
-          expect(panelRect.top, lessThan(keyboard[1] / 1000));
+          final keyboard = tester.getRect(find.byType(PianoKeyboard));
+          expect(viewport.bottom, lessThanOrEqualTo(keyboard.top));
+          final resume = find.byKey(const ValueKey('resume-practice'));
+          await tester.ensureVisible(resume);
+          await tester.pumpAndSettle();
+          expect(resume.hitTestable(), findsOneWidget);
           final labels = locale == 'zh-Hans'
               ? [if (scale == 2) '重试保存', '重看演示', '增加帮助', '结束本次']
               : [
@@ -143,7 +152,6 @@ void main() {
               of: find.byKey(const ValueKey('pause-menu')),
               matching: find.text(label),
             );
-            if (scale == 1) expect(finder.hitTestable(), findsOneWidget);
             await Scrollable.ensureVisible(
               tester.element(finder),
               alignment: .2,

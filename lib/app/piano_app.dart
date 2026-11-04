@@ -672,9 +672,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     ),
   );
 
-  Widget practiceHeader({bool limited = false}) => limited
-      ? SingleChildScrollView(child: practiceHeaderContent())
-      : practiceHeaderContent();
+  Widget practiceHeader() =>
+      SingleChildScrollView(child: practiceHeaderContent());
 
   Widget practiceHeaderContent() => ConstrainedBox(
     constraints: const BoxConstraints(minHeight: practiceHeaderBaseHeight),
@@ -1003,12 +1002,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                               children: [
                                 SizedBox(
                                   height: height,
-                                  child: practiceHeader(
-                                    limited:
-                                        scale > 1.5 ||
-                                        height < desired ||
-                                        bounds.maxWidth < 360,
-                                  ),
+                                  child: practiceHeader(),
                                 ),
                                 Expanded(
                                   child: QinPageList(

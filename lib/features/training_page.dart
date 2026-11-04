@@ -533,16 +533,19 @@ class _TrainingPageState extends State<TrainingPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    task.target['trial_type'] == 'GO'
-                        ? c.text(
-                            '弹奏 · ${task.expected.single + 1} 号键',
-                            'Play · Key ${task.expected.single + 1}',
-                          )
-                        : c.text('等待 · 不按键', 'Wait · No press'),
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+                  Flexible(
+                    child: Text(
+                      task.target['trial_type'] == 'GO'
+                          ? c.text(
+                              '弹奏 · ${task.expected.single + 1} 号键',
+                              'Play · Key ${task.expected.single + 1}',
+                            )
+                          : c.text('等待 · 不按键', 'Wait · No press'),
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 12),

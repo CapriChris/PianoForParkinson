@@ -89,7 +89,10 @@ void main() {
             c.notifyListeners();
             await tester.pumpAndSettle();
             expect(find.byKey(const ValueKey('pause-menu')), findsOneWidget);
-            expect(find.text('继续练习'), findsNothing);
+            expect(
+              find.byKey(const ValueKey('resume-practice')),
+              findsOneWidget,
+            );
             expect(find.text('返回首页'), findsNothing);
             expect(tester.getRect(find.byType(PianoKeyboard)), keyboard);
             expect(

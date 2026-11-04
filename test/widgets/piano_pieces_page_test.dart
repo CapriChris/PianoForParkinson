@@ -24,7 +24,9 @@ import 'cognitive_pages_test.dart' show mocks;
 import 'rhythm_pages_test.dart' show MemoryPreferences;
 
 Future<void> frames(WidgetTester tester) async {
-  for (var i = 0; i < 6; i++) {
+  // Qin controls activate after their press/release animation. Pump a finite
+  // number of frames because the moving score keeps its ticker scheduled.
+  for (var i = 0; i < 18; i++) {
     await tester.pump(const Duration(milliseconds: 16));
   }
 }
@@ -240,7 +242,10 @@ void main() {
             await tester.pumpAndSettle();
             await tester.tap(find.byKey(const ValueKey('piece-audition')));
             await frames(tester);
-            expect(find.text(locale == 'en' ? 'Pause' : '暂停'), findsOneWidget);
+            expect(
+              find.byTooltip(locale == 'en' ? 'Pause preview' : '暂停试听'),
+              findsOneWidget,
+            );
             expect(find.byKey(const ValueKey('audition-seek')), findsOneWidget);
             expect(
               find.byKey(const ValueKey('enter-performance')),
@@ -331,14 +336,32 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final other = find.byKey(const ValueKey('home-other-practices'));
+      await Scrollable.ensureVisible(tester.element(other));
+      await tester.pumpAndSettle();
+      await tester.tap(other);
+      await tester.pumpAndSettle();
+      await scrollTo(tester, find.text('钢琴曲目'), 150);
+      await tester.pumpAndSettle();
       await tester.tap(find.text('钢琴曲目'));
       await tester.pumpAndSettle();
       expect(find.byType(PianoPiecesPage), findsOneWidget);
-      Navigator.of(tester.element(find.byType(PianoPiecesPage))).pop();
+      await remove(tester);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: qinTheme(highContrast: false),
+          home: ResultPage(
+            c: c,
+            record: old,
+            fromHistory: true,
+            showAssistant: false,
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
-      await scrollTo(tester, find.text('再练上次的内容'), 150);
+      await Scrollable.ensureVisible(tester.element(find.text('打开新版曲目')));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('再练上次的内容'));
+      await tester.tap(find.text('打开新版曲目'));
       await tester.pumpAndSettle();
       expect(find.byType(PianoPiecePage), findsOneWidget);
       expect(find.byType(PianoPerformancePage), findsNothing);
@@ -383,10 +406,17 @@ void main() {
       await slideTempo(tester, toMaximum: true);
       expect(find.text('80 拍/分钟'), findsOneWidget);
       await scrollTo(tester, find.byKey(const ValueKey('piece-audition')), 120);
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const ValueKey('piece-audition'))),
+        alignment: .2,
+      );
       await tester.pumpAndSettle();
       await tester.tap(find.byKey(const ValueKey('piece-audition')));
       await frames(tester);
-      expect(find.text('暂停'), findsOneWidget);
+      expect(find.byTooltip('暂停试听'), findsOneWidget);
+      await Scrollable.ensureVisible(
+        tester.element(find.byKey(const ValueKey('enter-performance'))),
+      );
       await tester.tap(find.byKey(const ValueKey('enter-performance')));
       await tester
           .pumpAndSettle(); // Portrait cannot start the moving timeline.
@@ -410,7 +440,7 @@ void main() {
       await tester.tap(find.byKey(const ValueKey('performance-back')));
       await tester.pumpAndSettle();
       expect(find.byType(PianoPiecePage), findsOneWidget);
-      expect(find.text('试听'), findsOneWidget);
+      expect(find.byTooltip('播放试听'), findsOneWidget);
       expect(orientations.last, contains('DeviceOrientation.portraitUp'));
       expect(tester.takeException(), isNull);
       await remove(tester);
@@ -462,9 +492,14 @@ void main() {
       isTrue,
     );
     await scrollTo(tester, find.byKey(const ValueKey('piece-audition')), 120);
+    await Scrollable.ensureVisible(
+      tester.element(find.byKey(const ValueKey('piece-audition'))),
+      alignment: .2,
+    );
+    await tester.pump();
     await tester.tap(find.byKey(const ValueKey('piece-audition')));
     await frames(tester);
-    expect(find.text('暂停'), findsOneWidget);
+    expect(find.byTooltip('暂停试听'), findsOneWidget);
     clock.now = 2000000;
     await tester.pump(const Duration(milliseconds: 16));
     await tester.tap(find.byKey(const ValueKey('piece-audition')));
@@ -477,6 +512,16 @@ void main() {
     expect(
       tester.widget<Slider>(find.byKey(const ValueKey('audition-seek'))).value,
       frozen,
+    );
+    expect(find.byTooltip('播放试听'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('piece-audition')));
+    await frames(tester);
+    expect(find.byTooltip('暂停试听'), findsOneWidget);
+    clock.now += 1000000;
+    await tester.pump(const Duration(milliseconds: 16));
+    expect(
+      tester.widget<Slider>(find.byKey(const ValueKey('audition-seek'))).value,
+      greaterThan(frozen),
     );
     expect(tester.takeException(), isNull);
     await remove(tester);
@@ -628,7 +673,7 @@ void main() {
     final draggedTime =
         -3000000 + 96 * 1000000 / ContinuousScoreLayout.beatWidth;
     expect(starts.last, closeTo(draggedTime, 25000));
-    expect(find.text('暂停'), findsOneWidget);
+    expect(find.byTooltip('暂停试听'), findsOneWidget);
     clock.now = 3000000;
     await tester.pump(const Duration(milliseconds: 16));
     expect(
@@ -787,7 +832,7 @@ void main() {
     await frames(tester);
     c.previewInterruptions.value++;
     await tester.pumpAndSettle();
-    expect(find.text('试听'), findsOneWidget);
+    expect(find.byTooltip('播放试听'), findsOneWidget);
     final playCount = calls.where((call) => call.name == 'playNote').length;
     clock.now += 10000000;
     await tester.pump(const Duration(seconds: 10));

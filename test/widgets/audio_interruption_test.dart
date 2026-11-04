@@ -166,7 +166,11 @@ void main() {
         );
         await tester.pumpAndSettle();
         if (surface == 'onboarding') {
-          await tester.tap(find.text('Next'));
+          final next = find.text('Next');
+          await tester.ensureVisible(next);
+          await tester.pumpAndSettle();
+          expect(next.hitTestable(), findsOneWidget);
+          await tester.tap(next);
           await tester.pumpAndSettle();
         }
         await tester.ensureVisible(find.byType(PianoKeyboard));

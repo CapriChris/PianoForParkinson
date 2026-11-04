@@ -12,6 +12,8 @@ import 'package:piano_practice/features/intro_lessons_page.dart';
 import 'package:piano_practice/features/keyboard.dart';
 import 'package:piano_practice/features/key_duration_guide.dart';
 import 'package:piano_practice/features/lesson_beat_timeline.dart';
+import 'package:piano_practice/ui/qin_components.dart';
+import 'package:piano_practice/ui/qin_press.dart';
 
 class LessonRepository extends PracticeRepository {
   final completed = <String>{};
@@ -27,6 +29,13 @@ class LessonRepository extends PracticeRepository {
     if (failSave) throw StateError('save failed');
     completed.add(id);
   }
+}
+
+void setInstructionSong(AppController c) {
+  c.content.song = {
+    'content_id': 'test-song',
+    'localized_title': {'zh-Hans': '测试曲目', 'en': 'Test melody'},
+  };
 }
 
 void main() {
@@ -55,6 +64,7 @@ void main() {
     c = AppController(clock: clock, repository: repository)
       ..initialized = true
       ..audioReady = true;
+    setInstructionSong(c);
     repository.profile = {
       'profile_id': 'test',
       'locale': 'zh-Hans',
@@ -107,12 +117,18 @@ void main() {
   }
 
   testWidgets(
-    'brand and optional lessons reachable from home and task instructions',
+    'brand and optional lessons reachable from practice and task instructions',
     (tester) async {
       await tester.pumpWidget(PianoApp(controller: c));
-      expect(find.text('琴伴'), findsOneWidget);
       expect(tester.widget<MaterialApp>(find.byType(MaterialApp)).title, '琴伴');
-      await tap(tester, '打开教学');
+      await tester.tap(
+        find.descendant(
+          of: find.byType(QinNavigationBar),
+          matching: find.text('练习'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tap(tester, '入门教学');
       expect(find.byType(IntroLessonsPage), findsOneWidget);
       tester.state<NavigatorState>(find.byType(Navigator)).pop();
       await tester.pumpAndSettle();
@@ -124,7 +140,7 @@ void main() {
             ),
           );
       await tester.pumpAndSettle();
-      await tap(tester, '查看入门教学（可选）');
+      await tap(tester, '查看入门教学');
       expect(find.byType(IntroLessonsPage), findsOneWidget);
       expect(c.engine, isNull);
       await tester.pumpWidget(const SizedBox());
@@ -149,8 +165,12 @@ void main() {
         expect(c.engine, isNull);
       }
       await show(tester, IntroLessonsPage(c: c));
-      expect(find.text('已完成 · 可以重看'), findsWidgets);
-      await tap(tester, '打开教学');
+      final cards = tester.widgetList<PracticeCard>(find.byType(PracticeCard));
+      expect(
+        cards.where((card) => card.completed),
+        hasLength(IntroLesson.all.length),
+      );
+      await tap(tester, IntroLesson.all.first.zh);
       expect(find.text('1 / 3'), findsOneWidget);
       await tester.pumpWidget(const SizedBox());
     },
@@ -162,7 +182,7 @@ void main() {
       repository.failRead = true;
       await show(tester, IntroLessonsPage(c: c));
       expect(find.text('完成标记读取失败，可以继续学习。'), findsOneWidget);
-      await tap(tester, '打开教学');
+      await tap(tester, IntroLesson.all.last.zh);
       await tap(tester, '下一页');
       await tap(tester, '下一页');
       repository.failSave = true;
@@ -195,7 +215,8 @@ void main() {
       );
       clock.now += 1500000;
       await tester.pump(const Duration(milliseconds: 40));
-      expect(find.text('等待'), findsNWidgets(2));
+      expect(find.text('2 等待'), findsOneWidget);
+      expect(find.text('4 等待'), findsOneWidget);
       expect(
         tester.widget<PianoKeyboard>(find.byType(PianoKeyboard)).highlighted,
         isNull,
@@ -329,18 +350,10 @@ void main() {
       tester.widget<PianoKeyboard>(find.byType(PianoKeyboard)).highlighted,
       isNotNull,
     );
-    final keyColors = tester
-        .widgetList<Container>(
-          find.descendant(
-            of: find.byType(PianoKeyboard),
-            matching: find.byType(Container),
-          ),
-        )
-        .map((container) => container.decoration)
-        .whereType<BoxDecoration>()
-        .map((decoration) => decoration.color);
     expect(
-      keyColors.where((color) => color == const Color(0xffc6ddbd)),
+      tester
+          .widget<PianoKeyboard>(find.byType(PianoKeyboard))
+          .demonstratingKeys,
       hasLength(1),
     );
     final plays = calls.where((call) => call.method == 'playNote').length;
@@ -380,7 +393,9 @@ void main() {
       );
       await tap(tester, '下一页');
       expect(find.text('等待'), findsNothing);
-      expect(find.text('弹奏'), findsNWidgets(4));
+      for (var i = 1; i <= 4; i++) {
+        expect(find.text('$i 弹奏'), findsOneWidget);
+      }
       calls.clear();
       await tap(tester, '观看示范');
       for (var step = 0; step < 4; step++) {
@@ -404,15 +419,23 @@ void main() {
   );
 
   testWidgets(
-    'completing all lessons removes links in every task, keeps home lessons and survives progress reload',
+    'completing all lessons removes task links, keeps the practice entry and survives progress reload',
     (tester) async {
       await c.completeIntroLesson('T1');
       await c.completeIntroLesson('T2');
       await show(tester, InstructionPage(c: c, taskId: 'S1_GUIDED'));
-      expect(find.text('查看入门教学（可选）'), findsOneWidget);
+      final intro = find.text('查看入门教学');
+      await tester.scrollUntilVisible(
+        intro,
+        100,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.ensureVisible(intro);
+      await tester.pumpAndSettle();
+      expect(intro.hitTestable(), findsOneWidget);
       await c.completeIntroLesson('T3');
       await tester.pumpAndSettle();
-      expect(find.text('查看入门教学（可选）'), findsNothing);
+      expect(find.text('查看入门教学'), findsNothing);
       await c.refreshIntroLessonProgress();
       for (final id in [
         'G1_MEMORY',
@@ -423,7 +446,7 @@ void main() {
         'M1_ALTERNATE',
       ]) {
         await show(tester, InstructionPage(c: c, taskId: id));
-        expect(find.text('查看入门教学（可选）'), findsNothing);
+        expect(find.text('查看入门教学'), findsNothing);
         await tester.tap(find.byTooltip('播放语音说明'));
         await tester.pumpAndSettle();
         final spokenBefore = calls
@@ -437,7 +460,23 @@ void main() {
         expect(find.text('试按 · 不计入记录'), findsOneWidget);
       }
       await tester.pumpWidget(PianoApp(controller: c));
-      expect(find.text('入门教学'), findsWidgets);
+      await tester.tap(
+        find.descendant(
+          of: find.byType(QinNavigationBar),
+          matching: find.text('练习'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final entry = find.text('入门教学');
+      await tester.scrollUntilVisible(
+        entry,
+        150,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey(1)),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(entry.hitTestable(), findsOneWidget);
       await show(tester, IntroLessonsPage(c: c));
       expect(find.text('跳过，返回练习'), findsNothing);
       await tester.pumpWidget(const SizedBox());
@@ -501,13 +540,6 @@ void main() {
               );
           await tester.pumpAndSettle();
           for (var page = 0; page < 3; page++) {
-            final viewport = tester.state<ScrollableState>(
-              find.byType(Scrollable).last,
-            );
-            expect(
-              viewport.position.maxScrollExtent,
-              size.height >= 400 ? 0 : lessThanOrEqualTo(56),
-            );
             final action = find.text(
               page == 2
                   ? c.text('完成教学', 'Complete lesson')
@@ -534,14 +566,21 @@ void main() {
               }
             }
             expect(tester.takeException(), isNull);
-            await tester.tap(find.text(c.text('观看示范', 'Watch example')));
-            await tester.pump(const Duration(milliseconds: 40));
-            expect(
-              viewport.position.maxScrollExtent,
-              size.height >= 400 ? 0 : lessThanOrEqualTo(56),
+            final example = find.widgetWithText(
+              QinOutlinedButton,
+              c.text('观看示范', 'Watch example'),
             );
+            expect(example.hitTestable(), findsOneWidget);
+            expect(action.hitTestable(), findsOneWidget);
+            await tester.tap(example);
+            await tester.pumpAndSettle();
             expect(tester.takeException(), isNull);
-            await tester.tap(find.text(c.text('停止示范', 'Stop example')));
+            final stop = find.widgetWithText(
+              QinOutlinedButton,
+              c.text('停止示范', 'Stop example'),
+            );
+            expect(stop.hitTestable(), findsOneWidget);
+            await tester.tap(stop);
             await tester.pumpAndSettle();
             await tester.tap(action);
             await tester.pumpAndSettle();

@@ -14,6 +14,9 @@ import 'package:piano_practice/ui/qin_theme.dart';
 import '../domain/piece_trace_test.dart' show tracedRecord;
 import 'cognitive_pages_test.dart' show mocks;
 
+Finder control(String key, Type type) =>
+    find.descendant(of: find.byKey(ValueKey(key)), matching: find.byType(type));
+
 void main() {
   testWidgets('score card opens from its edge and from its staff', (
     tester,
@@ -97,16 +100,12 @@ void main() {
       painter.data.tickUs(piece.notes[1].startTick),
     );
     expect(
-      tester
-          .widget<IconButton>(find.byKey(const ValueKey('review-play')))
-          .onPressed,
+      tester.widget<IconButton>(control('review-play', IconButton)).onPressed,
       isNotNull,
     );
     expect(
       tester
-          .widget<OutlinedButton>(
-            find.byKey(const ValueKey('review-demo-mode')),
-          )
+          .widget<OutlinedButton>(control('review-demo-mode', OutlinedButton))
           .onPressed,
       isNotNull,
     );
@@ -247,9 +246,12 @@ void main() {
                     as Map;
             expect(wrongTone['melody'][0]['note_id'], piece.playback(0).sample);
             final play = find.byKey(const ValueKey('review-play'));
+            await tester.ensureVisible(play);
             await tester.tap(play);
-            await tester.pump();
-            await tester.pump(const Duration(milliseconds: 16));
+            // Replay has a live ticker, so settle only the control animation.
+            for (var i = 0; i < 18; i++) {
+              await tester.pump(const Duration(milliseconds: 16));
+            }
             final replay =
                 calls
                         .lastWhere((c) => c.method == 'preparePieceBacking')
@@ -292,9 +294,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(
         tester
-            .widget<OutlinedButton>(
-              find.byKey(const ValueKey('review-user-mode')),
-            )
+            .widget<OutlinedButton>(control('review-user-mode', OutlinedButton))
             .onPressed,
         isNull,
       );

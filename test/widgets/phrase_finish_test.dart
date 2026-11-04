@@ -1,3 +1,4 @@
+import 'package:piano_practice/ui/qin_press.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/app/app_controller.dart';
@@ -124,7 +125,7 @@ void main() {
           await tester.pumpAndSettle();
           expect(
             tester
-                .widget<OutlinedButton>(
+                .widget<QinOutlinedButton>(
                   find.byKey(const ValueKey('replay-demo')),
                 )
                 .onPressed,

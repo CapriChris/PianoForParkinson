@@ -1,3 +1,4 @@
+import 'package:piano_practice/ui/qin_press.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/app/app_controller.dart';
@@ -148,7 +149,7 @@ void main() {
             expect(tester.widget<PianoKeyboard>(keyboard).highlighted, isNull);
             expect(
               tester
-                  .widget<OutlinedButton>(
+                  .widget<QinOutlinedButton>(
                     find.byKey(const ValueKey('more-help')),
                   )
                   .onPressed,
@@ -156,7 +157,7 @@ void main() {
             );
             expect(
               tester
-                  .widget<OutlinedButton>(
+                  .widget<QinOutlinedButton>(
                     find.byKey(const ValueKey('replay-demo')),
                   )
                   .onPressed,
