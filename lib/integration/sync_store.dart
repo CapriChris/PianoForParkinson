@@ -11,7 +11,7 @@ class SyncStore {
   Future<void> open(String directory) async {
     db = await openDatabase(
       '$directory/pd_cloud_sync.db',
-      version: 2,
+      version: 3,
       singleInstance: false,
       onCreate: (db, _) async {
         await _captureSchema(db);
@@ -30,16 +30,120 @@ class SyncStore {
         await db.execute(
           'CREATE TABLE cloud_records (patient_id TEXT NOT NULL, kind TEXT NOT NULL, record_id TEXT NOT NULL, payload TEXT NOT NULL, PRIMARY KEY(patient_id,kind,record_id))',
         );
+        await _createOutbox(db);
       },
       onUpgrade: (db, oldVersion, _) async {
-        if (oldVersion < 2) await _captureSchema(db);
+        if (oldVersion < 3) { await _captureSchema(db); await _createOutbox(db); }
       },
     );
   }
 
   static Future<void> _captureSchema(Database db) => db.execute(
-    'CREATE TABLE training_captures (capture_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, record_id TEXT, payload TEXT NOT NULL)',
+    'CREATE TABLE IF NOT EXISTS training_captures (capture_id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, record_id TEXT, payload TEXT NOT NULL)',
   );
+
+  static Future<void> _createOutbox(Database db) async {
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS sync_outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, scope TEXT NOT NULL, kind TEXT NOT NULL, source TEXT NOT NULL, body TEXT, error_status INTEGER, UNIQUE(scope,kind,source))',
+    );
+    await db.execute(
+      'CREATE TABLE IF NOT EXISTS plan_revisions (scope TEXT NOT NULL, plan TEXT NOT NULL, fingerprint TEXT NOT NULL, revision INTEGER NOT NULL, PRIMARY KEY(scope,plan))',
+    );
+  }
+
+  Future<bool> known(String scope, String kind, String source) async =>
+      (await db.query(
+        'sync_outbox',
+        columns: ['seq'],
+        where: 'scope=? AND kind=? AND source=?',
+        whereArgs: [scope, kind, source],
+        limit: 1,
+      )).isNotEmpty;
+
+  Future<void> enqueue(String scope, Map<String, dynamic> body) async {
+    await db.insert(
+      'sync_outbox',
+      _entry(scope, body),
+      conflictAlgorithm: ConflictAlgorithm.ignore,
+    );
+  }
+
+  Map<String, Object?> _entry(String scope, Map<String, dynamic> body) => {
+    'scope': scope,
+    'kind': body['record_type'],
+    'source': body['source_record_id'],
+    'body': jsonEncode(body),
+  };
+
+  Future<void> enqueuePlan(
+    String scope,
+    String plan,
+    String fingerprint,
+    Map<String, dynamic> body,
+  ) async {
+    await db.transaction((tx) async {
+      final previous = await tx.query(
+        'plan_revisions',
+        where: 'scope=? AND plan=?',
+        whereArgs: [scope, plan],
+      );
+      if (previous.isNotEmpty && previous.single['fingerprint'] == fingerprint) {
+        return;
+      }
+      final revision = previous.isEmpty
+          ? 1
+          : (previous.single['revision'] as int) + 1;
+      final source = '$plan:r$revision:${fingerprint.substring(0, 24)}';
+      final payload = Map<String, dynamic>.from(body['payload'] as Map);
+      await tx.insert(
+        'sync_outbox',
+        _entry(scope, {
+          ...body,
+          'source_record_id': source,
+          'payload': {...payload, 'snapshot_revision': revision},
+        }),
+      );
+      await tx.insert('plan_revisions', {
+        'scope': scope,
+        'plan': plan,
+        'fingerprint': fingerprint,
+        'revision': revision,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    });
+  }
+
+  Future<List<Map<String, Object?>>> pending(String scope) => db.query(
+    'sync_outbox',
+    where: 'scope=? AND body IS NOT NULL AND error_status IS NULL',
+    whereArgs: [scope],
+    orderBy: 'seq',
+    limit: 60,
+  );
+
+  Future<void> reject(String scope, int seq, int status) async {
+    await db.update(
+      'sync_outbox',
+      {'error_status': status},
+      where: 'scope=? AND seq=?',
+      whereArgs: [scope, seq],
+    );
+  }
+
+  Future<int> rejectedCount(String scope) async =>
+      (await db.rawQuery(
+            'SELECT count(*) AS count FROM sync_outbox WHERE scope=? AND error_status IS NOT NULL',
+            [scope],
+          )).single['count']
+          as int;
+
+  Future<void> acknowledge(String scope, int seq) async {
+    await db.update(
+      'sync_outbox',
+      {'body': null},
+      where: 'scope=? AND seq=?',
+      whereArgs: [scope, seq],
+    );
+  }
 
   Future<void> put(String key, String value) async {
     await db.insert('kv', {

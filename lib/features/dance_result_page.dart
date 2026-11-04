@@ -60,7 +60,10 @@ class _DanceResultPageState extends State<DanceResultPage> {
       unawaited(c.captures.recordSaved(widget.record['session_id'] as String));
       c.syncPlanReminders();
       if (mounted) setState(() => saved = true);
-      if (widget.saveRecord == null) unawaited(c.refreshHistory());
+      if (widget.saveRecord == null) {
+        c.cloudSync.trigger();
+        unawaited(c.refreshHistory());
+      }
     } catch (_) {
       /* The same immutable session remains available for retry. */
     } finally {
@@ -153,8 +156,9 @@ class _DanceResultPageState extends State<DanceResultPage> {
         Text(
           durationLabel(widget.record['active_ms'] as int),
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.titleLarge
-              ?.copyWith(color: context.qin.primary),
+          style: Theme.of(
+            context,
+          ).textTheme.titleLarge?.copyWith(color: context.qin.primary),
         ),
       ],
     );

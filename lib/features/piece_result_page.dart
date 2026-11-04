@@ -49,6 +49,7 @@ class _PieceResultPageState extends State<PieceResultPage> {
     try {
       await c.repository.savePiecePerformance(widget.record);
       unawaited(c.captures.recordSaved(widget.record['session_id'] as String));
+      c.cloudSync.trigger();
       c.syncPlanReminders();
       if (!mounted) return;
       setState(() => saved = true);
@@ -115,8 +116,9 @@ class _PieceResultPageState extends State<PieceResultPage> {
                     Row(
                       children: [
                         QinIconButton(
-                          tooltip: MaterialLocalizations.of(context)
-                              .backButtonTooltip,
+                          tooltip: MaterialLocalizations.of(
+                            context,
+                          ).backButtonTooltip,
                           onPressed: () => Navigator.of(context).maybePop(),
                           icon: const Icon(Icons.arrow_back),
                         ),
@@ -133,8 +135,9 @@ class _PieceResultPageState extends State<PieceResultPage> {
                     Align(
                       alignment: Alignment.centerLeft,
                       child: QinIconButton(
-                        tooltip: MaterialLocalizations.of(context)
-                            .backButtonTooltip,
+                        tooltip: MaterialLocalizations.of(
+                          context,
+                        ).backButtonTooltip,
                         onPressed: () => Navigator.of(context).maybePop(),
                         icon: const Icon(Icons.arrow_back),
                       ),
@@ -150,8 +153,9 @@ class _PieceResultPageState extends State<PieceResultPage> {
                     const SizedBox(height: 4),
                     Text(
                       piece.composer(c.locale),
-                      style: Theme.of(context).textTheme.bodySmall
-                          ?.copyWith(color: context.qin.ink),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall?.copyWith(color: context.qin.ink),
                     ),
                   ],
                 ],
@@ -234,9 +238,9 @@ class _PieceResultPageState extends State<PieceResultPage> {
                     recordId: r['session_id'] as String,
                     title: title,
                     date: widget.alreadySaved
-                        ? recordDateLabel(recordedDate(r, 'started_utc_ms'))
-                              .split(' ')
-                              .first
+                        ? recordDateLabel(
+                            recordedDate(r, 'started_utc_ms'),
+                          ).split(' ').first
                         : null,
                   ),
                 ],

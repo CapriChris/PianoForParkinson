@@ -15,6 +15,7 @@ import '../domain/intro_lessons.dart';
 import '../domain/task_engine.dart';
 import '../platform/platform_service.dart';
 import 'speech_navigation_observer.dart';
+import '../integration/auto_sync.dart';
 
 class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final content = ContentRepository();
@@ -28,6 +29,11 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   bool _assistantRevoking = false;
   final previewInterruptions = ValueNotifier<int>(0);
   final trainingUpdates = ValueNotifier<int>(0);
+  late final cloudSync = AutoSync(
+    repository,
+    trainingUpdates,
+    () => initialized && (engine == null || engine!.ended),
+  );
   final activeSpeech = ValueNotifier<Object?>(null);
 
   /// Presentation-only intent; never persisted in practice records.
@@ -751,6 +757,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     await flush();
     if (storageError == null) {
       saved = true;
+      cloudSync.trigger();
       syncPlanReminders();
       await refreshHistory();
     }
@@ -859,9 +866,11 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     _backgrounded = state != AppLifecycleState.resumed;
+    cloudSync.foreground = !_backgrounded;
     if (_backgrounded) {
       interruptPlayback('INTERRUPTED_BACKGROUND');
     } else {
+      cloudSync.trigger();
       unawaited(refreshRecommendations());
     }
   }
@@ -876,6 +885,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     _recorder?.cancel();
     _platformEvents?.cancel();
     previewInterruptions.dispose();
+    cloudSync.close();
     trainingUpdates.dispose();
     activeSpeech.dispose();
     homeNavigationRequests.dispose();

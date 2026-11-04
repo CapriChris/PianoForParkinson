@@ -11,7 +11,6 @@ import 'package:video_player/video_player.dart';
 
 import '../app/app_controller.dart';
 import 'remote_api.dart';
-import 'sync_service.dart';
 import 'sync_store.dart';
 
 class CloudIntegrationPage extends StatefulWidget {
@@ -21,12 +20,25 @@ class CloudIntegrationPage extends StatefulWidget {
   State<CloudIntegrationPage> createState() => _CloudIntegrationPageState();
 }
 
-class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
+class _CloudIntegrationPageState extends State<CloudIntegrationPage>
+    with WidgetsBindingObserver {
   final base = TextEditingController();
   final username = TextEditingController();
   final password = TextEditingController();
   SyncStore? sidecar;
-  RemoteApi? remote;
+  RemoteApi? get remote => widget.controller.cloudSync.remote;
+  List<Map<String, dynamic>> cloudRecords = [];
+  final kinds = const {
+    'assessment_sessions': '评估',
+    'piano_sessions': '钢琴训练',
+    'guided_song_sessions': '曲目跟弹',
+    'pose_sessions': '动作训练',
+    'training_plans': '训练计划',
+    'micro_expression_results': '面部分析',
+    'finger_tapping_results': '手指敲击',
+    'functional_assessments': '功能评估',
+    'external_practice_records': '软件训练记录',
+  };
   List<Map<String, dynamic>> patients = [];
   String? patientId;
   String status = '登录后选择患者并绑定，既有本地练习不会被修改。';
@@ -49,22 +61,24 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     unawaited(_load());
   }
 
   Future<void> _load() async {
     try {
-      final dbDir = File(widget.controller.repository.db.path).parent.path;
-      final s = SyncStore();
-      await s.open(dbDir);
-      sidecar = s;
+      final s = await widget.controller.cloudSync.store();
+      if (!mounted) return;
       final saved = await s.get('base_url');
-      if (saved != null) base.text = saved;
-      final chosen = await s.get('patient_id');
-      remote = widget.controller.captures.api;
-      patients = await s.patients();
-      patientId = chosen;
-      if (mounted) setState(() {});
+      if (!mounted) return;
+      sidecar = s;
+      base.text =
+          remote?.base.toString() ??
+          saved ??
+          'https://ccqspace.site/pd-rehab/api';
+      patientId = widget.controller.cloudSync.patient;
+      setState(() {});
+      if (remote?.signedIn == true) await run(_refreshCloud);
     } catch (e) {
       if (mounted) setState(() => status = '同步存储初始化失败：$e');
     }
@@ -76,31 +90,81 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
     try {
       await operation();
     } catch (e) {
-      if (mounted) setState(() => status = '$e');
+      if (mounted) {
+        setState(() {
+          if (e is RemoteApiException && (e.status == 401 || e.status == 403)) {
+            widget.controller.cloudSync.signOut();
+            patients = [];
+            patientId = null;
+            cloudRecords = [];
+            remoteRecordCount = 0;
+          }
+          status = '$e';
+        });
+      }
     } finally {
       if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> login() => run(() async {
+    final coordinator = widget.controller.cloudSync;
+    widget.controller.captures.disconnect();
+    coordinator.signOut();
+    setState(() {
+      patients = [];
+      patientId = null;
+      cloudRecords = [];
+      remoteRecordCount = 0;
+    });
     final service = RemoteApi(base.text);
     final account = await service.login(username.text.trim(), password.text);
+    if (!mounted) {
+      service.signOut();
+      return;
+    }
     password.clear();
-    remote = service;
+    await coordinator.signIn(
+      service,
+      account['id'] as String,
+      deviceId,
+      profileId,
+    );
+    if (!mounted) return;
     widget.controller.captures.connect(service, account['id'] as String);
-    await sidecar?.put('base_url', base.text.trim());
-    setState(() => status = '已登录：${account['display_name']}。正在获取云端档案…');
-    await refreshPatients();
+    await sidecar?.put('base_url', service.base.toString());
+    if (!mounted) return;
+    patientId = coordinator.patient;
+    await _refreshCloud();
   });
+
+  Future<void> _refreshCloud() async {
+    await refreshPatients();
+    if (!mounted) return;
+    if (patientId != null && patientId == widget.controller.cloudSync.patient) {
+      widget.controller.cloudSync.trigger();
+      await _readCloud();
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed &&
+        remote?.signedIn == true &&
+        ModalRoute.of(context)?.isCurrent == true) {
+      unawaited(run(_refreshCloud));
+    }
+  }
 
   Future<void> refreshPatients() async {
     final service = remote;
-    if (service == null) return;
+    if (service == null || !service.signedIn) return;
     var offset = 0;
     final results = <Map<String, dynamic>>[];
+    var staff = 0;
     while (true) {
       final data = await service.bootstrap(offset: offset);
-      await sidecar?.rememberBootstrap(data);
+      staff = (data['staff'] as List?)?.length ?? 0;
       results.addAll(
         (data['patients'] as List).map(
           (e) => Map<String, dynamic>.from(e as Map),
@@ -110,11 +174,15 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
       offset = data['next_offset'] as int;
       if (offset > 10000) throw const FormatException('患者列表超过当前同步范围，请联系维护人员。');
     }
-    staffCount = await sidecar?.staffCount() ?? 0;
+    staffCount = staff;
     if (mounted) {
       setState(() {
         patients = results.where((p) => p['is_deleted'] != true).toList();
-        if (!patients.any((p) => p['id'] == patientId)) patientId = null;
+        if (!patients.any((p) => p['id'] == patientId)) {
+          patientId = null;
+          cloudRecords = [];
+          remoteRecordCount = 0;
+        }
         status = '已取得 ${patients.length} 位可用患者、$staffCount 位工作人员。请确认本机记录归属后绑定。';
       });
     }
@@ -127,66 +195,63 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
       throw const FormatException('请先登录并选择患者。');
     }
     final response = await service.bindPatient(deviceId, profileId, id);
-    await sidecar?.put('patient_id', id);
+    await widget.controller.cloudSync.setBinding(id);
     widget.controller.captures.bind(id, response['binding_id'] as String);
-    setState(() => status = '已绑定 ${response['name']}，既有本地训练暂未上传。');
+    if (mounted) {
+      setState(
+        () =>
+            status = '已绑定 ${response['name']}（${response['hospital_number']}）。',
+      );
+    }
+    await _readCloud();
   });
 
   Future<void> sync() => run(() async {
-    final service = remote;
-    final s = sidecar;
-    final id = patientId;
-    if (service == null || s == null || id == null) {
-      throw const FormatException('先登录、选择并绑定患者。');
+    if (patientId != widget.controller.cloudSync.patient) {
+      throw const FormatException('请先确认当前患者绑定。');
     }
-    setState(() => status = '正在同步本地记录，请保持网络连接…');
-    final result = await CrossClientSync(
-      widget.controller.repository,
-      service,
-      s,
-      deviceId: deviceId,
-      localProfileId: profileId,
-      patientId: id,
-    ).syncAll();
-    lastSent = result.uploaded;
-    setState(
-      () => status = result.errors.isEmpty
-          ? '已上传 ${result.uploaded} 条新记录，跳过 ${result.skipped} 条。'
-          : '已上传 ${result.uploaded} 条；${result.errors.length} 条待重试：${result.errors.take(2).join('；')}',
-    );
-  });
-
-  Future<void> readCloud() => run(() async {
-    final service = remote;
-    final s = sidecar;
-    final id = patientId;
-    if (service == null || s == null || id == null) {
-      throw const FormatException('请先登录并选择患者。');
-    }
-    int offset = 0;
-    while (true) {
-      final data = await service.patientData(id, offset: offset);
-      await s.rememberPatientData(data);
-      if (data['next_offset'] == null) break;
-      offset = data['next_offset'] as int;
-      if (offset > 5000) throw const FormatException('云端记录超过当前同步容量，请分批导出。');
-    }
-    final records = await s.patientRecords(id);
+    final result = await widget.controller.cloudSync.sync();
+    if (!mounted) return;
     setState(() {
-      remoteRecordCount = records.length;
-      status = '已缓存 ${records.length} 条云端评估/训练记录，独立于本机原始练习数据库。';
+      lastSent = result.uploaded;
+      status = result.errors.isEmpty
+          ? '已上传 ${result.uploaded} 条。'
+          : '部分记录待重试：${result.errors.first}';
     });
   });
 
+  Future<void> readCloud() => run(_readCloud);
+
+  Future<void> _readCloud() async {
+    final service = remote, id = patientId;
+    if (service == null || !service.signedIn || id == null) return;
+    var offset = 0;
+    final records = <Map<String, dynamic>>[];
+    while (true) {
+      final data = await service.patientData(id, offset: offset);
+      if (!mounted || !identical(remote, service) || patientId != id) return;
+      for (final entry in (data['categories'] as Map).entries) {
+        for (final record in entry.value as List) {
+          records.add({'kind': entry.key, 'data': record});
+        }
+      }
+      if (data['next_offset'] == null) break;
+      offset = data['next_offset'] as int;
+      if (offset > 5000) throw const FormatException('云端历史超过当前读取上限。');
+    }
+    setState(() {
+      cloudRecords = records;
+      remoteRecordCount = records.length;
+      status = '已读取 ${records.length} 条云端记录。';
+    });
+  }
+
   Future<void> showCloudRecords() async {
-    final id = patientId;
-    final s = sidecar;
-    if (id == null || s == null) {
-      setState(() => status = '请先选择患者。');
+    if (remote?.signedIn != true || patientId == null) {
+      setState(() => status = '请先登录并选择患者。');
       return;
     }
-    final records = await s.patientRecords(id);
-    if (!mounted) return;
+    final records = List.of(cloudRecords);
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -208,8 +273,10 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
                       record['data'] as Map,
                     );
                     return ExpansionTile(
-                      title: Text('${record['kind']}'),
-                      subtitle: Text('记录 ${data['id']}'),
+                      title: Text(kinds[record['kind']] ?? '${record['kind']}'),
+                      subtitle: Text(
+                        '${data['completed_at'] ?? data['started_at'] ?? data['created_at'] ?? '时间未记录'} · ${data['status'] ?? '历史记录'}',
+                      ),
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(12),
@@ -267,8 +334,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
     base.dispose();
     username.dispose();
     password.dispose();
-    // The application session owns the in-memory token across training routes.
-    if (sidecar != null) unawaited(sidecar!.db.close());
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 
@@ -284,7 +350,10 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
             onPressed: () {
               widget.controller.captures.disconnect();
               setState(() {
-                remote = null;
+                widget.controller.cloudSync.signOut();
+                patients = [];
+                patientId = null;
+                cloudRecords = [];
                 status = '已退出登录。';
               });
             },
@@ -319,6 +388,53 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
             icon: const Icon(Icons.login),
             label: const Text('登录并同步患者档案'),
           ),
+          ValueListenableBuilder<String>(
+            valueListenable: widget.controller.cloudSync.message,
+            builder: (context, message, _) {
+              final coordinator = widget.controller.cloudSync;
+              final signed = coordinator.remote?.signedIn == true;
+              return Column(
+                children: [
+                  SwitchListTile(
+                    title: const Text('前台自动同步'),
+                    subtitle: Text(
+                      message.isEmpty ? '开启后会同步此档案的既有和新增记录；断网后会在前台重试。' : message,
+                    ),
+                    value: coordinator.enabled,
+                    onChanged:
+                        !signed ||
+                            loading ||
+                            patientId == null ||
+                            patientId != coordinator.patient
+                        ? null
+                        : (value) => unawaited(
+                            run(() async {
+                              await coordinator.setEnabled(value);
+                              if (mounted) setState(() {});
+                            }),
+                          ),
+                  ),
+                  if (signed)
+                    TextButton(
+                      onPressed: loading
+                          ? null
+                          : () {
+                              widget.controller.captures.disconnect();
+                              coordinator.signOut();
+                              setState(() {
+                                patients = [];
+                                patientId = null;
+                                cloudRecords = [];
+                                remoteRecordCount = 0;
+                                status = '已退出云端账号。';
+                              });
+                            },
+                      child: const Text('退出云端账号'),
+                    ),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 18),
           DropdownButtonFormField<String>(
             key: ValueKey('${patients.length}-$patientId'),
@@ -339,7 +455,11 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage> {
             ],
             onChanged: loading
                 ? null
-                : (value) => setState(() => patientId = value),
+                : (value) => setState(() {
+                    patientId = value;
+                    cloudRecords = [];
+                    remoteRecordCount = 0;
+                  }),
           ),
           const SizedBox(height: 8),
           OutlinedButton.icon(
