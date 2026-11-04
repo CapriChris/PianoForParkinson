@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 
 import '../data/practice_repository.dart';
+import '../data/training_schedule_repository.dart';
+import '../domain/dance_training.dart' show localDay, planDue;
 import 'remote_api.dart';
 import 'sync_store.dart';
 
@@ -24,11 +26,16 @@ class CrossClientSync {
     required this.deviceId,
     required this.localProfileId,
     required this.patientId,
+    required this.scope,
+    required this.mayUpload,
   });
   final PracticeRepository repository;
   final RemoteApi remote;
   final SyncStore sidecar;
   final String deviceId, localProfileId, patientId;
+
+  final String scope;
+  final bool Function() mayUpload;
 
   Future<SyncOutcome> syncAll() async {
     final db = repository.db;
@@ -61,6 +68,7 @@ class CrossClientSync {
         );
       }
       for (final row in rows) {
+        if (!mayUpload()) return SyncOutcome(uploaded, skipped, errors);
         final id = row[pk] as String;
         // Do not upload unfinished sessions or corrupted records as if complete.
         if (table == 'sessions' &&
@@ -69,6 +77,12 @@ class CrossClientSync {
               'EXITED',
               'RECOVERED_INTERRUPTED',
             ].contains(row['status'])) {
+          skipped++;
+          continue;
+        }
+        if (table != 'training_plans' &&
+            table != 'plan_occurrences' &&
+            await sidecar.known(scope, type, id)) {
           skipped++;
           continue;
         }
@@ -107,13 +121,44 @@ class CrossClientSync {
               'plan_occurrences',
               where: 'plan_id=?',
               whereArgs: [id],
+              orderBy: 'occurrence_id',
             );
-            payload = {'record': row, 'occurrences': occurrences};
+            final plan = Map<String, dynamic>.from(
+              jsonDecode(row['plan_json'] as String) as Map,
+            );
+            final now = DateTime.now();
+            final dates =
+                [
+                      for (var i = 6; i >= 0; i--)
+                        DateTime(now.year, now.month, now.day - i),
+                    ]
+                    .where(
+                      (day) => plan['deleted'] != true && planDue(plan, day),
+                    )
+                    .toList();
+            final amounts = await TrainingScheduleRepository(db, localProfileId)
+                .automaticProgressFor([
+                  for (final day in dates) (plan: plan, date: day),
+                ]);
+            payload = {
+              'record': row,
+              'occurrences': occurrences,
+              'daily_progress': [
+                for (final (i, day) in dates.indexed)
+                  {
+                    'local_date': localDay(day),
+                    'completed_units': amounts[i],
+                    'target': plan['target'],
+                    'target_type': plan['target_type'],
+                  },
+              ],
+            };
           } else {
             final links = await db.query(
               'plan_links',
               where: 'occurrence_id=?',
               whereArgs: [id],
+              orderBy: 'rowid',
             );
             payload = {'record': row, 'links': links};
           }
@@ -123,11 +168,7 @@ class CrossClientSync {
               (table == 'training_plans' || table == 'plan_occurrences')
               ? '$id:${sha256.convert(utf8.encode(jsonEncode(payload))).toString().substring(0, 24)}'
               : id;
-          if (await sidecar.isSynced(type, sourceId, patientId)) {
-            skipped++;
-            continue;
-          }
-          await remote.syncRecord({
+          final body = <String, dynamic>{
             'device_id': deviceId,
             'local_profile_id': localProfileId,
             'patient_id': patientId,
@@ -138,15 +179,69 @@ class CrossClientSync {
             'metric_version': row['metric_version']?.toString(),
             'captured_at_ms': row['started_utc_ms'],
             'payload': payload,
-          });
-          await sidecar.markSynced(type, sourceId, patientId);
-          uploaded++;
+          };
+          if (table == 'training_plans') {
+            await sidecar.enqueuePlan(
+              scope,
+              id,
+              sha256.convert(utf8.encode(jsonEncode(payload))).toString(),
+              body,
+            );
+          } else {
+            await sidecar.enqueue(scope, body);
+          }
         } catch (e) {
           errors.add('$type $id：$e');
           // Continue other independent records; the failed record stays pending.
         }
       }
     }
+    for (final entry in await sidecar.pending(scope)) {
+      if (!mayUpload()) break;
+      try {
+        final body = Map<String, dynamic>.from(
+          jsonDecode(entry['body'] as String) as Map,
+        );
+        // A locally deleted immutable record must not leave the device later.
+        final kind = body['record_type'];
+        final table = const {
+          'PIANO_SESSION': 'sessions',
+          'PIECE_PERFORMANCE': 'piece_performances',
+          'DANCE_SESSION': 'dance_sessions',
+        }[kind];
+        if (table != null &&
+            (await db.query(
+              table,
+              columns: ['session_id'],
+              where: 'profile_id=? AND session_id=?',
+              whereArgs: [localProfileId, body['source_record_id']],
+              limit: 1,
+            )).isEmpty) {
+          await sidecar.acknowledge(scope, entry['seq'] as int);
+          skipped++;
+          continue;
+        }
+        if (!mayUpload()) break;
+        await remote.syncRecord(body);
+        await sidecar.acknowledge(scope, entry['seq'] as int);
+        uploaded++;
+      } on RemoteApiException catch (e) {
+        if (e.status == 401 || e.status == 403) rethrow;
+        errors.add('上传失败（${e.status}）：${e.message}');
+        if (e.status == 0 ||
+            e.status == 408 ||
+            e.status == 429 ||
+            e.status >= 500) {
+          break;
+        }
+        await sidecar.reject(scope, entry['seq'] as int, e.status);
+      } catch (_) {
+        errors.add('网络暂不可用，将保留待同步记录。');
+        break;
+      }
+    }
+    final rejected = await sidecar.rejectedCount(scope);
+    if (rejected > 0) errors.add('$rejected 条记录被服务器拒绝，已保留，需核对后处理。');
     return SyncOutcome(uploaded, skipped, errors);
   }
 }

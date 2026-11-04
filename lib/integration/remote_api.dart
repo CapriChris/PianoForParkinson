@@ -52,9 +52,17 @@ class RemoteApi {
         req.add(utf8.encode(jsonEncode(data)));
       }
       final res = await req.close().timeout(const Duration(seconds: 60));
-      final body = await utf8.decoder.bind(res).join();
-      final parsed = body.isEmpty ? <String, dynamic>{} : jsonDecode(body);
+      final body = await utf8.decoder
+          .bind(res)
+          .join()
+          .timeout(const Duration(seconds: 30));
       if (res.statusCode < 200 || res.statusCode >= 300) {
+        Object? parsed;
+        try {
+          parsed = jsonDecode(body);
+        } on FormatException {
+          /* A proxy may return HTML. */
+        }
         final error = parsed is Map ? parsed['error'] : null;
         final msg = error is Map ? error['message'] : null;
         throw RemoteApiException(
@@ -62,7 +70,7 @@ class RemoteApi {
           '$msg'.trim() == 'null' ? '请求失败 (${res.statusCode})' : '$msg',
         );
       }
-      return Map<String, dynamic>.from(parsed as Map);
+      return Map<String, dynamic>.from(jsonDecode(body) as Map);
     } on SocketException {
       throw const RemoteApiException(0, '无法连接到服务器。请检查网络后重试。');
     } finally {
@@ -176,7 +184,10 @@ class RemoteApi {
       await req.addStream(file.openRead());
       req.add(utf8.encode('\r\n--$boundary--\r\n'));
       final res = await req.close().timeout(const Duration(minutes: 5));
-      final body = await utf8.decoder.bind(res).join();
+      final body = await utf8.decoder
+          .bind(res)
+          .join()
+          .timeout(const Duration(seconds: 30));
       final data = jsonDecode(body) as Map;
       if (res.statusCode < 200 || res.statusCode >= 300) {
         final error = data['error'];
