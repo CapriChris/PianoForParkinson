@@ -1,0 +1,52 @@
+openapi: 3.1.0
+info:
+  title: PD Rehab incremental synchronization extension
+  version: "1.0"
+servers:
+  - url: /api
+paths:
+  /integration/v1/changes:
+    get:
+      security: [{bearer: []}]
+      parameters:
+        - {name: patient_id, in: query, required: true, schema: {type: string, format: uuid}}
+        - {name: device_id, in: query, required: true, schema: {type: string}}
+        - {name: local_profile_id, in: query, required: true, schema: {type: string}}
+        - {name: cursor, in: query, schema: {type: string, maxLength: 2048}}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 50, default: 25}}
+      responses:
+        "200":
+          description: Apply items and next_cursor in a local transaction. Repeat if has_more.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items, next_cursor, has_more, patient, staff]
+                properties:
+                  next_cursor: {type: string}
+                  has_more: {type: boolean}
+                  patient: {type: object}
+                  staff: {type: object}
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      required: [kind, id, deleted]
+                      properties:
+                        kind: {type: string}
+                        id: {type: string}
+                        deleted: {type: boolean}
+                        data: {type: object}
+              example:
+                next_cursor: signed-scoped-cursor
+                has_more: false
+                patient: {id: example, name: QA}
+                staff: {id: staff, display_name: QA}
+                items: [{kind: assessment_sessions, id: a, deleted: true}]
+        "401": {description: Re-authenticate.}
+        "403": {description: Remove cached data and cursor for this scope.}
+        "409": {description: Cursor invalid; rebuild from a fresh cursor.}
+        "501": {description: Feed not enabled on this storage engine.}
+components:
+  securitySchemes:
+    bearer: {type: http, scheme: bearer, bearerFormat: JWT}
