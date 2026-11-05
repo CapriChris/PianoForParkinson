@@ -121,7 +121,7 @@ void main() {
         if (task == 'G1_MEMORY') {
           await tester.tap(find.byTooltip('Back'));
           await tester.pumpAndSettle();
-          await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+          await tester.tap(find.widgetWithText(FilledButton, 'Save'));
           await tester.pumpAndSettle();
           expect(find.byType(HomePage), findsOneWidget);
           expect(c.saved, true);
@@ -134,7 +134,7 @@ void main() {
           expect(c.storageError, isNotNull);
           await tester.tap(find.byTooltip('Back'));
           await tester.pumpAndSettle();
-          await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+          await tester.tap(find.widgetWithText(FilledButton, 'Save'));
           await tester.pumpAndSettle();
           expect(find.text('Leave with unsaved records?'), findsOneWidget);
           await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));

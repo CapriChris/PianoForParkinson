@@ -1,0 +1,72 @@
+# 当前工作区入口（2026-11-03）
+
+Flutter 工程在 `D:/MyIdea/PianoForParkinson/app`。交付基于 `0.1.56+57`，云端模块已合入本机的 `0.1.59+60`。原始 Flutter 交付包归档在 `D:/MyIdea/PianoForParkinson/recovery-data/PianoForParkinson-integrated-20261103`。
+
+公开 Web 仓库的 `main` 已更新到 `8f3fb2d`，包含集成功能提交 `a628447`。Flutter 的 `cross_client_openapi_integration.json` 与 Web 保留的原版协议逐字节一致，SHA-256 为 `40b6bd50ec1ff1eb6a0276f5ba095d5cf8fb4b5250af82bd4ef28ccab57cbfe9`。Web 的 v1.1 扩展增加了患者授权、绑定撤销和问答来源，线上 OpenAPI 保留了原有集成路径。[Web 发布报告](https://github.com/WuChangqing1/PD-Rehab-Web/blob/8f3fb2db676f96eaa3ec5bff07a8dc3abc9fe02e/docs/WEB_INTEGRATION_MAINTENANCE_REPORT.md)
+
+生产 API 地址为 `https://ccqspace.site/pd-rehab/api`。复核时 `/system/health` 和 `/openapi.json` 返回 200，未登录访问 `/integration/v1/capabilities` 返回 401。Web 队友的报告记录了接口级端到端验收，Flutter 真机验收仍需使用联调账号、测试患者与测试素材完成。[线上 API 文档](https://ccqspace.site/pd-rehab/api/docs)
+
+```powershell
+Set-Location 'D:/MyIdea/PianoForParkinson/app'
+git status --short
+Get-FileHash .\cross_client_openapi_integration.json
+flutter pub get
+flutter analyze
+flutter test
+flutter build apk --debug --dart-define=PD_CLOUD_INTEGRATION=true
+```
+
+用这个开关构建后，在设置中打开「云端服务联调」，填入测试 HTTPS API 地址。常规构建默认隐藏该入口。对象级授权、绑定隔离、视频同意与留存通过验收后，再考虑用真实数据。
+
+本机已更新 `pubspec.lock`，`flutter analyze` 及新增的 3 项 API 客户端测试通过。合入后全量测试为 622 项通过、102 项失败。在移除本次集成改动的临时副本中复跑相关测试，复现了同一组 102 项失败。
+
+带联调开关的 Android debug 构建已通过。输出位于 `app/build/app/outputs/flutter-apk/app-debug.apk`。需用此包在 Android 真机验证同步、面部分析和 AI 问答的完整交互。
+
+---
+
+# Flutter / Android Agent：PianoForParkinson 跨端联通后续维护与编译调试（2026-11-03）
+
+维护现有 Flutter 项目，不重建：
+`D:\MyIdea\PianoForParkinson\app`
+对应后端见上方 Web 发布报告。联调优先填写 Web 队友提供的测试 HTTPS API 地址。
+
+## 首先完整阅读
+- 根目录 `CROSS_CLIENT_INTEGRATION_HANDOFF.md` 和 `cross_client_openapi_integration.json`。
+- `lib/integration/remote_api.dart`：HTTPS 请求、Web 员工登录、视频 multipart 上传、Face Job、AI Chat。
+- `lib/integration/sync_store.dart`：独立 `pd_cloud_sync.db` 缓存/上传标记。
+- `lib/integration/sync_service.dart`：本地 SQLite v4 原始数据同步。
+- `lib/integration/remote_pages.dart`：云端入口、患者绑定、视频选帧、AI 问答 UI。
+- `lib/app/piano_app.dart` 新设置入口；原 `lib/data/practice_repository.dart`、`lib/data/record_integrity.dart`、`lib/domain`。
+- 与 Web Agent 对照 `backend/app/api/integration.py`，不要未经协商修改线上字段、错误码、记录类型或音频任务语义。
+
+## 最优先：必须在用户 Windows 真实环境完成编译与调试
+1. `git status`，确认未提交修改，保留原来的所有钢琴和舞蹈训练功能与本地存储。检查 README 当前工具链约定（原项目 Flutter 3.47.7 / Dart 3.13.5 / JDK21；以实际本机为准）。
+2. `flutter doctor -v` → `flutter pub get`（`image_picker` 已合入当前工程并更新锁文件）→ `dart format --output=none --set-exit-if-changed lib/integration test/integration` → `flutter analyze` → `flutter test` → `flutter build apk --debug --dart-define=PD_CLOUD_INTEGRATION=true`，有条件再构建 release 并在真实 Android 上测试。必须记录并修复真实编译、插件、Gradle、SDK、权限、video_player 等问题。上一轮交付环境未运行任何 Flutter/Dart 命令，**不能把 Dart 编译称作已通过**。
+3. 验证 AndroidManifest `INTERNET`、摄像头/相册权限由 `image_picker` 插件正确处理；如需 Android 13/14/15 的权限配置按实际插件文档处理。检查 `https://ccqspace.site/pd-rehab/api` 是否实际可访问且证书有效；绝不为了调试而在正式 App 允许明文 HTTP 或关闭证书验证。
+
+## 数据同步安全与兼容
+A. **绝不更改现有 practice.db 的 schema v4、迁移、哈希校验及原始训练事件。** 新的云缓存只能存在 `pd_cloud_sync.db` 等隔离空间。再次验证离线训练、节拍、音频、舞蹈、练习计划和本地历史与旧版本一致。
+B. 本地 `profiles` 初期只有单个 Profile；不能偷偷把已有记录归属给手机上新选择的另一患者。绑定必须使用服务器 `patients.id` UUID + 本地 Profile ID + 设备 ID，显示患者姓名/编号供二次确认；绑定后锁定。未来如要多患者共用设备，先实现安全 Profile 切换和本地缓存隔离，不可直接覆盖绑定。
+C. 当前 `CrossClientSync.syncAll()` 扫描 `sessions`、`piece_performances`、`dance_sessions`、`training_plans`、`plan_occurrences`。检查上传记录必须完整、经过原记录完整性校验、指标单位和版本不丢失，断线重试幂等，不产生重复记录；修复分页限额、资源上限和保存失败。注意 mutable 计划修订与旧的稳定会话 ID 各自不同同步策略。
+D. 当前云端数据只读快照缓存尚非完整双向数据编辑。若要软件端真正编辑患者、医护档案、计划，必须先与 Web Agent 确立每种实体权威源、change cursor、版本冲突与软删除语义，再实现。绝不使用姓名匹配患者，绝不把云端 Web 表的数据直接插入本地经过校验的 `sessions/trials/events` 等表。
+E. 工作人员登陆态现在只保存在内存，不存密码和 JWT 到 SQLite。若要实现免登录，采用 OS keystore（如 flutter_secure_storage，需评估权限与退出销毁），不要明文保存 JWT。禁止在输出日志和错误 Dialog 中显示 Authorization Token 或原始患者病历。
+
+## 面部视频云推理
+1. 模型推理全部在 Web，不把真实权重放入 Flutter APK。软件支持拍视频或选视频 → 预览 → 告知并取得患者明确授权 → HTTPS 上传 → 后端 `job_id` → CausalNet 候选关键帧预览 → 人工确认 onset/apex/offset → 任务状态 → **真实**结果展示。
+2. 审核后端返回 candidate id、frame count、fps、时间戳边界；确认所选关键帧来自正确视频且用户实际预览了相应时段，不只预览一张峰值帧就默认为临床完成。若模型没配置，显示真实不可用，不伪造七类概率；CausalNet 现有实际三类标签，不得随意扩大为七类。
+3. 加入明确上传大小提示，客户端和服务端限制一致（Web 当前约 50MB，上限可按配置更小）；网络断流/服务器重启/任务复核过期后能正确恢复提示；确保 Widget dispose 后不使用失效 context、视频控制器/HttpClient 关闭，真机测试长视频 OOM、旋转屏幕与切后台行为。
+
+## AI 问答
+Web 统一提供 `/integration/v1/expert/chat`，软件不存 LLM API Key。优先问答知识/平台用法，未配置模型展示暂不可用；不得用模拟回答冒充服务端结果。未来患者数据解读需要由服务端受控查询，不让模型随意读全量患者资料。补充历史、错误重试和用户可读的界面。
+
+## 产品与验收流程
+仍坚持软件原生钢琴、舞蹈、节奏、离线训练优先，云功能从设置页打开即可，不要强制用户登录云端才能弹琴。完成真实 Android 设备测试：
+1. 离线启动/练习并保存 → 网络恢复后登录并绑定正确患者 → 上传多条训练 → Web 可见且重复同步不重复写入；
+2. 从 Web 下载该患者既有评估/钢琴/舞蹈记录到隔离缓存，不能混淆指标版本；
+3. 上传面部视频，人工审核正确关键帧，得到真实三分类模型结果，Web 同时可见；
+4. 测试没有模型、没有 AI Key、没有网络、令牌过期、错误患者、权限拒绝、重复提交、超大视频、用户取消与 App 重启；
+5. AI 问答获得真实模型输出或明确的 503，不出现虚构医学结论。
+
+## 交付与 Git
+分小 Commit：`fix: compile mobile cloud integration`、`test: cover cloud sync and media upload`、`feat: harden patient binding and offline sync` 等。只有用户明确授权时才把 APK 推送到公开 Release 或自动发布；敏感数据/私有密钥不能进 public GitHub。
+生成 `docs/FLUTTER_INTEGRATION_VALIDATION_REPORT.md`，列真实 Flutter/Gradle/设备信息、编译和全部测试命令输出、重要交互截图、同步 API/记录版本、尚未完成的自动双向数据同步、与 Web Agent 协商的契约变化、APK 真实路径与 SHA256、每项阻塞及 Git Commit。不得将未实测的 Android、真实模型或在线服务标记为成功。

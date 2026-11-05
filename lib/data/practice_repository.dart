@@ -30,8 +30,10 @@ class PracticeRepository {
   late Json _normalizedSettings;
   final Map<String, _WriteCache> _cache = {};
   final safety = DatabaseSafety();
+  final _initialTaskStates = <String, Json?>{};
   Future<void> open(String directory, String locale) async {
     _cache.clear();
+    _initialTaskStates.clear();
     await safety.prepare('$directory/practice.db');
     db = await openDatabase(
       '$directory/practice.db',
@@ -391,12 +393,29 @@ class PracticeRepository {
       'snapshot_sha256': digest(snapshot),
       'environment_json': canonical(environment),
     };
+    Json? initialState;
     final cache = await db.transaction((tx) async {
+      final states = await tx.query(
+        'profile_task_state',
+        where: 'profile_id=? AND task_id=? AND mode=? AND parameter_profile_version=?',
+        whereArgs: [
+          profile['profile_id'],
+          engine.taskId,
+          engine.mode,
+          engine.config.json['version'],
+        ],
+      );
+      initialState = states.isEmpty
+          ? null
+          : Map<String, dynamic>.from(states.single);
       await tx.insert('sessions', session);
       return _persist(tx, engine, data);
     });
     _cache.clear();
     _cache[engine.id] = cache;
+    _initialTaskStates
+      ..clear()
+      ..[engine.id] = initialState;
   }
 
   Future<Json> _capture(TaskEngine engine) {
@@ -745,7 +764,7 @@ class PracticeRepository {
       'WHERE profile_id=? AND started_utc_ms>=? AND started_utc_ms<? '
       '${taskId == null ? '' : 'AND task_id=? '}'
       '${contentId == null ? '' : 'AND content_id=? '}'
-      'ORDER BY started_utc_ms DESC, session_id LIMIT 41',
+      'ORDER BY started_utc_ms DESC, session_id',
       [
         profile['profile_id'],
         from.millisecondsSinceEpoch,
@@ -942,6 +961,51 @@ class PracticeRepository {
           ? (sortedIds.isEmpty ? null : sortedIds.first)
           : recent.single['content_id'],
     };
+  }
+
+  /// Discard only a live session created by this repository instance.
+  Future<void> discard(String id) async {
+    if (!_initialTaskStates.containsKey(id)) {
+      throw StateError('E_SESSION_NOT_OWNED');
+    }
+    final initialState = _initialTaskStates[id];
+    await db.transaction((tx) async {
+      final rows = await tx.query(
+        'sessions',
+        where: 'session_id=? AND profile_id=?',
+        whereArgs: [id, profile['profile_id']],
+      );
+      if (rows.isEmpty) return;
+      final session = rows.single;
+      if ([
+        'COMPLETED',
+        'EXITED',
+        'RECOVERED_INTERRUPTED',
+      ].contains(session['status'])) {
+        throw StateError('E_TERMINAL_SESSION');
+      }
+      await tx.delete(
+        'plan_links',
+        where: "record_id=? AND record_kind='exercise'",
+        whereArgs: [id],
+      );
+      await tx.delete('sessions', where: 'session_id=?', whereArgs: [id]);
+      await tx.delete(
+        'profile_task_state',
+        where: 'profile_id=? AND task_id=? AND mode=? AND parameter_profile_version=?',
+        whereArgs: [
+          session['profile_id'],
+          session['task_id'],
+          session['mode'],
+          session['parameter_profile_version'],
+        ],
+      );
+      if (initialState != null) {
+        await tx.insert('profile_task_state', initialState);
+      }
+    });
+    _cache.remove(id);
+    _initialTaskStates.remove(id);
   }
 
   Future<void> delete(String id) async {

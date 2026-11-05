@@ -27,10 +27,9 @@ class AssistantReply {
     final refs = body['references'];
     if (answer is! String ||
         answer.trim().isEmpty ||
-        answer.length > 2400 ||
-        (nextStep != null && (nextStep is! String || nextStep.length > 600)) ||
-        refs is! List ||
-        refs.length > 6) {
+        answer.length > 12000 ||
+        (nextStep != null && (nextStep is! String || nextStep.length > 2000)) ||
+        refs is! List) {
       throw const AssistantFailure('invalid_reply');
     }
     final allowed = <int, Set<String>>{
@@ -89,7 +88,7 @@ class AssistantGateway {
   }
 
   String get consentVersion =>
-      '${base ?? 'local'}#${const String.fromEnvironment('QIN_AI_PRIVACY_VERSION', defaultValue: '1')}';
+      '${base ?? 'local'}#${const String.fromEnvironment('QIN_AI_PRIVACY_VERSION', defaultValue: '2')}';
 
   Future<AssistantReply> ask({
     required String locale,
@@ -171,6 +170,9 @@ class AssistantGateway {
           );
         }
         final payload = utf8.encode(jsonEncode(body));
+        if (payload.length > 4 * 1024 * 1024) {
+          throw const AssistantFailure('context_too_large');
+        }
         request.contentLength = payload.length;
         if (token != null) {
           request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
@@ -185,7 +187,7 @@ class AssistantGateway {
         }
         final bytes = <int>[];
         await for (final chunk in response) {
-          if (bytes.length + chunk.length > 32 * 1024) {
+          if (bytes.length + chunk.length > 512 * 1024) {
             throw const AssistantFailure('invalid_reply');
           }
           bytes.addAll(chunk);
@@ -194,7 +196,7 @@ class AssistantGateway {
         if (data is! Json) throw const AssistantFailure('invalid_reply');
         return data;
       })().timeout(
-        const Duration(seconds: 38),
+        const Duration(seconds: 120),
         onTimeout: () => throw const AssistantFailure('timeout'),
       );
     } on IOException {
@@ -209,6 +211,7 @@ class AssistantGateway {
   static AssistantFailure _failure(int status) =>
       AssistantFailure(switch (status) {
         401 => 'unauthorized',
+        413 => 'context_too_large',
         422 => 'invalid_reply',
         429 => 'quota',
         504 => 'timeout',
@@ -223,7 +226,7 @@ class AssistantGateway {
     var received = 0;
     final bounded = response.map((bytes) {
       received += bytes.length;
-      if (received > 128 * 1024) throw const AssistantFailure('invalid_reply');
+      if (received > 1024 * 1024) throw const AssistantFailure('invalid_reply');
       return bytes;
     });
     var answer = '';
@@ -236,7 +239,7 @@ class AssistantGateway {
       switch (event) {
         case {'delta': final String delta}:
           answer += delta;
-          if (answer.length > 4800) {
+          if (answer.length > 16000) {
             throw const AssistantFailure('invalid_reply');
           }
           onAnswer?.call(answer);

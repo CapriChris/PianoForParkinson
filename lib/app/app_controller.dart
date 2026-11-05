@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 import '../data/content_repository.dart';
+import '../data/assistant_conversation_store.dart';
 import '../data/practice_repository.dart';
 import '../data/training_schedule_repository.dart';
 import '../platform/plan_reminders.dart';
@@ -22,6 +23,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final PracticeRepository repository;
   final platform = PlatformService();
   final AssistantGateway assistant;
+  final assistantConversations = AssistantConversationStore();
   TrainingCaptureService? _captures;
   TrainingCaptureService get captures =>
       _captures ??= TrainingCaptureService(repository);
@@ -84,6 +86,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   int _previewSerial = 0;
   int _generation = 0, _lastFlushSeq = 0;
   Future<void>? _pendingFlush;
+  bool _discardingPractice = false;
   Json? layout;
   bool get hasPendingSave => engine?.ended == true && !saved;
   AppController({
@@ -128,6 +131,8 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   String get mode => repository.profile['mode'] as String;
   Json get settings => repository.settings;
   int get assistantConsentRevision => _assistantConsentRevision;
+  String get assistantMemoryConsent =>
+      '${assistant.consentVersion}#${settings['assistant_memory_epoch'] ?? ''}';
   bool get assistantRecordsAllowed =>
       !_assistantRevoking &&
       settings['assistant_record_consent'] == assistant.consentVersion;
@@ -138,6 +143,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       await updateSettings(
         values: {
           'assistant_record_consent': allowed ? assistant.consentVersion : '',
+          if (!allowed) 'assistant_memory_epoch': uuid(),
         },
       );
     } finally {
@@ -179,6 +185,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         await Directory(databasePath).create();
       }
       await repository.open(databasePath, language == 'zh' ? 'zh-Hans' : 'en');
+      await assistantConversations.open(databasePath);
       await content.load().timeout(const Duration(seconds: 10));
       content.select(settings['selected_song_id'] as String?);
       await refreshIntroLessonProgress();
@@ -590,21 +597,25 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void down(int pointer, int? key, {bool disabled = false, Json? coordinates}) {
+    if (_discardingPractice) return;
     engine?.down(pointer, key, disabled: disabled, coordinates: coordinates);
     _changed();
   }
 
   void up(int pointer, {bool cancel = false, Json? coordinates}) {
+    if (_discardingPractice) return;
     engine?.up(pointer, cancel: cancel, coordinates: coordinates);
     _changed();
   }
 
   void move(int pointer, Json coordinates) {
+    if (_discardingPractice) return;
     engine?.move(pointer, coordinates);
     if (engine?.ended == true) _changed();
   }
 
   void reconfigureLayout(Json value) {
+    if (_discardingPractice) return;
     layout = value;
     engine?.reconfigure(value);
     _changed();
@@ -624,11 +635,13 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void cue() {
+    if (_discardingPractice) return;
     engine?.cuePresented();
     _changed();
   }
 
   void pause(String reason) {
+    if (_discardingPractice) return;
     engine?.pause(reason);
     _changed();
     unawaited(flush());
@@ -674,6 +687,37 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     engine?.finish('EXITED');
     _changed();
     await finishSave();
+  }
+
+  Future<void> discardPractice() async {
+    if (_discardingPractice) return;
+    final task = engine;
+    if (task == null) return;
+    if (busy || task.ended) throw StateError('E_SESSION_NOT_ACTIVE');
+    _discardingPractice = true;
+    busy = true;
+    try {
+      task.pause('USER');
+      _drainAudio();
+      await _audioWrites;
+      await stopAllPlayback();
+      await _writes;
+      await repository.discard(task.id);
+      _ticker?.cancel();
+      _recorder?.cancel();
+      engine = null;
+      layout = null;
+      saved = false;
+      storageError = null;
+      _lastFlushSeq = 0;
+      trainingUpdates.value++;
+      syncPlanReminders();
+      await refreshHistory();
+    } finally {
+      _discardingPractice = false;
+      busy = false;
+      notifyListeners();
+    }
   }
 
   void _drainAudio() {
@@ -733,7 +777,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> flush() {
     final task = engine;
-    if (task == null) return Future.value();
+    if (task == null || _discardingPractice) return Future.value();
     final pending = _pendingFlush;
     if (pending != null) {
       return pending;
@@ -894,6 +938,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   void dispose() {
     _disposed = true;
     _captures?.dispose();
+    unawaited(assistantConversations.close().catchError((_) {}));
     _historyRevision++;
     WidgetsBinding.instance.removeObserver(this);
     _ticker?.cancel();

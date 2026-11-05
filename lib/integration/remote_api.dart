@@ -200,13 +200,6 @@ class RemoteApi {
   Future<Map<String, dynamic>> syncRecord(Map<String, dynamic> payload) =>
       request('POST', '/integration/v1/records', data: payload);
 
-  Future<Map<String, dynamic>> ask(String question, {String? patientId}) =>
-      request(
-        'POST',
-        '/integration/v1/expert/chat',
-        data: {'question': question, 'patient_id': ?patientId},
-      );
-
   Future<Map<String, dynamic>> faceJob(
     String path, {
     required String patientId,

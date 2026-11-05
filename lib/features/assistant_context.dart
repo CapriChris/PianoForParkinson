@@ -26,6 +26,28 @@ class AssistantEvidence {
   final String? recordId, content, condition;
   final int? startedAt;
 
+  Json toStoredJson() => {
+    'kind': kind,
+    'title': title,
+    'date': date,
+    'metrics': metrics,
+    'record_id': recordId,
+    'content': content,
+    'condition': condition,
+    'started_at': startedAt,
+  };
+
+  factory AssistantEvidence.fromStoredJson(Json value) => AssistantEvidence(
+    kind: value['kind'] as String,
+    title: value['title'] as String,
+    date: value['date'] as String,
+    metrics: Map<String, num>.from(value['metrics'] as Map),
+    recordId: value['record_id'] as String?,
+    content: value['content'] as String?,
+    condition: value['condition'] as String?,
+    startedAt: value['started_at'] as int?,
+  );
+
   // The local record ID and comparison key never leave the device.
   Json payload(int index) => {
     'ref': index + 1,
@@ -40,6 +62,25 @@ class AssistantContext {
   const AssistantContext(this.evidence, {this.from, this.until, this.limit});
   final List<AssistantEvidence> evidence;
   final String? from, until, limit;
+
+  Json toStoredJson() => {
+    'from': from,
+    'until': until,
+    'limit': limit,
+    'evidence': [for (final item in evidence) item.toStoredJson()],
+  };
+
+  factory AssistantContext.fromStoredJson(Json value) => AssistantContext(
+    [
+      for (final item in value['evidence'] as List)
+        AssistantEvidence.fromStoredJson(
+          Map<String, dynamic>.from(item as Map),
+        ),
+    ],
+    from: value['from'] as String?,
+    until: value['until'] as String?,
+    limit: value['limit'] as String?,
+  );
 
   Json toJson() => {
     if (from != null) 'from': from,
@@ -59,11 +100,11 @@ class AssistantContextReader {
     r'点评|复盘|回顾|表现|进步|进展|退步|怎么样|好吗|改进|比之前|练了|完成了|完成情况|练习记录|'
     r'下次.{0,6}怎么练|下一次.{0,6}怎么练|加速|提速|'
     r'how did|how am i doing|how have i|review|progress|improv|performance|'
-    r'compared|practic(ed|e history)|training records|how many',
+    r'compared|practic(ed|e history)|training records|how many|记录|数据|成绩|历史|records|results|statistics',
     caseSensitive: false,
   );
   static final _practiceWords = RegExp(
-    r'练习|练得|训练|练了|弹|跳|计划|这次|上次|刚才|我的|'
+    r'练习|练得|训练|练了|弹|跳|计划|这次|上次|刚才|我的|记录|数据|历史|成绩|record|result|'
     r'practice|training|session|piano|dance|my |this time|last time|today|this week',
     caseSensitive: false,
   );
@@ -174,11 +215,13 @@ class AssistantContextReader {
                   lower.contains('这个月') ||
                   lower.contains('this month')
             ? DateTime(today.year, today.month)
-            : DateTime(
+            : _recent.hasMatch(question)
+            ? DateTime(
                 referenceDay.year,
                 referenceDay.month,
                 referenceDay.day - 13,
-              ));
+              )
+            : DateTime(1970));
     final lastDate = _dateIn(question, last: true);
     final endDay = requestedDate == null
         ? referenceDay
@@ -202,7 +245,7 @@ class AssistantContextReader {
       contentId: piece,
     );
     final candidates = <AssistantEvidence>[];
-    for (final row in rows.take(40)) {
+    for (final row in rows) {
       final id = row['session_id'] as String;
       if (id == selected?.recordId) continue;
       final item = await _readRecord(
@@ -220,7 +263,7 @@ class AssistantContextReader {
             anchor.condition != null &&
             item.condition == anchor.condition,
       );
-      final evidence = [anchor, ...comparable.take(4)];
+      final evidence = [anchor, ...comparable];
       return AssistantContext(
         evidence,
         from: fromLabel,
@@ -238,46 +281,11 @@ class AssistantContextReader {
         ).hasMatch(question)) {
       return AssistantContext([candidates.first]);
     }
-    if (task == null && selected == null && candidates.isNotEmpty) {
-      final counts = <String, int>{};
-      for (final item in candidates) {
-        final type = exerciseIds.contains(item.kind) ? 'exercise' : item.kind;
-        counts[type] = (counts[type] ?? 0) + 1;
-      }
-      return AssistantContext(
-        [
-          for (final entry in counts.entries)
-            AssistantEvidence(
-              kind: entry.key,
-              title: switch (entry.key) {
-                'DANCE' => c.text('舞蹈跟练', 'Dance practice'),
-                'PIANO_PIECE' => c.text('钢琴曲目', 'Piano pieces'),
-                _ => c.text('钢琴练习', 'Piano exercises'),
-              },
-              date: '$fromLabel — $untilLabel',
-              metrics: {'session_count': entry.value},
-            ),
-          for (final type in counts.keys)
-            candidates.firstWhere(
-              (item) =>
-                  (exerciseIds.contains(item.kind) ? 'exercise' : item.kind) ==
-                  type,
-            ),
-        ],
-        from: fromLabel,
-        until: untilLabel,
-        limit: rows.length > 40 ? 'latest_sample_only' : null,
-      );
-    }
     return AssistantContext(
-      [?selected, ...candidates.take(5)],
+      [?selected, ...candidates],
       from: fromLabel,
       until: untilLabel,
-      limit: candidates.isEmpty && selected == null
-          ? 'no_records'
-          : candidates.length > 5
-          ? 'latest_sample_only'
-          : null,
+      limit: candidates.isEmpty && selected == null ? 'no_records' : null,
     );
   }
 
@@ -373,6 +381,18 @@ class AssistantContextReader {
         if (key != null) condition = '$kind:${result['version']}:$key';
       }
     }
+    void collectNumbers(Map source, String prefix) {
+      for (final entry in source.entries) {
+        final key = prefix.isEmpty ? '${entry.key}' : '$prefix.${entry.key}';
+        final value = entry.value;
+        if (value is num && value.isFinite) metrics[key] = value;
+        if (value is Map) collectNumbers(value, key);
+      }
+    }
+
+    if (kind != 'PIANO_PIECE' && kind != 'DANCE') {
+      collectNumbers(result, 'result');
+    }
     if (metrics.isEmpty) return null;
     return AssistantEvidence(
       kind: kind,
@@ -393,20 +413,16 @@ class AssistantContextReader {
     );
     final summaries = await repository.summaries(day);
     final evidence = [
-      for (final row
-          in summaries
-              .where((row) {
-                final plan = row['plan'] as Json;
-                final matches = switch (task) {
-                  'PIANO_PIECE' => plan['kind'] == 'piece',
-                  'DANCE' => plan['kind'] == 'dance',
-                  null => true,
-                  _ =>
-                    plan['kind'] == 'exercise' && plan['training_id'] == task,
-                };
-                return matches && plan['paused'] != true && planDue(plan, day);
-              })
-              .take(5))
+      for (final row in summaries.where((row) {
+        final plan = row['plan'] as Json;
+        final matches = switch (task) {
+          'PIANO_PIECE' => plan['kind'] == 'piece',
+          'DANCE' => plan['kind'] == 'dance',
+          null => true,
+          _ => plan['kind'] == 'exercise' && plan['training_id'] == task,
+        };
+        return matches && plan['paused'] != true && planDue(plan, day);
+      }))
         AssistantEvidence(
           kind: 'plan',
           title: c.text('训练计划', 'Training plan'),

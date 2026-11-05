@@ -344,20 +344,6 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage>
     );
   }
 
-  void openExpert() {
-    final service = remote;
-    if (service == null) {
-      setState(() => status = '请先登录，再使用 AI 问答。');
-      return;
-    }
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ExpertQuestionPage(api: service, patientId: patientId),
-      ),
-    );
-  }
-
   void openFace() {
     final service = remote;
     final id = patientId;
@@ -392,7 +378,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage>
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('云端数据与 AI 服务'),
+      title: const Text('云端数据与面部分析'),
       actions: [
         if (remote?.signedIn == true)
           IconButton(
@@ -576,12 +562,6 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage>
             icon: const Icon(Icons.face_outlined),
             label: const Text('上传面部视频分析'),
           ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: loading ? null : openExpert,
-            icon: const Icon(Icons.chat_bubble_outline),
-            label: const Text('AI 康复问答'),
-          ),
           if (loading)
             const Padding(
               padding: EdgeInsets.all(16),
@@ -591,115 +571,6 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage>
           SelectableText(status),
           const SizedBox(height: 8),
           const Text('注意：此版本以 Web 患者档案为主、软件上传历史记录；不会覆盖本机原始数据。切换患者不能自动转移旧训练记录。'),
-        ],
-      ),
-    ),
-  );
-}
-
-class ExpertQuestionPage extends StatefulWidget {
-  const ExpertQuestionPage({super.key, required this.api, this.patientId});
-  final RemoteApi api;
-  final String? patientId;
-  @override
-  State<ExpertQuestionPage> createState() => _ExpertQuestionPageState();
-}
-
-class _ExpertQuestionPageState extends State<ExpertQuestionPage> {
-  final input = TextEditingController();
-  final turns = <({String question, String answer})>[];
-  bool busy = false;
-  String? error;
-  Future<void> send() async {
-    final text = input.text.trim();
-    if (text.isEmpty || busy) return;
-    setState(() {
-      busy = true;
-      error = null;
-    });
-    try {
-      final result = await widget.api.ask(text, patientId: widget.patientId);
-      if (!mounted) return;
-      setState(() {
-        turns.add((question: text, answer: '${result['answer']}'));
-        input.clear();
-      });
-    } catch (e) {
-      if (mounted) setState(() => error = '$e');
-    } finally {
-      if (mounted) setState(() => busy = false);
-    }
-  }
-
-  @override
-  void dispose() {
-    input.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('AI 康复问答')),
-    body: SafeArea(
-      child: Column(
-        children: [
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: Text('用于康复知识与平台使用帮助。当前不会向模型传送患者病历，也不会提供诊断和处方。'),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                for (final t in turns) ...[
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Text(t.question),
-                      ),
-                    ),
-                  ),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: SelectableText(t.answer),
-                    ),
-                  ),
-                ],
-                if (error != null)
-                  Text(
-                    error!,
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          if (busy) const LinearProgressIndicator(),
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: input,
-                    maxLines: 2,
-                    decoration: const InputDecoration(
-                      hintText: '输入康复问题或训练操作疑问',
-                    ),
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  tooltip: '发送',
-                  onPressed: busy ? null : send,
-                ),
-              ],
-            ),
-          ),
         ],
       ),
     ),

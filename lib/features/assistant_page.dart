@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -23,8 +25,8 @@ Future<bool?> _askRecordConsent(
     content: Text(
       c.assistant.available
           ? c.text(
-              '允许后，琴伴会把问题和相关练习摘要（如项目、日期、成绩）发送给琴伴服务及${_provider(c)}，用于回答问题。你可以在设置中撤回授权。',
-              'If you allow this, Qinban and ${_provider(c)} receive your question and relevant practice summaries. You can revoke permission in Settings.',
+              '允许后，助手可在回答需要时查询你的训练记录，并将相关记录、指标和本会话内容发送给琴伴服务及${_provider(c)}，用于回答问题。聊天保存在本机，你可以删除会话或在设置中撤回记录授权。',
+              'If you allow this, Piano Companion and ${_provider(c)} receive relevant practice records, metrics and conversation messages when needed. Chats are stored on this device. You can delete chats or revoke record access in Settings.',
             )
           : c.text(
               '在本机读取相关练习摘要并展示参考记录。目前未配置在线服务。',
@@ -117,16 +119,26 @@ class AssistantReviewCard extends StatelessWidget {
 }
 
 class AssistantPrivacyTile extends StatelessWidget {
-  const AssistantPrivacyTile({super.key, required this.c});
+  const AssistantPrivacyTile({
+    super.key,
+    required this.c,
+    this.showDescription = true,
+  });
   final AppController c;
+  final bool showDescription;
 
   @override
   Widget build(BuildContext context) => SwitchListTile(
     contentPadding: EdgeInsets.zero,
-    title: Text(c.text('AI 结合训练记录', 'AI access to practice summaries')),
-    subtitle: Text(
-      c.text('只在回答相关问题时使用摘要。', 'Use summaries only for related questions.'),
-    ),
+    title: Text(c.text('AI 结合训练记录', 'AI access to practice records')),
+    subtitle: showDescription
+        ? Text(
+            c.text(
+              '允许助手按问题查询训练记录，可随时撤回。',
+              'Allow record queries when needed. You can revoke access anytime.',
+            ),
+          )
+        : null,
     value: c.assistantRecordsAllowed,
     onChanged: (enabled) async {
       if (enabled && await _askRecordConsent(context, c) != true) return;
@@ -180,6 +192,7 @@ class _AssistantTurn {
     this.local = false,
     this.error,
     this.consentRevision,
+    this.consentKey,
   });
   final String question;
   final AssistantScope scope;
@@ -188,6 +201,50 @@ class _AssistantTurn {
   final AssistantContext? context;
   final int? consentRevision;
   final bool local;
+  final String? consentKey;
+
+  Json toJson() => {
+    'question': question,
+    'scope': scope.name,
+    'record_id': recordId,
+    'reply': reply == null
+        ? null
+        : {
+            'answer': reply!.answer,
+            'next_step': reply!.nextStep,
+            'references': [
+              for (final entry in reply!.references.entries)
+                {'ref': entry.key, 'metrics': entry.value.toList()},
+            ],
+          },
+    'context': context?.toStoredJson(),
+    'local': local,
+    'error': error,
+    'consent_key': consentKey,
+  };
+
+  factory _AssistantTurn.fromJson(Json row) {
+    final context = row['context'] == null
+        ? null
+        : AssistantContext.fromStoredJson(
+            Map<String, dynamic>.from(row['context'] as Map),
+          );
+    return _AssistantTurn(
+      row['question'] as String,
+      AssistantScope.values.byName(row['scope'] as String),
+      row['record_id'] as String?,
+      row['reply'] == null
+          ? null
+          : AssistantReply.parse(
+              Map<String, dynamic>.from(row['reply'] as Map),
+              context?.toJson(),
+            ),
+      context: context,
+      local: row['local'] == true,
+      error: row['error'] as String?,
+      consentKey: row['consent_key'] as String?,
+    );
+  }
 }
 
 class _AssistantPageState extends State<AssistantPage> {
@@ -200,9 +257,291 @@ class _AssistantPageState extends State<AssistantPage> {
   String? _pending;
   String _streamedAnswer = '';
   bool _busy = false;
+  bool _loading = true;
+  bool _switching = false;
+  final _scaffold = GlobalKey<ScaffoldState>();
+  List<Json> _conversations = [];
+  String _conversationId = uuid();
+  String? _conversationTitle;
+  late String? _recordLabel = widget.recordLabel;
+  Timer? _draftTimer;
+  Future<void> _saveTail = Future.value();
+
+  String get _profileId => c.repository.profile['profile_id'] as String;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadConversations());
+  }
+
+  Future<void> _loadConversations() async {
+    try {
+      final rows = await c.assistantConversations.list(_profileId);
+      if (mounted) setState(() => _conversations = rows);
+    } catch (_) {
+      _storageNotice();
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  void _storageNotice() {
+    if (!mounted) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            c.text(
+              '暂时无法保存或读取聊天记录，请重试。',
+              'Chat history could not be saved or read. Please retry.',
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
+  Future<void> _persist() async {
+    _draftTimer?.cancel();
+    if (_turns.isEmpty && _pending == null && _input.text.trim().isEmpty) {
+      return;
+    }
+    final first =
+        _turns.firstOrNull?.question ?? _pending ?? _input.text.trim();
+    final snapshot = <String, dynamic>{
+      'id': _conversationId,
+      'profile_id': _profileId,
+      'title': _conversationTitle ?? first.characters.take(40).toString(),
+      'updated_ms': DateTime.now().millisecondsSinceEpoch,
+      'record_id': _recordId,
+      'record_label': _recordLabel,
+      'turns': [for (final turn in _turns) turn.toJson()],
+      'draft': _input.text,
+      'pending': _pending,
+    };
+    final write = c.assistantConversations.save(snapshot);
+    _saveTail = write;
+    try {
+      await write;
+      final rows = await c.assistantConversations.list(
+        snapshot['profile_id'] as String,
+      );
+      if (mounted) setState(() => _conversations = rows);
+    } catch (_) {
+      _storageNotice();
+    }
+  }
+
+  Future<void> _newConversation() async {
+    if (_busy || _loading || _switching) return;
+    setState(() => _switching = true);
+    try {
+      await _persist();
+      if (!mounted) return;
+      setState(() {
+        _conversationId = uuid();
+        _conversationTitle = null;
+        _turns.clear();
+        _input.clear();
+        _recordId = null;
+        _recordLabel = null;
+      });
+      _scaffold.currentState?.closeDrawer();
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
+  }
+
+  Future<void> _selectConversation(Json row) async {
+    if (_busy || _loading || _switching) return;
+    if (row['id'] == _conversationId) {
+      _scaffold.currentState?.closeDrawer();
+      return;
+    }
+    setState(() => _switching = true);
+    try {
+      await _persist();
+      if (!mounted) return;
+      final turns = [
+        for (final turn in row['turns'] as List)
+          _AssistantTurn.fromJson(Map<String, dynamic>.from(turn as Map)),
+      ];
+      final pending = row['pending'] as String?;
+      if (pending != null) {
+        turns.add(
+          _AssistantTurn(
+            pending,
+            AssistantScope.automatic,
+            row['record_id'] as String?,
+            null,
+            error: 'interrupted',
+          ),
+        );
+      }
+      setState(() {
+        _conversationId = row['id'] as String;
+        _conversationTitle = row['title'] as String;
+        _recordId = row['record_id'] as String?;
+        _recordLabel = row['record_label'] as String?;
+        _turns
+          ..clear()
+          ..addAll(turns);
+        _input.text = row['draft'] as String? ?? '';
+      });
+      _scaffold.currentState?.closeDrawer();
+      _showLatest();
+    } catch (_) {
+      _storageNotice();
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
+  }
+
+  Future<void> _deleteConversation(Json row) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(c.text('删除这段对话？', 'Delete this conversation?')),
+        content: Text(
+          c.text(
+            '本机保存的消息和参考依据将一并删除。',
+            'Saved messages and references on this device will be deleted.',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(c.text('取消', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(c.text('删除', 'Delete')),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _busy) return;
+    _draftTimer?.cancel();
+    await _persist();
+    await _saveTail.catchError((_) {});
+    try {
+      await c.assistantConversations.delete(_profileId, row['id'] as String);
+      if (!mounted) return;
+      if (row['id'] == _conversationId) {
+        setState(() {
+          _conversationId = uuid();
+          _conversationTitle = null;
+          _turns.clear();
+          _input.clear();
+          _recordId = null;
+          _recordLabel = null;
+        });
+      }
+      await _loadConversations();
+    } catch (_) {
+      _storageNotice();
+    }
+  }
+
+  Future<void> _renameConversation(Json row) async {
+    final input = TextEditingController(text: row['title'] as String);
+    final title = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(c.text('重命名对话', 'Rename conversation')),
+        content: TextField(controller: input, maxLength: 80, autofocus: true),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(c.text('取消', 'Cancel')),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, input.text.trim()),
+            child: Text(c.text('保存', 'Save')),
+          ),
+        ],
+      ),
+    );
+    // Dispose after the dialog's exit animation no longer uses the field.
+    await Future<void>.delayed(const Duration(milliseconds: 300));
+    input.dispose();
+    if (title == null || title.isEmpty || !mounted) return;
+    try {
+      await _saveTail.catchError((_) {});
+      final latest = (await c.assistantConversations.list(_profileId))
+          .firstWhere((item) => item['id'] == row['id']);
+      await c.assistantConversations.save({...latest, 'title': title});
+      if (row['id'] == _conversationId) _conversationTitle = title;
+      await _loadConversations();
+    } catch (_) {
+      _storageNotice();
+    }
+  }
+
+  Widget _historyDrawer() => Drawer(
+    child: SafeArea(
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: FilledButton.tonalIcon(
+              key: const ValueKey('assistant-new-chat'),
+              icon: const Icon(Icons.add_comment_outlined),
+              label: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                child: Text(c.text('新对话', 'New chat')),
+              ),
+              style: FilledButton.styleFrom(shape: const StadiumBorder()),
+              onPressed: _busy || _loading || _switching
+                  ? null
+                  : _newConversation,
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: AssistantPrivacyTile(c: c, showDescription: false),
+          ),
+          if (_loading) const Center(child: CircularProgressIndicator()),
+          if (!_loading && _conversations.isEmpty)
+            ListTile(title: Text(c.text('暂无历史对话', 'No conversations yet'))),
+          for (final row in _conversations)
+            ListTile(
+              selected: row['id'] == _conversationId,
+              title: Text(
+                row['title'] as String,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              enabled: !_busy && !_loading && !_switching,
+              onTap: () => _selectConversation(row),
+              trailing: PopupMenuButton<String>(
+                enabled: !_busy && !_loading && !_switching,
+                onSelected: (value) => value == 'delete'
+                    ? _deleteConversation(row)
+                    : _renameConversation(row),
+                itemBuilder: (_) => [
+                  PopupMenuItem(
+                    value: 'rename',
+                    child: Text(c.text('重命名', 'Rename')),
+                  ),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(c.text('删除', 'Delete')),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    ),
+  );
 
   @override
   void dispose() {
+    _draftTimer?.cancel();
+    unawaited(_persist());
     _input.dispose();
     _scroll.dispose();
     super.dispose();
@@ -220,7 +559,13 @@ class _AssistantPageState extends State<AssistantPage> {
     bool retry = false,
   }) async {
     final question = (prompt ?? _input.text).trim();
-    if (_busy || question.isEmpty || question.length > 1200) return;
+    if (_busy ||
+        _loading ||
+        _switching ||
+        question.isEmpty ||
+        question.length > 1200) {
+      return;
+    }
     final recordId = _recordId;
     final previous = _turns.lastOrNull;
     final canReuse =
@@ -230,7 +575,7 @@ class _AssistantPageState extends State<AssistantPage> {
         (previous.scope == AssistantScope.question ||
             previous.local ||
             c.assistantRecordsAllowed &&
-                previous.consentRevision == c.assistantConsentRevision);
+                previous.consentKey == c.assistantMemoryConsent);
     var resolved = _reader.resolve(
       scope ?? AssistantScope.automatic,
       question,
@@ -241,6 +586,17 @@ class _AssistantPageState extends State<AssistantPage> {
     try {
       AssistantContext? evidence;
       Object? readFailure;
+      if (resolved != AssistantScope.question && !c.assistantRecordsAllowed) {
+        final decision = await _askRecordConsent(context, c);
+        if (!mounted || decision == null) return;
+        if (decision) {
+          if (!await _changeConsent(context, c, true)) return;
+        } else {
+          resolved = AssistantScope.question;
+        }
+      }
+      final requestConsentRevision = c.assistantConsentRevision;
+      final requestConsentKey = c.assistantMemoryConsent;
       if (resolved != AssistantScope.question) {
         try {
           evidence = await _reader.read(
@@ -256,32 +612,21 @@ class _AssistantPageState extends State<AssistantPage> {
         }
       }
       if (!mounted) return;
-      if (c.assistant.available &&
-          evidence?.evidence.isNotEmpty == true &&
-          !c.assistantRecordsAllowed) {
-        final decision = await _askRecordConsent(context, c);
-        if (!mounted || decision == null) return;
-        if (decision) {
-          if (!await _changeConsent(context, c, true)) return;
-        } else {
-          resolved = AssistantScope.question;
-          evidence = null;
-        }
-      }
-      if (!mounted) return;
       if (retry && _turns.isNotEmpty && _turns.last.error != null) {
         _turns.removeLast();
       }
       if (prompt == null || _input.text.trim() == question) _input.clear();
       FocusScope.of(context).unfocus();
       setState(() => _pending = question);
+      await _persist();
+      if (!mounted) return;
       _showLatest();
       final attached = evidence?.evidence.isNotEmpty == true;
-      final revision = attached ? c.assistantConsentRevision : null;
+      final revision = requestConsentRevision;
+      var historyUsesRecords = false;
       bool canSend() =>
           mounted &&
-          (!attached ||
-              !c.assistant.available ||
+          (!(attached || historyUsesRecords) ||
               c.assistantRecordsAllowed &&
                   revision == c.assistantConsentRevision);
       try {
@@ -297,22 +642,26 @@ class _AssistantPageState extends State<AssistantPage> {
               context: evidence,
               local: true,
               consentRevision: revision,
+              consentKey: attached || historyUsesRecords
+                  ? requestConsentKey
+                  : null,
             ),
           );
           return;
         }
-        final lastMatching = _turns.reversed
-            .takeWhile(
-              (turn) =>
-                  turn.scope == resolved &&
-                  turn.recordId == recordId &&
-                  turn.consentRevision == revision &&
-                  turn.error == null &&
-                  !turn.local,
-            )
-            .take(2)
-            .toList()
-            .reversed;
+        final lastMatching = <_AssistantTurn>[];
+        for (final turn in _turns) {
+          if (turn.consentKey != null &&
+              (!c.assistantRecordsAllowed ||
+                  turn.consentKey != c.assistantMemoryConsent)) {
+            lastMatching.clear();
+          } else if (turn.reply != null && turn.error == null && !turn.local) {
+            lastMatching.add(turn);
+          }
+        }
+        historyUsesRecords = lastMatching.any(
+          (turn) => turn.consentKey != null,
+        );
         final reply = await c.assistant.ask(
           locale: c.locale,
           question: question,
@@ -320,7 +669,10 @@ class _AssistantPageState extends State<AssistantPage> {
           history: [
             for (final turn in lastMatching) ...[
               {'role': 'user', 'text': turn.question},
-              {'role': 'assistant', 'text': turn.reply!.answer},
+              {
+                'role': 'assistant',
+                'text': [turn.reply!.answer, ?turn.reply!.nextStep].join('\n'),
+              },
             ],
           ],
           context: c.assistantRecordsAllowed ? evidence?.toJson() : null,
@@ -359,6 +711,9 @@ class _AssistantPageState extends State<AssistantPage> {
             reply,
             context: evidence,
             consentRevision: revision,
+            consentKey: attached || historyUsesRecords
+                ? c.assistantMemoryConsent
+                : null,
           ),
         );
       } catch (failure) {
@@ -384,6 +739,7 @@ class _AssistantPageState extends State<AssistantPage> {
           _pending = null;
           _streamedAnswer = '';
         });
+        await _persist();
         if (follow) _showLatest();
       }
     }
@@ -552,6 +908,14 @@ class _AssistantPageState extends State<AssistantPage> {
       '今天的问答额度已用完，请稍后再试。',
       'The question limit was reached. Try again later.',
     ),
+    'interrupted' => c.text(
+      '上次回答中断，可重试。',
+      'The previous reply was interrupted. You can retry.',
+    ),
+    'context_too_large' => c.text(
+      '这段对话或记录超出服务可处理的容量，请缩小记录日期范围或新建对话。',
+      'This conversation or record range exceeds the service capacity. Narrow the dates or start a new chat.',
+    ),
     'network' => c.text(
       '暂时无法连接，请检查网络。',
       'Unable to connect. Check your connection.',
@@ -650,7 +1014,7 @@ class _AssistantPageState extends State<AssistantPage> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    widget.recordLabel ?? '',
+                    _recordLabel ?? '',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -684,6 +1048,14 @@ class _AssistantPageState extends State<AssistantPage> {
                     child: TextField(
                       key: const ValueKey('assistant-question'),
                       controller: _input,
+                      enabled: !_loading && !_switching,
+                      onChanged: (_) {
+                        _draftTimer?.cancel();
+                        _draftTimer = Timer(
+                          const Duration(milliseconds: 500),
+                          () => unawaited(_persist()),
+                        );
+                      },
                       textAlignVertical: TextAlignVertical.center,
                       minLines: 1,
                       maxLines: 3,
@@ -710,7 +1082,11 @@ class _AssistantPageState extends State<AssistantPage> {
                       style: IconButton.styleFrom(
                         foregroundColor: context.qin.primary,
                       ),
-                      onPressed: _busy || value.text.trim().isEmpty
+                      onPressed:
+                          _busy ||
+                              _loading ||
+                              _switching ||
+                              value.text.trim().isEmpty
                           ? null
                           : () => _send(),
                     ),
@@ -728,12 +1104,34 @@ class _AssistantPageState extends State<AssistantPage> {
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: c,
     builder: (context, _) => Scaffold(
+      key: _scaffold,
+      drawer: _historyDrawer(),
+      drawerEnableOpenDragGesture: true,
+      drawerEdgeDragWidth: MediaQuery.sizeOf(context).width,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         scrolledUnderElevation: 0,
-        leading: const QinBackButton(),
+        leading: IconButton(
+          tooltip: c.text('历史对话', 'Conversations'),
+          icon: const Icon(Icons.menu),
+          onPressed: () => _scaffold.currentState?.openDrawer(),
+        ),
         title: PageTitle(c.text('AI 训练助手', 'AI practice assistant')),
+        actions: [
+          IconButton(
+            tooltip: c.text('新对话', 'New chat'),
+            icon: const Icon(Icons.add_comment_outlined),
+            onPressed: _busy || _loading || _switching
+                ? null
+                : _newConversation,
+          ),
+          IconButton(
+            tooltip: c.text('返回', 'Back'),
+            icon: const Icon(Icons.close),
+            onPressed: () => Navigator.maybePop(context),
+          ),
+        ],
       ),
       body: QinPageSurface(
         opacity: .92,

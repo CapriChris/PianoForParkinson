@@ -2988,8 +2988,8 @@ class SettingsPage extends StatelessWidget {
                                       icon: const Icon(Icons.cloud_outlined),
                                       label: Text(
                                         c.text(
-                                          '患者同步、面部分析与 AI 问答',
-                                          'Patient sync, face analysis and AI help',
+                                          '患者同步与面部分析',
+                                          'Patient sync and face analysis',
                                         ),
                                       ),
                                     ),

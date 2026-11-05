@@ -41,6 +41,7 @@ class _TrainingPageState extends State<TrainingPage> {
   bool? captureRunning;
   bool ready = false, started = false, starting = false, navigated = false;
   bool allowLeave = false, ending = false, orientationRequested = false;
+  bool discarding = false;
   Animation<double>? routeAnimation;
   String? error;
   final outsidePointers = <int>{};
@@ -166,6 +167,7 @@ class _TrainingPageState extends State<TrainingPage> {
   Future<void> keyboardLayout(Json layout) async {
     if (!ready ||
         starting ||
+        ending ||
         layout['canvas_width_dp'] <= layout['canvas_height_dp']) {
       return;
     }
@@ -236,6 +238,7 @@ class _TrainingPageState extends State<TrainingPage> {
   }
 
   Future<void> back() async {
+    if (ending || starting || c.busy) return;
     if (!started) {
       Navigator.pop(context);
       return;
@@ -244,7 +247,68 @@ class _TrainingPageState extends State<TrainingPage> {
       await leaveEndedPractice();
       return;
     }
-    await endPractice(home: true);
+    ending = true;
+    try {
+      if (c.engine!.phase != 'paused') c.pause('USER');
+      final save = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(c.text('退出本次训练', 'Exit this training')),
+          content: Text(
+            c.text(
+              '是否保存本次已完成的训练进度？',
+              'Save the progress completed in this training?',
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text(c.text('不保存', "Don't save")),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text(c.text('保存', 'Save')),
+            ),
+          ],
+        ),
+      );
+      if (save == null || !mounted) return;
+      navigated = true;
+      if (save) {
+        await c.exit();
+        if (c.saved) {
+          try {
+            await widget.capture?.finish(c.engine!.id, 'PIANO_SESSION');
+          } catch (_) {
+            // The training record has already been saved.
+          }
+        }
+        if (mounted) await leaveEndedPractice();
+      } else {
+        setState(() => discarding = true);
+        await c.discardPractice();
+        try {
+          await widget.capture?.discard();
+        } catch (_) {
+          // Capture cleanup must not keep a discarded session on screen.
+        }
+        await goHome();
+      }
+    } catch (_) {
+      navigated = false;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              c.text('暂时无法退出，请重试。', 'Unable to exit. Please retry.'),
+            ),
+          ),
+        );
+      }
+    } finally {
+      ending = false;
+      if (mounted && !allowLeave) setState(() => discarding = false);
+    }
   }
 
   @override
@@ -676,6 +740,12 @@ class _TrainingPageState extends State<TrainingPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (discarding) {
+      return PopScope(
+        canPop: allowLeave,
+        child: const Scaffold(body: Center(child: CircularProgressIndicator())),
+      );
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) c.framePresented();
     });
