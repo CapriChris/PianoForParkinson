@@ -2,7 +2,8 @@ param(
     [Parameter(Mandatory)][string]$WebRoot,
     [string]$Python = 'python',
     [string]$Flutter = 'flutter',
-    [string]$OpenSsl = 'openssl'
+    [string]$OpenSsl = 'openssl',
+    [string]$TestPath = 'test/integration/live_sync_smoke_test.dart'
 )
 $ErrorActionPreference = 'Stop'
 $app = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -45,17 +46,17 @@ try {
     $env:PD_SYNC_TEST_URL = "https://127.0.0.1:$port/api"
     $env:PD_SYNC_TEST_PASSWORD = $env:BOOTSTRAP_ADMIN_PASSWORD
     $env:PD_SYNC_TEST_CERT = $cert
-    for ($i=0; $i -lt 40; $i++) {
+    for ($i=0; $i -lt 200; $i++) {
         $server.Refresh()
         if ($server.HasExited) { throw "Isolated Web failed; inspect $work/web-error.log" }
-        curl.exe -fsS --noproxy '*' --cacert $cert "$env:PD_SYNC_TEST_URL/system/health" -o NUL 2>$null
+        & $Python -c "import ssl,sys,urllib.request; urllib.request.urlopen(sys.argv[1], context=ssl.create_default_context(cafile=sys.argv[2]),timeout=2).read()" "$env:PD_SYNC_TEST_URL/system/health" $cert 2> (Join-Path $work 'health-error.log')
         if ($LASTEXITCODE -eq 0) { break }
         Start-Sleep -Milliseconds 300
     }
     if ($LASTEXITCODE) { throw 'Isolated Web not ready' }
     Push-Location $app
     try {
-        & $Flutter test --no-pub --reporter expanded test/integration/live_sync_smoke_test.dart
+        & $Flutter test --no-pub --reporter expanded $TestPath
         if ($LASTEXITCODE) { throw 'Real HTTPS sync smoke failed' }
     } finally { Pop-Location }
 } finally {

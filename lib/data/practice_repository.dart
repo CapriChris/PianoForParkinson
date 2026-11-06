@@ -31,6 +31,29 @@ class PracticeRepository {
   final Map<String, _WriteCache> _cache = {};
   final safety = DatabaseSafety();
   final _initialTaskStates = <String, Json?>{};
+
+  /// The background worker may only read an already migrated account database.
+  /// It must never create profiles, take migration backups, recover unfinished
+  /// practice sessions or normalize settings while the user is not present.
+  Future<void> openForBackground(String directory) async {
+    final path = '$directory/practice.db';
+    if (!await File(path).exists()) throw StateError('E_BACKGROUND_DB_MISSING');
+    _cache.clear();
+    _initialTaskStates.clear();
+    db = await openDatabase(path, readOnly: true, singleInstance: false);
+    try {
+      if (await db.getVersion() != DatabaseSafety.version) {
+        throw StateError('E_BACKGROUND_REQUIRES_FOREGROUND_MIGRATION');
+      }
+      await _verifySchema();
+      await DatabaseSafety.verify(db);
+      await reload();
+    } catch (_) {
+      await db.close();
+      rethrow;
+    }
+  }
+
   Future<void> open(String directory, String locale) async {
     _cache.clear();
     _initialTaskStates.clear();
@@ -67,23 +90,7 @@ class PracticeRepository {
       onDowngrade: (_, _, _) =>
           throw StateError('E_SCHEMA_VERSION: database preserved'),
     );
-    final migrations = await db.query('schema_migrations', orderBy: 'version');
-    final schema = await rootBundle.loadString('assets/config/schema.sql');
-    if (migrations.length != 4 ||
-        migrations.first['version'] != 1 ||
-        migrations.first['migration_checksum'] != digest(schema) ||
-        migrations[1]['version'] != 2 ||
-        migrations[1]['migration_checksum'] !=
-            digest(DatabaseSafety.migration2) ||
-        migrations[2]['version'] != 3 ||
-        migrations[2]['migration_checksum'] !=
-            digest(DatabaseSafety.migration3) ||
-        migrations.last['version'] != 4 ||
-        migrations.last['migration_checksum'] !=
-            digest(DatabaseSafety.migration4)) {
-      await db.close();
-      throw StateError('E_SCHEMA_VERSION: database preserved');
-    }
+    await _verifySchema();
     await db.transaction((tx) async {
       final open = await tx.query(
         'sessions',
@@ -227,6 +234,26 @@ class PracticeRepository {
     }
     await DatabaseSafety.verify(db);
     await safety.committed();
+  }
+
+  Future<void> _verifySchema() async {
+    final migrations = await db.query('schema_migrations', orderBy: 'version');
+    final schema = await rootBundle.loadString('assets/config/schema.sql');
+    if (migrations.length != 4 ||
+        migrations.first['version'] != 1 ||
+        migrations.first['migration_checksum'] != digest(schema) ||
+        migrations[1]['version'] != 2 ||
+        migrations[1]['migration_checksum'] !=
+            digest(DatabaseSafety.migration2) ||
+        migrations[2]['version'] != 3 ||
+        migrations[2]['migration_checksum'] !=
+            digest(DatabaseSafety.migration3) ||
+        migrations.last['version'] != 4 ||
+        migrations.last['migration_checksum'] !=
+            digest(DatabaseSafety.migration4)) {
+      await db.close();
+      throw StateError('E_SCHEMA_VERSION: database preserved');
+    }
   }
 
   Future<void> reload() async =>

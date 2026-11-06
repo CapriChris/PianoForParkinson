@@ -17,6 +17,7 @@ import '../domain/task_engine.dart';
 import '../platform/platform_service.dart';
 import 'speech_navigation_observer.dart';
 import '../integration/auto_sync.dart';
+import '../accounts/account_session.dart';
 
 class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final content = ContentRepository();
@@ -24,6 +25,14 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final platform = PlatformService();
   final AssistantGateway assistant;
   final assistantConversations = AssistantConversationStore();
+  final AccountSession? account;
+  Future<void>? _accountConnecting;
+  Future<void>? _closingAccount;
+  bool get canSynchronizeAccount =>
+      initialized &&
+      !busy &&
+      _syncTrainingViews == 0 &&
+      (engine == null || engine!.ended);
   TrainingCaptureService? _captures;
   TrainingCaptureService get captures =>
       _captures ??= TrainingCaptureService(repository);
@@ -45,7 +54,9 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         initialized &&
         _syncTrainingViews == 0 &&
         (engine == null || engine!.ended),
-    authorizationLost: () => _captures?.disconnect(),
+    authorizationLost: () =>
+        _captures?.disconnect(clearCredentials: account == null),
+    ownsRemoteSession: account == null,
   );
   final activeSpeech = ValueNotifier<Object?>(null);
 
@@ -94,6 +105,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     PracticeRepository? repository,
     AssistantGateway? assistant,
     this.databaseSubdirectory,
+    this.account,
   }) : clock = clock ?? MonotonicClock(),
        assistant = assistant ?? AssistantGateway.fromEnvironment(),
        repository = repository ?? PracticeRepository() {
@@ -169,6 +181,75 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     capabilities = await platform.call('getCapabilities');
     notifyListeners();
   }
+
+  Future<void> connectAccountAndSync() {
+    return _accountConnecting ??= _connectAccount().whenComplete(
+      () => _accountConnecting = null,
+    );
+  }
+
+  Future<void> _connectAccount() async {
+    final session = account;
+    if (session == null ||
+        !session.signedIn ||
+        !canSynchronizeAccount ||
+        _disposed) {
+      return;
+    }
+    final user = session.userId!, patient = session.patientId!;
+    try {
+      if (!identical(cloudSync.remote, session.api)) {
+        await cloudSync.signIn(
+          session.api,
+          user,
+          settings['device_local_id'] as String,
+          repository.profile['profile_id'] as String,
+        );
+      }
+      if (_disposed || !session.signedIn || session.userId != user) return;
+      final binding = await session.api.bindPatient(
+        settings['device_local_id'] as String,
+        repository.profile['profile_id'] as String,
+        patient,
+      );
+      if (_disposed || !session.signedIn || session.userId != user) return;
+      await cloudSync.setBinding(
+        patient,
+        binding['binding_id'] as String,
+        ownedAccount: true,
+      );
+      if (_disposed) return;
+      if (!identical(captures.api, session.api) ||
+          captures.operatorId != user ||
+          captures.patientId != patient) {
+        captures.connect(session.api, user);
+        captures.bind(patient, binding['binding_id'] as String);
+      }
+      await cloudSync.sync();
+    } catch (e) {
+      if (!_disposed) cloudSync.message.value = '患者档案连接未完成，训练记录将在连接成功后同步。';
+      rethrow;
+    }
+  }
+
+  Future<void> shutdownAccount() => _closingAccount ??= () async {
+    if (!_disposed) dispose();
+    try {
+      await _pendingFlush;
+    } catch (_) {}
+    try {
+      await _settingsWrites;
+    } catch (_) {}
+    try {
+      await _accountConnecting;
+    } catch (_) {}
+    await cloudSync.shutdown();
+    await _captures?.shutdown();
+    await assistantConversations.close();
+    try {
+      await repository.db.close();
+    } catch (_) {}
+  }();
 
   Future<void> initialize() async {
     error = null;

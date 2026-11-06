@@ -24,6 +24,7 @@ import java.util.Locale
 import java.util.TimeZone
 
 class MainActivity : FlutterActivity() {
+    private var accountSync: AccountSyncBridge? = null
     private val emulatorDevice: Boolean
         get() = Build.HARDWARE.contains("ranchu") || Build.HARDWARE.contains("goldfish") ||
             Build.MODEL.startsWith("sdk_gphone") || Build.FINGERPRINT.startsWith("generic")
@@ -81,6 +82,10 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        AccountVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        accountSync = AccountSyncBridge(applicationContext).also {
+            it.register(flutterEngine.dartExecutor.binaryMessenger)
+        }
         if (Build.VERSION.SDK_INT >= 24) {
             val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             runCatching { manager.registerDefaultNetworkCallback(networkCallback) }
@@ -452,6 +457,8 @@ class MainActivity : FlutterActivity() {
         tts?.shutdown()
         if (::audioManager.isInitialized) audioManager.unregisterAudioDeviceCallback(devices)
         super.onDestroy()
+        accountSync?.close()
+        accountSync = null
     }
 }
 

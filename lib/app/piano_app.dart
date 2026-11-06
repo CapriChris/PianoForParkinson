@@ -1,4 +1,5 @@
 import '../features/capture_widgets.dart';
+import '../accounts/account_pages.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -155,6 +156,11 @@ class BootstrapError extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (c.account != null)
+            TextButton(
+              onPressed: c.account!.logout,
+              child: Text(c.text('退出登录', 'Sign out')),
+            ),
           ExpansionTile(
             title: Text(c.text('技术详情', 'Technical details')),
             children: [
@@ -199,6 +205,14 @@ class _OnboardingState extends State<Onboarding> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (c.account != null)
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: TextButton(
+                          onPressed: c.account!.logout,
+                          child: Text(c.text('退出登录', 'Sign out')),
+                        ),
+                      ),
                     Stack(
                       clipBehavior: Clip.none,
                       children: [
@@ -2967,7 +2981,32 @@ class SettingsPage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  if (const bool.fromEnvironment(
+                                  if (c.account != null) ...[
+                                    QinSectionTitle(
+                                      c.text('账号与数据', 'Account and data'),
+                                    ),
+                                    QinOutlinedButton.icon(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute<void>(
+                                          builder: (_) => AccountSettingsPage(
+                                            c: c,
+                                            session: c.account!,
+                                          ),
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.account_circle_outlined,
+                                      ),
+                                      label: Text(
+                                        c.text(
+                                          '我的账号与同步',
+                                          'My account and sync',
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 24),
+                                  ] else if (const bool.fromEnvironment(
                                     'PD_CLOUD_INTEGRATION',
                                   )) ...[
                                     QinSectionTitle(
@@ -3271,8 +3310,12 @@ class AboutPage extends StatelessWidget {
                   'Training works offline. Use test patients and media for integration testing. Uploads require manual submission.',
                 )
               : c.text(
-                  '数据只保存在本机，不上传。不提供账号、导出或云端恢复。',
-                  'Data stays on this device without uploads, accounts, exports or cloud recovery.',
+                  c.account == null
+                      ? '数据只保存在本机，不上传。不提供账号、导出或云端恢复。'
+                      : '训练记录保存在当前账号的独立空间，并与已授权的患者档案自动同步。',
+                  c.account == null
+                      ? 'Data stays on this device without uploads, accounts, exports or cloud recovery.'
+                      : 'Records stay in your account workspace and synchronize with your authorized patient profile.',
                 ),
         ),
       ],

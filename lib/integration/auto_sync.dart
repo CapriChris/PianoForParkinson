@@ -17,6 +17,7 @@ class AutoSync {
     this.trainingUpdates,
     this.canRun, {
     this.authorizationLost,
+    this.ownsRemoteSession = true,
   }) {
     trainingUpdates.addListener(trigger);
   }
@@ -24,6 +25,10 @@ class AutoSync {
   final ValueListenable<int> trainingUpdates;
   final bool Function() canRun;
   final void Function()? authorizationLost;
+  final bool ownsRemoteSession;
+  Future<void>? _shutdown;
+  bool _backgroundRun = false;
+  bool get _canTransfer => (foreground || _backgroundRun) && canRun();
   final message = ValueNotifier<String>('');
   final cloud = ValueNotifier<List<Map<String, dynamic>>>(const []);
   Future<void>? _purge;
@@ -95,19 +100,25 @@ class AutoSync {
     _timer = Timer.periodic(const Duration(seconds: 30), (_) => trigger());
   }
 
-  Future<void> setBinding(String id, String binding) async {
+  Future<void> setBinding(
+    String id,
+    String binding, {
+    bool ownedAccount = false,
+  }) async {
     final key = _identity;
     final api = remote;
     if (key == null || api?.signedIn != true) throw StateError('请先登录。');
     if (patient != null && patient != id) throw StateError('不能自动更换已绑定患者。');
     if (patient == id && bindingId == binding) return;
-    final start = DateTime.now().millisecondsSinceEpoch;
-    final plans = await repository.db.query(
-      'training_plans',
-      columns: ['plan_id'],
-      where: 'profile_id=?',
-      whereArgs: [profile],
-    );
+    final start = ownedAccount ? 0 : DateTime.now().millisecondsSinceEpoch;
+    final plans = ownedAccount
+        ? <Map<String, Object?>>[]
+        : await repository.db.query(
+            'training_plans',
+            columns: ['plan_id'],
+            where: 'profile_id=?',
+            whereArgs: [profile],
+          );
     if (!identical(api, remote) || api?.signedIn != true) return;
     await (await store()).put(
       'enrollment:$key',
@@ -175,7 +186,7 @@ class AutoSync {
       _purge = opened.then((s) => s.clearScope(scope));
       unawaited(_purge!.catchError((Object _) {}));
     }
-    remote?.signOut();
+    if (ownsRemoteSession) remote?.signOut();
     remote = null;
     patient = null;
     profile = null;
@@ -229,7 +240,7 @@ class AutoSync {
         dev == null) {
       return Future.error(StateError('请先登录并确认患者绑定。'));
     }
-    if (!foreground || !canRun()) {
+    if (!_canTransfer) {
       return Future.error(StateError('训练结束后会继续同步。'));
     }
     return _flight ??= _perform(
@@ -273,12 +284,11 @@ class AutoSync {
         mayUpload: () =>
             current() &&
             repository.profile['profile_id'] == local &&
-            foreground &&
-            canRun() &&
+            _canTransfer &&
             (!automatic || enabled),
       ).syncAll();
       String? pullMessage;
-      if (current() && foreground && canRun() && _feed != false) {
+      if (current() && _canTransfer && _feed != false) {
         try {
           await _pull(api, sidecar, scope, id, dev, local, current);
         } on RemoteApiException catch (e) {
@@ -328,11 +338,7 @@ class AutoSync {
   ) async {
     var cursor = await sidecar.get('cursor:$scope');
     bool reset = false;
-    for (
-      var pages = 0;
-      pages < 8 && current() && foreground && canRun();
-      pages++
-    ) {
+    for (var pages = 0; pages < 8 && current() && _canTransfer; pages++) {
       Map<String, dynamic> page;
       try {
         page = await api.changes(id, dev, local, cursor);
@@ -355,12 +361,24 @@ class AutoSync {
     if (current()) cloud.value = items;
   }
 
-  void close() {
+  Future<SyncOutcome> syncInBackground() async {
+    if (!canRun()) throw StateError('训练结束后会继续同步。');
+    if (_flight != null) return _flight!;
+    _backgroundRun = true;
+    try {
+      return await sync();
+    } finally {
+      _backgroundRun = false;
+    }
+  }
+
+  Future<void> shutdown() {
+    if (_shutdown != null) return _shutdown!;
     _closed = true;
     trainingUpdates.removeListener(trigger);
     signOut();
     final storeFuture = _store;
-    unawaited(() async {
+    _shutdown = () async {
       try {
         await _flight;
         await _purge;
@@ -368,8 +386,11 @@ class AutoSync {
       try {
         if (storeFuture != null) await (await storeFuture).db.close();
       } catch (_) {}
-    }());
+    }();
     message.dispose();
     cloud.dispose();
+    return _shutdown!;
   }
+
+  void close() => unawaited(shutdown());
 }
