@@ -93,6 +93,22 @@ class TrainingCaptureService extends ChangeNotifier
     return value == null ? null : Map<String, dynamic>.from(value);
   }
 
+  Future<void> _claimLegacy(Map<String, dynamic> data) async {
+    if (!owns(data)) return;
+    final expected =
+        'account-${sha256.convert(utf8.encode('${api!.base}\n$operatorId'))}';
+    final directory = File(repository.db.path).parent.uri.pathSegments
+        .where((s) => s.isNotEmpty)
+        .last;
+    if (directory != expected ||
+        !RegExp(
+          r'^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}$',
+        ).hasMatch('${data['capture_id']}')) {
+      return;
+    }
+    await vault<bool>('claimLegacy', {'capture_id': data['capture_id']});
+  }
+
   Future<void> open() => _opening ??= _open();
   Future<void> _open() async {
     await store.open(File(repository.db.path).parent.path);
@@ -108,6 +124,7 @@ class TrainingCaptureService extends ChangeNotifier
       // Interrupted recording is never automatically submitted.
       if (data['state'] == 'RECORDING') data['state'] = 'INTERRUPTED';
       records[data['capture_id'] as String] = data;
+      await _claimLegacy(data);
       if (DateTime.now().millisecondsSinceEpoch - (data['created_ms'] as int) >
           captureRetention.inMilliseconds) {
         await vault<void>('delete', {'capture_id': data['capture_id']});
@@ -366,6 +383,7 @@ class TrainingCaptureService extends ChangeNotifier
         return;
       }
       if (row['local_expired'] == true) throw StateError('本机视频已过期，无法重新上传。');
+      await _claimLegacy(row);
       final isMetered = await metered();
       if (!current()) return;
       if (isMetered && !allowMobile) {
@@ -532,6 +550,8 @@ class TrainingCaptureService extends ChangeNotifier
     final epoch = _identityEpoch;
     final row = records[id];
     if (row == null) return;
+    await _claimLegacy(row);
+    if (_closed || epoch != _identityEpoch) return;
     row['state'] = 'CANCELLED';
     await persist(row);
     if (_closed || epoch != _identityEpoch) return;

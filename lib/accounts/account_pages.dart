@@ -291,6 +291,28 @@ class _LoginPageState extends State<LoginPage> {
       error = null;
     });
     try {
+      if (register) {
+        final approved = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('确认自动同步'),
+            content: const Text(
+              '是否允许将训练记录和训练计划自动同步到您的 Web 档案？训练录像与 AI 服务会另行征求授权。',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('暂不注册'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('同意同步并注册'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || approved != true) return;
+      }
       if (reset) {
         final code = await widget.accounts.api.resetPassword(
           username.text,

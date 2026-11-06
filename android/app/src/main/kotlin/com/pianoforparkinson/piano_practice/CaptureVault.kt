@@ -51,6 +51,10 @@ class CaptureVault(private val context: Context) {
                     val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                     val root = root(args["owner_scope"])
                     val value: Any? = when (call.method) {
+                        "claimLegacy" -> CaptureNamespaceMigration.claim(
+                            File(context.filesDir, "capture_vault"),
+                            args["owner_scope"] as? String,
+                            args["capture_id"] as? String)
                         "cleanup" -> {
                             val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
                             context.cacheDir.listFiles()?.filter { it.name.startsWith("REC") && it.extension == "mp4" && it.lastModified() < cutoff }?.forEach { it.delete() }

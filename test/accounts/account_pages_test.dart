@@ -374,38 +374,51 @@ void main() {
     },
   );
 
-  testWidgets('valid registration submits without an extra sync confirmation', (
-    tester,
-  ) async {
-    final accounts = await openLogin(tester);
-    await tester.tap(find.text('没有账号？注册'));
-    await tester.pumpAndSettle();
-    await tester.enterText(
-      find.byKey(const ValueKey('account-username')),
-      'patient_one',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('account-nickname')),
-      '用户',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('account-password')),
-      'test-pass-123',
-    );
-    await tester.enterText(
-      find.byKey(const ValueKey('account-confirmation')),
-      'test-pass-123',
-    );
-    await tester.ensureVisible(find.text('注册并登录'));
-    await tester.tap(find.text('注册并登录'));
-    await tester.pumpAndSettle();
-    expect(find.byType(HomePage), findsOneWidget);
-    expect(
-      (accounts.api.transport as AuthTransport)
-          .registration!['sync_consent_version'],
-      'account-sync-v1',
-    );
-  });
+  testWidgets(
+    'registration requires an affirmative automatic sync confirmation',
+    (tester) async {
+      final accounts = await openLogin(tester);
+      await tester.tap(find.text('没有账号？注册'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+        find.byKey(const ValueKey('account-username')),
+        'patient_one',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('account-nickname')),
+        '用户',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('account-password')),
+        'test-pass-123',
+      );
+      await tester.enterText(
+        find.byKey(const ValueKey('account-confirmation')),
+        'test-pass-123',
+      );
+      await tester.ensureVisible(find.text('注册并登录'));
+      await tester.tap(find.text('注册并登录'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认自动同步'), findsOneWidget);
+      expect((accounts.api.transport as AuthTransport).registration, isNull);
+      expect(accounts.api.signedIn, isFalse);
+      await tester.tap(find.text('暂不注册'));
+      await tester.pumpAndSettle();
+      expect((accounts.api.transport as AuthTransport).registration, isNull);
+      expect(find.byType(HomePage), findsNothing);
+      await tester.tap(find.text('注册并登录'));
+      await tester.pumpAndSettle();
+      expect(find.text('确认自动同步'), findsOneWidget);
+      await tester.tap(find.text('同意同步并注册'));
+      await tester.pumpAndSettle();
+      expect(find.byType(HomePage), findsOneWidget);
+      expect(
+        (accounts.api.transport as AuthTransport)
+            .registration!['sync_consent_version'],
+        'account-sync-v1',
+      );
+    },
+  );
 
   testWidgets('password recovery has no footer or username helper', (
     tester,
