@@ -15,6 +15,7 @@ import '../features/language_picker.dart';
 import '../features/audio_volume_control.dart';
 import '../features/assistant_page.dart';
 import '../integration/remote_pages.dart';
+import '../accounts/account_pages.dart';
 import '../features/text_size_control.dart';
 import '../features/training_page.dart';
 import '../features/trend_page.dart';
@@ -155,6 +156,11 @@ class BootstrapError extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
+          if (c.onSignOut != null)
+            TextButton(
+              onPressed: c.busy ? null : c.onSignOut,
+              child: Text(c.text('退出当前账号', 'Sign out')),
+            ),
           ExpansionTile(
             title: Text(c.text('技术详情', 'Technical details')),
             children: [
@@ -187,6 +193,16 @@ class _OnboardingState extends State<Onboarding> {
       if (!didPop && step > 0) setState(() => step--);
     },
     child: Scaffold(
+      appBar: c.onSignOut == null
+          ? null
+          : AppBar(
+              actions: [
+                TextButton(
+                  onPressed: c.onSignOut,
+                  child: Text(c.text('退出账号', 'Sign out')),
+                ),
+              ],
+            ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
@@ -2967,9 +2983,25 @@ class SettingsPage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  if (const bool.fromEnvironment(
-                                    'PD_CLOUD_INTEGRATION',
-                                  )) ...[
+                                  if (c.accountApi != null)
+                                    QinOutlinedButton.icon(
+                                      onPressed: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => AccountPage(c: c),
+                                        ),
+                                      ),
+                                      icon: const Icon(
+                                        Icons.account_circle_outlined,
+                                      ),
+                                      label: Text(
+                                        c.text('我的账号与同步', 'Account and sync'),
+                                      ),
+                                    ),
+                                  if (c.accountApi == null &&
+                                      const bool.fromEnvironment(
+                                        'PD_CLOUD_INTEGRATION',
+                                      )) ...[
                                     QinSectionTitle(
                                       c.text(
                                         '云端服务联调',

@@ -29,6 +29,7 @@ class RemoteApi {
   String? _token;
   final _requests = <HttpClient>{};
   String? get currentToken => _token;
+  void setAccessToken(String value) => _token = value;
   bool get signedIn => _token != null;
 
   Uri uri(String path, [Map<String, String>? query]) =>

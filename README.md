@@ -1,23 +1,29 @@
 # 琴伴 · Android 内部演示
 
+## 最新版本 0.1.63（构建 64）
+
+新增注册登录、按账号隔离数据和自动同步，更新 App 图标、账号页共用插画与 8–16 位新密码提示。训练、计划与记录必须登录后使用。账号注册依赖配套后端和账号数据库迁移，Web 代码见 [草稿合并请求 #1](https://github.com/WuChangqing1/PD-Rehab-Web/pull/1)；合并部署后进行公网注册和真机验收。[更新说明](docs/2026-11-06-0.1.63-更新说明.md) · [部署与联调交接](docs/2026-11-06-账号注册登录与自动同步交接.md)
+
 ## 训练视频采集开发进度
 
 当前版本包含训练时可选的无声前摄采集、视频加密保存和完成后断点上传；Web 端候选复核需要配套接口。部署与真机验收状态见交接文档。
 
 详见 [实施与 Web 交接](docs/2026-11-04-训练视频采集实施与Web交接.md) 和 [设计文档](docs/2026-11-04-训练视频采集与Web面部分析设计.md)。
 
-## 下载 0.1.60（构建 61）
+## 下载 0.1.63（构建 64）
 
-Android 内测版通用 APK 约 632.8 MiB，支持 ARM64、ARMv7 和 x86_64，最低支持 Android 7.0（API 24）。四段舞蹈视频随包提供，可离线播放。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.60/qinban-0.1.60-android-universal.apk) · [发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.60) · [SHA-256 校验文件](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.60/SHA256SUMS-0.1.60.txt)
+Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，最低支持 Android 7.0（API 24）。四段舞蹈视频随包提供，可离线播放。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.63/qinban-0.1.63-android-universal.apk) · [发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.63) · [SHA-256 校验文件](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.63/SHA256SUMS-0.1.63.txt)
 
-包名为 `com.pianoforparkinson.piano_practice`。已安装相同包名及签名的用户可以直接覆盖安装，保留本机训练记录。此包沿用开发签名，用于内部测试。验证结果和安装包校验值见 [0.1.60 构建与验证](validation/release-0.1.60.md)，尚未进行本版真机及线上复验。
+包名为 `com.pianoforparkinson.piano_practice`。已安装相同包名及签名的用户可以直接覆盖安装，保留本机训练记录。此包沿用开发签名，用于内部测试。验证结果和安装包校验值见 [0.1.63 构建与验证](validation/release-0.1.63.md)，尚未进行本版真机及线上复验。
 
 ## 本版功能
+
+- **注册登录与自动同步**：登录后使用训练和计划，新账号自动建档，按账号隔离本机数据，支持登录恢复和网络恢复后的自动补传。旧版游客/联调记录保留原位置，不自动归入新账号。
 
 - **AI 训练助手**可从首页、练习完成页和历史详情进入。助手根据问题查找本机相关记录，经授权后才将训练摘要发给在线服务。可在回答下方查看引用。流式输出需要网关运行新版代码。[设计与接入说明](docs/2026-11-03-AI训练助手设计.md)
 - **历史会话与记忆**支持侧边栏切换、新对话和同一会话上下文；可点击左上角或向右滑动打开侧边栏。统一英文名为 Piano Companion，移除独立的 AI 康复问答。
 - **退出训练可选保存**：正式钢琴训练点击返回，选择「保存」或「不保存」；不保存会清理本次暂存记录并恢复原有难度。[0.1.60 更新说明](docs/2026-11-05-0.1.60-更新说明.md)
-- **双端互联**通过设置中的「云端服务联调」进入。使用 Web 联调账号和测试患者，验证患者绑定、训练记录同步及面部分析等接口。[双端交接说明](CROSS_CLIENT_INTEGRATION_HANDOFF.md) · [接口协议](cross_client_openapi_integration.json)
+- **双端互联**通过「设置 → 我的账号与同步」查看状态，使用本人账号自动关联患者档案并同步记录。[双端交接说明](CROSS_CLIENT_INTEGRATION_HANDOFF.md) · [接口协议](cross_client_openapi_integration.json)
 - **布局适配**覆盖练习与记录分类、钢琴曲目列表和计划表单，并修复相邻琴键遮挡按键粒子的问题。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md)
 
 旧版安装包仍可在历史 Release 查阅。视频按需下载列入未来开发计划。[0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [未来开发计划](docs/未来开发计划.md)

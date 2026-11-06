@@ -130,6 +130,25 @@ void main() {
     expect(await repository.detail(engine.id), isNull);
   });
 
+  test(
+    'background open never finalizes an interrupted active training',
+    () async {
+      await create();
+      final before = await repository.detail(engine.id);
+      await repository.db.close();
+      final background = PracticeRepository();
+      await background.open(directory.path, 'en', recoverInterrupted: false);
+      expect(await background.detail(engine.id), before);
+      await background.db.close();
+      // Normal interactive startup still performs the original recovery.
+      await repository.open(directory.path, 'en');
+      expect(
+        (await repository.detail(engine.id))!['status'],
+        'RECOVERED_INTERRUPTED',
+      );
+    },
+  );
+
   test('saved sessions cannot be discarded as active training', () async {
     await create();
     engine.finish('EXITED');

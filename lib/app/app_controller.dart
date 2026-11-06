@@ -17,6 +17,7 @@ import '../domain/task_engine.dart';
 import '../platform/platform_service.dart';
 import 'speech_navigation_observer.dart';
 import '../integration/auto_sync.dart';
+import '../accounts/account_api.dart';
 
 class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final content = ContentRepository();
@@ -45,7 +46,10 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         initialized &&
         _syncTrainingViews == 0 &&
         (engine == null || engine!.ended),
-    authorizationLost: () => _captures?.disconnect(),
+    authorizationLost: () {
+      _captures?.disconnect();
+      onAccountInvalidated?.call();
+    },
   );
   final activeSpeech = ValueNotifier<Object?>(null);
 
@@ -63,6 +67,11 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   final Clock clock;
   final String clockEpoch = uuid();
   final String? databaseSubdirectory;
+  final AccountApi? accountApi;
+  final Future<void> Function()? onSignOut;
+  final void Function()? onAccountInvalidated;
+  Timer? _accountReconnect;
+  Future<void>? _connectingAccount;
   TaskEngine? engine;
   Json capabilities = {};
   bool initialized = false, audioReady = false, busy = false, saved = false;
@@ -94,6 +103,9 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     PracticeRepository? repository,
     AssistantGateway? assistant,
     this.databaseSubdirectory,
+    this.accountApi,
+    this.onSignOut,
+    this.onAccountInvalidated,
   }) : clock = clock ?? MonotonicClock(),
        assistant = assistant ?? AssistantGateway.fromEnvironment(),
        repository = repository ?? PracticeRepository() {
@@ -107,6 +119,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         if (_disposed) return;
         final kind = (event as Map)['kind'];
         if (kind == 'CLOUD_NETWORK_AVAILABLE') {
+          if (initialized && accountApi != null) unawaited(connectAccount());
           if (initialized) cloudSync.trigger();
           return;
         }
@@ -199,11 +212,60 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       capabilities = await platform.call('getCapabilities');
       initialized = true;
       await refreshHistory();
+      if (accountApi != null) {
+        unawaited(connectAccount());
+        _accountReconnect = Timer.periodic(
+          const Duration(seconds: 30),
+          (_) => unawaited(connectAccount()),
+        );
+      }
     } catch (e) {
       error = '$e';
     }
     busy = false;
     notifyListeners();
+  }
+
+  Future<void> connectAccount() => _connectingAccount ??= _connectAccount()
+      .whenComplete(() => _connectingAccount = null);
+
+  Future<void> _connectAccount() async {
+    final api = accountApi;
+    final session = api?.session;
+    if (_disposed || !initialized || api == null || session == null) return;
+    try {
+      await cloudSync.enrollAccount(
+        api,
+        session.userId,
+        settings['device_local_id'] as String,
+        repository.profile['profile_id'] as String,
+        session.patientId,
+      );
+      if (_disposed || api.session == null || cloudSync.bindingId == null) {
+        return;
+      }
+      if (!identical(_captures?.api, api)) {
+        captures.connect(api, session.userId);
+        captures.bind(session.patientId, cloudSync.bindingId!);
+      }
+    } catch (e) {
+      if (!_disposed) cloudSync.message.value = '等待连接，训练数据已保存在本机。';
+    }
+  }
+
+  Future<void> shutdownAccount() async {
+    _accountReconnect?.cancel();
+    _ticker?.cancel();
+    _recorder?.cancel();
+    _captures?.disconnect();
+    await _connectingAccount;
+    await cloudSync.close();
+    await _writes;
+    await _settingsWrites;
+    await _audioWrites;
+    await _audioSettingsWrites;
+    dispose();
+    if (initialized && repository.db.isOpen) await repository.db.close();
   }
 
   Future<void> updateSettings({
@@ -929,6 +991,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     if (_backgrounded) {
       interruptPlayback('INTERRUPTED_BACKGROUND');
     } else {
+      if (accountApi != null) unawaited(connectAccount());
       cloudSync.trigger();
       unawaited(refreshRecommendations());
     }
@@ -937,6 +1000,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _disposed = true;
+    _accountReconnect?.cancel();
     _captures?.dispose();
     unawaited(assistantConversations.close().catchError((_) {}));
     _historyRevision++;

@@ -129,6 +129,56 @@ class AutoSync {
     trigger();
   }
 
+  /// Account-owned databases contain no guest records. A cached binding can be
+  /// restored offline; every upload still revalidates ownership on the server.
+  Future<void> enrollAccount(
+    RemoteApi api,
+    String account,
+    String deviceId,
+    String profileId,
+    String patientId,
+  ) async {
+    if (_closed ||
+        (identical(remote, api) && patient == patientId && bindingId != null)) {
+      return;
+    }
+    final key = sha256
+        .convert(
+          utf8.encode(
+            jsonEncode([api.base.toString(), account, deviceId, profileId]),
+          ),
+        )
+        .toString();
+    final s = await store();
+    final saved = await s.get('account-binding:$key');
+    String binding;
+    if (saved != null) {
+      final row = jsonDecode(saved) as Map;
+      if (row['patient'] != patientId) throw StateError('账号档案不匹配。');
+      binding = row['binding'] as String;
+    } else {
+      final row = await api.bindPatient(deviceId, profileId, patientId);
+      if (row['patient_id'] != patientId) throw StateError('账号档案不匹配。');
+      binding = row['binding_id'] as String;
+      await s.put(
+        'account-binding:$key',
+        jsonEncode({'patient': patientId, 'binding': binding}),
+      );
+    }
+    if (_closed || !api.signedIn) return;
+    _identity = key;
+    remote = api;
+    device = deviceId;
+    profile = profileId;
+    patient = patientId;
+    bindingId = binding;
+    _boundSince = 0;
+    _unconfirmedPlans = {};
+    enabled = true;
+    _timer ??= Timer.periodic(const Duration(seconds: 30), (_) => trigger());
+    trigger();
+  }
+
   Future<void> setEnabled(bool value) async {
     final key = _identity;
     if (key == null || patient == null || remote?.signedIn != true) {
@@ -215,7 +265,7 @@ class AutoSync {
     );
   }
 
-  Future<SyncOutcome> sync({bool automatic = false}) {
+  Future<SyncOutcome> sync({bool automatic = false, bool background = false}) {
     final api = remote,
         id = patient,
         key = _identity,
@@ -229,7 +279,7 @@ class AutoSync {
         dev == null) {
       return Future.error(StateError('请先登录并确认患者绑定。'));
     }
-    if (!foreground || !canRun()) {
+    if ((!foreground && !background) || !canRun()) {
       return Future.error(StateError('训练结束后会继续同步。'));
     }
     return _flight ??= _perform(
@@ -238,6 +288,7 @@ class AutoSync {
       local,
       dev,
       automatic,
+      background,
     ).whenComplete(() => _flight = null);
   }
 
@@ -247,6 +298,7 @@ class AutoSync {
     String local,
     String dev,
     bool automatic,
+    bool background,
   ) async {
     final scope = _scope!;
     final enrolledAt = _boundSince!;
@@ -273,7 +325,7 @@ class AutoSync {
         mayUpload: () =>
             current() &&
             repository.profile['profile_id'] == local &&
-            foreground &&
+            (foreground || background) &&
             canRun() &&
             (!automatic || enabled),
       ).syncAll();
@@ -355,12 +407,14 @@ class AutoSync {
     if (current()) cloud.value = items;
   }
 
-  void close() {
+  Future<void>? _closing;
+  Future<void> close() => _closing ??= _close();
+  Future<void> _close() async {
     _closed = true;
     trainingUpdates.removeListener(trigger);
     signOut();
     final storeFuture = _store;
-    unawaited(() async {
+    await () async {
       try {
         await _flight;
         await _purge;
@@ -368,7 +422,7 @@ class AutoSync {
       try {
         if (storeFuture != null) await (await storeFuture).db.close();
       } catch (_) {}
-    }());
+    }();
     message.dispose();
     cloud.dispose();
   }

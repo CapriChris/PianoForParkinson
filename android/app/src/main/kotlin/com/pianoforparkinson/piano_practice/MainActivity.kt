@@ -81,6 +81,8 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        AccountSessionVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
+        AccountBackgroundSync.uiEngine = flutterEngine
         if (Build.VERSION.SDK_INT >= 24) {
             val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
             runCatching { manager.registerDefaultNetworkCallback(networkCallback) }
@@ -441,6 +443,7 @@ class MainActivity : FlutterActivity() {
         tts?.stop(); publish("AUDIO_FOCUS_LOST"); super.onPause()
     }
     override fun onDestroy() {
+        AccountBackgroundSync.uiEngine = null
         if (Build.VERSION.SDK_INT >= 24) runCatching { connectivity?.unregisterNetworkCallback(networkCallback) }
         audioHandler.post {
             allOff(); piano.reset(); ready = false
@@ -452,6 +455,7 @@ class MainActivity : FlutterActivity() {
         tts?.shutdown()
         if (::audioManager.isInitialized) audioManager.unregisterAudioDeviceCallback(devices)
         super.onDestroy()
+        AccountDataLease.release("ui")
     }
 }
 

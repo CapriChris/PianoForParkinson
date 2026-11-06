@@ -31,7 +31,11 @@ class PracticeRepository {
   final Map<String, _WriteCache> _cache = {};
   final safety = DatabaseSafety();
   final _initialTaskStates = <String, Json?>{};
-  Future<void> open(String directory, String locale) async {
+  Future<void> open(
+    String directory,
+    String locale, {
+    bool recoverInterrupted = true,
+  }) async {
     _cache.clear();
     _initialTaskStates.clear();
     await safety.prepare('$directory/practice.db');
@@ -84,142 +88,144 @@ class PracticeRepository {
       await db.close();
       throw StateError('E_SCHEMA_VERSION: database preserved');
     }
-    await db.transaction((tx) async {
-      final open = await tx.query(
-        'sessions',
-        where: "status NOT IN ('COMPLETED','EXITED','RECOVERED_INTERRUPTED')",
-      );
-      for (final session in open) {
-        final id = session['session_id'];
-        await tx.update(
-          'attempts',
-          {
-            'validity': 'INTERRUPTED',
-            'reason_code': 'INTERRUPTED_PROCESS_DEATH',
-            'outcome': null,
-          },
-          where: "session_id=? AND validity='OPEN'",
-          whereArgs: [id],
-        );
-        await tx.update(
-          'blocks',
-          {'status': 'INTERRUPTED'},
-          where: "session_id=? AND status IN ('PLANNED','ACTIVE')",
-          whereArgs: [id],
-        );
-        await tx.update(
-          'trials',
-          {'status': 'INTERRUPTED'},
-          where: "session_id=? AND status IN ('PLANNED','ACTIVE')",
-          whereArgs: [id],
-        );
-        final last =
-            Sqflite.firstIntValue(
-              await tx.rawQuery(
-                'SELECT MAX(seq) FROM events WHERE session_id=?',
-                [id],
-              ),
-            ) ??
-            0;
-        await tx.insert('events', {
-          'session_id': id,
-          'seq': last + 1,
-          'offset_us': null,
-          'clock_epoch_id': uuid(),
-          'kind': 'ERROR',
-          'payload_version': 1,
-          'payload_json': canonical({
-            'reason_code': 'INTERRUPTED_PROCESS_DEATH',
-            'recovered_at_utc_ms': DateTime.now()
-                .toUtc()
-                .millisecondsSinceEpoch,
-          }),
-        });
-        await tx.update(
+    if (recoverInterrupted) {
+      await db.transaction((tx) async {
+        final open = await tx.query(
           'sessions',
-          {
-            'status': 'RECOVERED_INTERRUPTED',
-            'ended_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
-            'terminal_reason': 'INTERRUPTED_PROCESS_DEATH',
-          },
-          where: 'session_id=?',
-          whereArgs: [id],
+          where: "status NOT IN ('COMPLETED','EXITED','RECOVERED_INTERRUPTED')",
         );
-        final trialRows = await tx.query(
-          'trials',
-          where: 'session_id=?',
-          whereArgs: [id],
-        );
-        final allAttempts = await tx.query(
-          'attempts',
-          where: 'session_id=?',
-          whereArgs: [id],
-        );
-        final eventRows = await tx.query(
-          'events',
-          where: 'session_id=?',
-          whereArgs: [id],
-          orderBy: 'seq',
-        );
-        final recoveredSummary = PracticeMetrics.build(
-          taskId: session['task_id'] as String,
-          version: session['metric_version'] as String,
-          attempts: allAttempts
-              .map(
-                (a) => {
-                  ...a,
-                  'result': a['result_json'] == null
-                      ? null
-                      : jsonDecode(a['result_json'] as String),
-                },
-              )
-              .toList(),
-          trials: trialRows.map((t) => Map<String, dynamic>.from(t)).toList(),
-          events: eventRows
-              .map(
-                (e) => {
-                  ...e,
-                  'payload': jsonDecode(e['payload_json'] as String),
-                },
-              )
-              .toList(),
-          planned: session['planned_target_count'] as int,
-          complete: false,
-          qualityFlags: ['PROCESS_DEATH'],
-        );
-        await tx.insert('summaries', {
-          'summary_id': uuid(),
-          'session_id': id,
-          'scope': 'SESSION',
-          'scope_key': 'SESSION',
-          'metric_version': session['metric_version'],
-          'calculated_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
-          'source_last_seq': last + 1,
-          'result_json': canonical(recoveredSummary),
-        }, conflictAlgorithm: ConflictAlgorithm.ignore);
-      }
-      final existing = await tx.query('profiles');
-      if (existing.isEmpty) {
-        await tx.insert('profiles', {
-          'profile_id': uuid(),
-          'created_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
-          'locale': locale,
-          'mode': 'ASSIST',
-          'onboarding_completed': 0,
-          'settings_json': canonical({
-            'schema_version': 1,
-            'sound_enabled': true,
-            'gain_permille': defaultKeyGain,
-            'speech_gain_permille': defaultSpeechGain,
-            'volume_controls_version': 2,
-            'speech_enabled': true,
-            'decorative_animation_enabled': true,
-            'high_contrast': false,
-            'device_local_id': uuid(),
-          }),
-        });
-      }
-    });
+        for (final session in open) {
+          final id = session['session_id'];
+          await tx.update(
+            'attempts',
+            {
+              'validity': 'INTERRUPTED',
+              'reason_code': 'INTERRUPTED_PROCESS_DEATH',
+              'outcome': null,
+            },
+            where: "session_id=? AND validity='OPEN'",
+            whereArgs: [id],
+          );
+          await tx.update(
+            'blocks',
+            {'status': 'INTERRUPTED'},
+            where: "session_id=? AND status IN ('PLANNED','ACTIVE')",
+            whereArgs: [id],
+          );
+          await tx.update(
+            'trials',
+            {'status': 'INTERRUPTED'},
+            where: "session_id=? AND status IN ('PLANNED','ACTIVE')",
+            whereArgs: [id],
+          );
+          final last =
+              Sqflite.firstIntValue(
+                await tx.rawQuery(
+                  'SELECT MAX(seq) FROM events WHERE session_id=?',
+                  [id],
+                ),
+              ) ??
+              0;
+          await tx.insert('events', {
+            'session_id': id,
+            'seq': last + 1,
+            'offset_us': null,
+            'clock_epoch_id': uuid(),
+            'kind': 'ERROR',
+            'payload_version': 1,
+            'payload_json': canonical({
+              'reason_code': 'INTERRUPTED_PROCESS_DEATH',
+              'recovered_at_utc_ms': DateTime.now()
+                  .toUtc()
+                  .millisecondsSinceEpoch,
+            }),
+          });
+          await tx.update(
+            'sessions',
+            {
+              'status': 'RECOVERED_INTERRUPTED',
+              'ended_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
+              'terminal_reason': 'INTERRUPTED_PROCESS_DEATH',
+            },
+            where: 'session_id=?',
+            whereArgs: [id],
+          );
+          final trialRows = await tx.query(
+            'trials',
+            where: 'session_id=?',
+            whereArgs: [id],
+          );
+          final allAttempts = await tx.query(
+            'attempts',
+            where: 'session_id=?',
+            whereArgs: [id],
+          );
+          final eventRows = await tx.query(
+            'events',
+            where: 'session_id=?',
+            whereArgs: [id],
+            orderBy: 'seq',
+          );
+          final recoveredSummary = PracticeMetrics.build(
+            taskId: session['task_id'] as String,
+            version: session['metric_version'] as String,
+            attempts: allAttempts
+                .map(
+                  (a) => {
+                    ...a,
+                    'result': a['result_json'] == null
+                        ? null
+                        : jsonDecode(a['result_json'] as String),
+                  },
+                )
+                .toList(),
+            trials: trialRows.map((t) => Map<String, dynamic>.from(t)).toList(),
+            events: eventRows
+                .map(
+                  (e) => {
+                    ...e,
+                    'payload': jsonDecode(e['payload_json'] as String),
+                  },
+                )
+                .toList(),
+            planned: session['planned_target_count'] as int,
+            complete: false,
+            qualityFlags: ['PROCESS_DEATH'],
+          );
+          await tx.insert('summaries', {
+            'summary_id': uuid(),
+            'session_id': id,
+            'scope': 'SESSION',
+            'scope_key': 'SESSION',
+            'metric_version': session['metric_version'],
+            'calculated_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
+            'source_last_seq': last + 1,
+            'result_json': canonical(recoveredSummary),
+          }, conflictAlgorithm: ConflictAlgorithm.ignore);
+        }
+        final existing = await tx.query('profiles');
+        if (existing.isEmpty) {
+          await tx.insert('profiles', {
+            'profile_id': uuid(),
+            'created_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
+            'locale': locale,
+            'mode': 'ASSIST',
+            'onboarding_completed': 0,
+            'settings_json': canonical({
+              'schema_version': 1,
+              'sound_enabled': true,
+              'gain_permille': defaultKeyGain,
+              'speech_gain_permille': defaultSpeechGain,
+              'volume_controls_version': 2,
+              'speech_enabled': true,
+              'decorative_animation_enabled': true,
+              'high_contrast': false,
+              'device_local_id': uuid(),
+            }),
+          });
+        }
+      });
+    }
     await reload();
     final oldSettings = jsonDecode(profile['settings_json'] as String) as Json;
     if (oldSettings['volume_controls_version'] != 2) {

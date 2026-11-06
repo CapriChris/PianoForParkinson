@@ -85,6 +85,12 @@ class PlanReminders {
   }
 
   Future<void> _pending = Future.value();
+  Future<void> clearForLogout() async {
+    await _pending;
+    if (initialized) await plugin.cancelAll();
+    onOpen = null;
+  }
+
   Future<void> sync(TrainingScheduleRepository store, {bool chinese = true}) {
     final next = _pending.then((_) => _sync(store, chinese: chinese));
     _pending = next.catchError((Object _) {});

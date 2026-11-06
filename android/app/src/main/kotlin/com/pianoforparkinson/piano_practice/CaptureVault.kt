@@ -49,7 +49,10 @@ class CaptureVault(private val context: Context) {
                             val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
                             context.cacheDir.listFiles()?.filter { it.name.startsWith("REC") && it.extension == "mp4" && it.lastModified() < cutoff }?.forEach { it.delete() }
                             val known = (args["known_ids"] as? List<*>)?.filterIsInstance<String>()?.toSet() ?: emptySet()
-                            root.listFiles()?.filter { it.isDirectory && it.name !in known && it.lastModified() < cutoff }?.forEach {
+                            // Another signed-in account has a separate metadata DB.
+                            // Preserve its recordings for the full retention period.
+                            val retentionCutoff = System.currentTimeMillis() - 7 * 24 * 60 * 60 * 1000L
+                            root.listFiles()?.filter { it.isDirectory && it.name !in known && it.lastModified() < retentionCutoff }?.forEach {
                                 if (runCatching { id(it.name) }.isSuccess) it.deleteRecursively()
                             }
                             null
