@@ -56,6 +56,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   /// Presentation-only intent; never persisted in practice records.
   final homeNavigationRequests = ValueNotifier<int>(0);
   bool _disposed = false;
+  bool _repositoryOpened = false;
   int _lastPresentedFrame = 0;
   String? recommendedTask, recommendedSong, recommendationError;
   int _recommendationRevision = 0;
@@ -198,6 +199,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         await Directory(databasePath).create();
       }
       await repository.open(databasePath, language == 'zh' ? 'zh-Hans' : 'en');
+      _repositoryOpened = true;
       await assistantConversations.open(databasePath);
       await content.load().timeout(const Duration(seconds: 10));
       content.select(settings['selected_song_id'] as String?);
@@ -253,19 +255,23 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
-  Future<void> shutdownAccount() async {
+  Future<void>? _closingAccount;
+  Future<void> shutdownAccount() => _closingAccount ??= _shutdownAccount();
+  Future<void> _shutdownAccount() async {
     _accountReconnect?.cancel();
     _ticker?.cancel();
     _recorder?.cancel();
     _captures?.disconnect();
     await _connectingAccount;
     await cloudSync.close();
+    await _captures?.shutdown();
     await _writes;
     await _settingsWrites;
     await _audioWrites;
     await _audioSettingsWrites;
+    await assistantConversations.close();
     dispose();
-    if (initialized && repository.db.isOpen) await repository.db.close();
+    if (_repositoryOpened && repository.db.isOpen) await repository.db.close();
   }
 
   Future<void> updateSettings({

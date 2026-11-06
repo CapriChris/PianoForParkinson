@@ -42,6 +42,23 @@ class TrainingCaptureService extends ChangeNotifier
   final Map<String, Map<String, dynamic>> records = {};
   final Map<String, double> progress = {};
   bool _closed = false, _uploading = false;
+  final _operations = <Future<dynamic>>{};
+  Future<T> _track<T>(Future<T> Function() action) {
+    final pending = Future<T>.sync(action);
+    _operations.add(pending);
+    unawaited(
+      pending.then<void>(
+        (_) {
+          _operations.remove(pending);
+        },
+        onError: (Object _, StackTrace _) {
+          _operations.remove(pending);
+        },
+      ),
+    );
+    return pending;
+  }
+
   String? _uploadingId;
   final Map<String, bool> _waitingUploads = {};
   int _identityEpoch = 0;
@@ -49,9 +66,31 @@ class TrainingCaptureService extends ChangeNotifier
   String get profileId => repository.profile['profile_id'] as String;
   String get deviceId => repository.settings['device_local_id'] as String;
   bool get connected =>
-      api?.signedIn == true && patientId != null && bindingId != null;
+      !_closed &&
+      api?.signedIn == true &&
+      patientId != null &&
+      bindingId != null;
   void changed() {
     if (!_closed) notifyListeners();
+  }
+
+  Future<T?> vault<T>(String method, [Map<String, dynamic> args = const {}]) {
+    final parts = File(repository.db.path).parent.uri.pathSegments
+        .where((s) => s.isNotEmpty)
+        .toList();
+    final directory = parts.isEmpty ? 'legacy' : parts.last;
+    return _vault.invokeMethod<T>(method, {
+      ...args,
+      if (directory.startsWith('account-')) 'owner_scope': directory,
+    });
+  }
+
+  Future<Map<String, dynamic>?> vaultMap(
+    String method, [
+    Map<String, dynamic> args = const {},
+  ]) async {
+    final value = await vault<Map<dynamic, dynamic>>(method, args);
+    return value == null ? null : Map<String, dynamic>.from(value);
   }
 
   Future<void> open() => _opening ??= _open();
@@ -71,22 +110,19 @@ class TrainingCaptureService extends ChangeNotifier
       records[data['capture_id'] as String] = data;
       if (DateTime.now().millisecondsSinceEpoch - (data['created_ms'] as int) >
           captureRetention.inMilliseconds) {
-        await _vault.invokeMethod<void>('delete', {
-          'capture_id': data['capture_id'],
-        });
+        await vault<void>('delete', {'capture_id': data['capture_id']});
         data['files'] = <dynamic>[];
         data['local_expired'] = true;
       }
       await persist(data);
     }
+    if (_closed) return;
     WidgetsBinding.instance.addObserver(this);
     _retryTimer ??= Timer.periodic(
       const Duration(seconds: 30),
       (_) => unawaited(resumePending()),
     );
-    await _vault.invokeMethod<void>('cleanup', {
-      'known_ids': records.keys.toList(),
-    });
+    await vault<void>('cleanup', {'known_ids': records.keys.toList()});
     changed();
   }
 
@@ -108,9 +144,9 @@ class TrainingCaptureService extends ChangeNotifier
     unawaited(open().then((_) => resumePending()).catchError((_) {}));
   }
 
-  void disconnect() {
+  void disconnect({bool clearCredentials = true}) {
     _identityEpoch++;
-    api?.signOut();
+    if (clearCredentials) api?.signOut();
     api = null;
     operatorId = null;
     patientId = null;
@@ -124,7 +160,9 @@ class TrainingCaptureService extends ChangeNotifier
     return api!.request('GET', '/integration/v1/capabilities');
   }
 
-  Future<TrainingCapture> prepare() async {
+  Future<TrainingCapture> prepare() => _track(_prepare);
+  Future<TrainingCapture> _prepare() async {
+    if (_closed) throw StateError('训练档案已关闭。');
     await open();
     final identity = _identityEpoch;
     if (active != null && !active!.finished) throw StateError('已有采集正在进行。');
@@ -133,7 +171,7 @@ class TrainingCaptureService extends ChangeNotifier
         caps['face_model_ready'] != true) {
       throw const RemoteApiException(503, '训练视频分析暂不可用，请联系维护人员更新并配置 Web 服务。');
     }
-    final space = await _vault.invokeMapMethod<String, dynamic>('space');
+    final space = await vaultMap('space');
     if ((space?['free_bytes'] as int? ?? 0) < captureMaxBytes * 2 ||
         (space?['used_bytes'] as int? ?? 0) > 1024 * 1024 * 1024) {
       throw StateError('视频存储空间不足，请先清理已保存的视频。');
@@ -172,7 +210,9 @@ class TrainingCaptureService extends ChangeNotifier
     return capture;
   }
 
-  Future<void> persist(Map<String, dynamic> data) async {
+  Future<void> persist(Map<String, dynamic> data) =>
+      _track(() => _persist(data));
+  Future<void> _persist(Map<String, dynamic> data) async {
     records[data['capture_id'] as String] = data;
     await store.db.insert('training_captures', {
       'capture_id': data['capture_id'],
@@ -190,7 +230,10 @@ class TrainingCaptureService extends ChangeNotifier
     return null;
   }
 
-  Future<void> recordSaved(String recordId) async {
+  Future<void> recordSaved(String recordId) =>
+      _track(() => _recordSaved(recordId));
+  Future<void> _recordSaved(String recordId) async {
+    if (_closed) return;
     if (records.isEmpty && active == null && _opening == null) return;
     try {
       await open();
@@ -204,6 +247,7 @@ class TrainingCaptureService extends ChangeNotifier
   Future<String> _syncOne(
     Map<String, dynamic> capture,
     RemoteApi remote,
+    bool Function() current,
   ) async {
     final id = capture['source_record_id'] as String;
     final detail = await repository.detail(id);
@@ -221,6 +265,7 @@ class TrainingCaptureService extends ChangeNotifier
         'summaries',
         'adaptive_decisions',
       ]) {
+        if (!current()) throw StateError('训练档案已关闭。');
         children[table] = await repository.db.query(
           table,
           where: 'session_id=?',
@@ -229,6 +274,7 @@ class TrainingCaptureService extends ChangeNotifier
       }
       payload['children'] = children;
     }
+    if (!current()) throw StateError('训练档案已关闭。');
     final r = await remote.syncRecord({
       'device_id': capture['device_id'],
       'local_profile_id': capture['profile_id'],
@@ -250,10 +296,10 @@ class TrainingCaptureService extends ChangeNotifier
       row['patient_id'] == patientId &&
       row['profile_id'] == profileId &&
       row['server_origin'] == api!.base.toString();
-  Future<bool> metered() async =>
-      await _vault.invokeMethod<bool>('metered') ?? true;
+  Future<bool> metered() async => await vault<bool>('metered') ?? true;
 
-  Future<void> resumePending() async {
+  Future<void> resumePending() => _track(_resumePending);
+  Future<void> _resumePending() async {
     if (_closed ||
         !connected ||
         _uploading ||
@@ -281,7 +327,9 @@ class TrainingCaptureService extends ChangeNotifier
     if (state == AppLifecycleState.resumed) unawaited(resumePending());
   }
 
-  Future<void> upload(String captureId, {bool allowMobile = false}) async {
+  Future<void> upload(String captureId, {bool allowMobile = false}) =>
+      _track(() => _upload(captureId, allowMobile: allowMobile));
+  Future<void> _upload(String captureId, {bool allowMobile = false}) async {
     if (_closed) return;
     if (_uploading) {
       if (_uploadingId != captureId) _waitingUploads[captureId] = allowMobile;
@@ -318,17 +366,20 @@ class TrainingCaptureService extends ChangeNotifier
         return;
       }
       if (row['local_expired'] == true) throw StateError('本机视频已过期，无法重新上传。');
-      if (await metered() && !allowMobile) {
+      final isMetered = await metered();
+      if (!current()) return;
+      if (isMetered && !allowMobile) {
         row['state'] = 'WAITING_NETWORK';
         row['message'] = '等待 Wi-Fi，也可选择使用移动网络上传。';
         await persist(row);
         return;
       }
       final caps = await remote.request('GET', '/integration/v1/capabilities');
+      if (!current()) return;
       if (caps['face_recordings_ready'] != true) {
         throw StateError('Web 服务尚未支持训练录像，请先更新服务。');
       }
-      row['external_record_id'] ??= await _syncOne(row, remote);
+      row['external_record_id'] ??= await _syncOne(row, remote, current);
       if (!current()) return;
       final files = (row['files'] as List).cast<Map<String, dynamic>>();
       if (files.isEmpty) throw StateError('本次没有可上传的视频。');
@@ -354,7 +405,7 @@ class TrainingCaptureService extends ChangeNotifier
         row['remote'] = parent;
         row['state'] = parent['status'];
         await persist(row);
-        await _vault.invokeMethod<void>('delete', {'capture_id': captureId});
+        await vault<void>('delete', {'capture_id': captureId});
         return;
       }
       row['state'] = 'UPLOADING';
@@ -379,7 +430,7 @@ class TrainingCaptureService extends ChangeNotifier
                 captureChunkBytes,
               );
           if (!present.contains(index)) {
-            final bytes = await _vault.invokeMethod<Uint8List>('readChunk', {
+            final bytes = await vault<Uint8List>('readChunk', {
               'capture_id': captureId,
               'file_id': fileId,
               'index': index,
@@ -411,7 +462,7 @@ class TrainingCaptureService extends ChangeNotifier
       row['state'] = result['status'];
       row['remote'] = result;
       await persist(row);
-      await _vault.invokeMethod<void>('delete', {'capture_id': captureId});
+      await vault<void>('delete', {'capture_id': captureId});
     } catch (e) {
       if (current()) {
         row['state'] = e is RemoteApiException && {401, 403}.contains(e.status)
@@ -440,7 +491,9 @@ class TrainingCaptureService extends ChangeNotifier
     }
   }
 
-  Future<void> refresh(String id) async {
+  Future<void> refresh(String id) => _track(() => _refresh(id));
+  Future<void> _refresh(String id) async {
+    if (_closed) return;
     final row = records[id];
     if (row == null || !owns(row) || row['remote_id'] == null) return;
     final remote = api!, epoch = _identityEpoch;
@@ -448,32 +501,40 @@ class TrainingCaptureService extends ChangeNotifier
       'GET',
       '/integration/v1/face/recordings/${row['remote_id']}',
     );
-    if (epoch != _identityEpoch || row['state'] == 'DELETED') return;
+    if (_closed || epoch != _identityEpoch || row['state'] == 'DELETED') return;
     row['remote'] = result;
     row['state'] = result['status'];
     row.remove('message');
     await persist(row);
   }
 
-  Future<void> retryAnalysis(String id) async {
+  Future<void> retryAnalysis(String id) => _track(() => _retryAnalysis(id));
+  Future<void> _retryAnalysis(String id) async {
+    if (_closed) return;
     final row = records[id];
     if (row == null || !owns(row) || row['remote_id'] == null) {
       throw StateError('请连接原训练档案后重试。');
     }
-    final result = await api!.request(
+    final remote = api!, epoch = _identityEpoch;
+    final result = await remote.request(
       'POST',
       '/integration/v1/face/recordings/${row['remote_id']}/retry',
     );
+    if (_closed || epoch != _identityEpoch || row['state'] == 'DELETED') return;
     row['remote'] = result;
     row['state'] = result['status'];
     await persist(row);
   }
 
-  Future<void> remove(String id) async {
+  Future<void> remove(String id) => _track(() => _remove(id));
+  Future<void> _remove(String id) async {
+    if (_closed) return;
+    final epoch = _identityEpoch;
     final row = records[id];
     if (row == null) return;
     row['state'] = 'CANCELLED';
     await persist(row);
+    if (_closed || epoch != _identityEpoch) return;
     if (row['remote_id'] != null) {
       if (!owns(row)) throw StateError('请登录原训练档案后同步云端删除。');
       await api!.request(
@@ -481,14 +542,39 @@ class TrainingCaptureService extends ChangeNotifier
         '/integration/v1/face/recordings/${row['remote_id']}',
       );
     }
-    await _vault.invokeMethod<void>('delete', {'capture_id': id});
+    if (_closed || epoch != _identityEpoch) return;
+    await vault<void>('delete', {'capture_id': id});
     row['state'] = 'DELETED';
     row['files'] = <dynamic>[];
     await persist(row);
   }
 
+  Future<void>? _shutdown;
+  Future<void> shutdown() => _shutdown ??= () async {
+    if (!_closed) dispose();
+    if (_opening == null) return;
+    try {
+      await _opening;
+    } catch (_) {
+      return;
+    }
+    try {
+      await active?.discard();
+    } catch (_) {}
+    while (_operations.isNotEmpty) {
+      await Future.wait(
+        _operations.toList().map(
+          (pending) =>
+              pending.then<void>((_) {}, onError: (Object _, StackTrace _) {}),
+        ),
+      );
+    }
+    await store.db.close();
+  }();
+
   @override
   void dispose() {
+    if (_closed) return;
     _closed = true;
     _retryTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
@@ -596,9 +682,7 @@ class TrainingCapture extends ChangeNotifier with WidgetsBindingObserver {
         }
         _checkingBudget = true;
         try {
-          final budget = await _vault.invokeMapMethod<String, dynamic>(
-            'budget',
-          );
+          final budget = await owner.vaultMap('budget');
           final sealedBytes = (data['files'] as List).fold<int>(
             0,
             (total, file) => total + (file['size_bytes'] as int),
@@ -637,7 +721,7 @@ class TrainingCapture extends ChangeNotifier with WidgetsBindingObserver {
         changed();
         final fileId = uuid();
         try {
-          final info = await _vault.invokeMapMethod<String, dynamic>('seal', {
+          final info = await owner.vaultMap('seal', {
             'capture_id': id,
             'file_id': fileId,
             'path': file.path,
@@ -705,7 +789,7 @@ class TrainingCapture extends ChangeNotifier with WidgetsBindingObserver {
       /* Discard also cleans a failed recording. */
     }
     try {
-      await _vault.invokeMethod<void>('delete', {'capture_id': id});
+      await owner.vault<void>('delete', {'capture_id': id});
       data['state'] = 'DELETED';
       data['files'] = <dynamic>[];
       await owner.persist(data);

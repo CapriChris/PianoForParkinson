@@ -95,6 +95,7 @@ class AccountController extends ChangeNotifier {
   Future<void> restore() async {
     try {
       await _acquire();
+      unawaited(api.drainRevocations());
       final saved = await vault.read();
       if (saved != null && !saved.expired) {
         api.session = saved;

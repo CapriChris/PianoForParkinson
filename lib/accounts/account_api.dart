@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:typed_data';
 
 import '../domain/contracts.dart';
@@ -47,16 +48,34 @@ class AccountApi extends RemoteApi {
     final old = session;
     if (old != null &&
         (old.userId != next.userId || old.patientId != next.patientId)) {
+      await _queueRevocation(next);
       throw const FormatException('Account identity changed');
     }
-    if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
+    if (_epoch != epoch) {
+      await _queueRevocation(next);
+      throw const RemoteApiException(401, '登录状态已变化。');
+    }
     final write = _vaultWrites.catchError((Object _) {}).then((_) async {
       if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
       await vault.write(next);
       if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
     });
     _vaultWrites = write;
-    await write;
+    try {
+      await write;
+    } catch (_) {
+      if (_epoch == epoch) {
+        signOut();
+        await _clearCredential();
+        invalidated?.call();
+      }
+      await _queueRevocation(next);
+      rethrow;
+    }
+    if (_epoch != epoch) {
+      await _queueRevocation(next);
+      throw const RemoteApiException(401, '登录状态已变化。');
+    }
     session = next;
     setAccessToken(body['access_token'] as String);
     transport?.setAccessToken(body['access_token'] as String);
@@ -64,6 +83,7 @@ class AccountApi extends RemoteApi {
       Duration(seconds: (body['expires_in'] as int) - 30),
     );
     changed?.call(next);
+    unawaited(drainRevocations());
   }
 
   Future<Json> authenticate(
@@ -106,6 +126,13 @@ class AccountApi extends RemoteApi {
         await _accept(body, current.deviceId, epoch);
       } on RemoteApiException catch (error) {
         if (error.status == 401 && _epoch == epoch) {
+          signOut();
+          await _clearCredential();
+          invalidated?.call();
+        }
+        rethrow;
+      } on FormatException {
+        if (_epoch == epoch) {
           signOut();
           await _clearCredential();
           invalidated?.call();
@@ -179,19 +206,81 @@ class AccountApi extends RemoteApi {
   }
 
   Future<void> logout() async {
-    final token = session?.refreshToken;
+    final current = session;
     signOut();
     await _clearCredential();
-    if (token != null) {
+    if (current != null) await _queueRevocation(current, waitForRemote: true);
+  }
+
+  Future<void> _queueRevocation(
+    AccountSession record, {
+    bool waitForRemote = false,
+  }) async {
+    final write = _vaultWrites.catchError((Object _) {}).then((_) async {
+      final raw = await vault.readRevocations();
+      final entries = raw == null ? <dynamic>[] : jsonDecode(raw) as List;
+      entries.removeWhere(
+        (e) =>
+            !DateTime.parse(e['expires_at'] as String)
+                .isAfter(DateTime.now().toUtc()),
+      );
+      if (!entries.any((e) => e['refresh_token'] == record.refreshToken)) {
+        entries.add({
+          'base': record.base,
+          'refresh_token': record.refreshToken,
+          'expires_at': record.refreshExpiresAt.toIso8601String(),
+        });
+      }
+      await vault.writeRevocations(jsonEncode(entries));
+    });
+    _vaultWrites = write;
+    await write;
+    final drain = drainRevocations();
+    if (waitForRemote) {
       try {
+        await drain.timeout(const Duration(seconds: 8));
+      } on TimeoutException {
+        /* Encrypted retry remains. */
+      }
+    } else {
+      unawaited(drain);
+    }
+  }
+
+  Future<void>? _draining;
+  Future<void> drainRevocations() =>
+      _draining ??= _drainRevocations().whenComplete(() => _draining = null);
+  Future<void> _drainRevocations() async {
+    try {
+      await _vaultWrites.catchError((Object _) {});
+      while (true) {
+        final raw = await vault.readRevocations();
+        if (raw == null) return;
+        final pending = (jsonDecode(raw) as List)
+            .where((item) => item['base'] == base.toString())
+            .toList();
+        if (pending.isEmpty) return;
+        final item = pending.first;
         await _send(
           'POST',
           '/mobile/auth/logout',
-          data: {'refresh_token': token},
+          data: {'refresh_token': item['refresh_token']},
         ).timeout(const Duration(seconds: 8));
-      } catch (_) {
-        /* Local logout remains effective when offline. */
+        final write = _vaultWrites.catchError((Object _) {}).then((_) async {
+          final current = await vault.readRevocations();
+          final entries = current == null
+              ? <dynamic>[]
+              : jsonDecode(current) as List;
+          entries.removeWhere(
+            (e) => e['refresh_token'] == item['refresh_token'],
+          );
+          await vault.writeRevocations(jsonEncode(entries));
+        });
+        _vaultWrites = write;
+        await write;
       }
+    } catch (_) {
+      /* Keep encrypted compensation until the next login/restore. */
     }
   }
 

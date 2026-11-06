@@ -25,10 +25,15 @@ class CaptureVault(private val context: Context) {
         private val executor = Executors.newSingleThreadExecutor { r -> Thread(r, "CaptureVault").apply { isDaemon = true } }
     }
     private val main = Handler(Looper.getMainLooper())
-    private val root get() = File(context.filesDir, "capture_vault").apply { mkdirs() }
+    private fun root(scope: Any?): File {
+        val base = File(context.filesDir, "capture_vault").apply { mkdirs() }
+        if (scope == null) return base
+        require(scope is String && Regex("account-[a-f0-9]{64}").matches(scope))
+        return File(base, scope).apply { mkdirs() }
+    }
     private val blockSize = 4 * 1024 * 1024
     private fun id(raw: Any?): String = UUID.fromString(raw as String).toString()
-    private fun folder(capture: Any?, file: Any?) = File(File(root, id(capture)), id(file))
+    private fun folder(root: File, capture: Any?, file: Any?) = File(File(root, id(capture)), id(file))
     private fun key(): SecretKey {
         val store = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (store.getKey("qin-training-video-v1", null) as? SecretKey)?.let { return it }
@@ -44,6 +49,7 @@ class CaptureVault(private val context: Context) {
             executor.execute {
                 try {
                     val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
+                    val root = root(args["owner_scope"])
                     val value: Any? = when (call.method) {
                         "cleanup" -> {
                             val cutoff = System.currentTimeMillis() - 24 * 60 * 60 * 1000L
@@ -66,7 +72,7 @@ class CaptureVault(private val context: Context) {
                             val source = File(args["path"] as String).canonicalFile
                             require(source.toPath().startsWith(context.cacheDir.canonicalFile.toPath()))
                             require(source.length() in 1..(400L * 1024 * 1024))
-                            val destination = folder(args["capture_id"], args["file_id"])
+                            val destination = folder(root, args["capture_id"], args["file_id"])
                             require(!destination.exists())
                             destination.mkdirs()
                             try {
@@ -109,7 +115,7 @@ class CaptureVault(private val context: Context) {
                         "readChunk" -> {
                             val index = (args["index"] as Number).toInt()
                             require(index in 0..100)
-                            val bytes = File(folder(args["capture_id"], args["file_id"]), "$index.bin").readBytes()
+                            val bytes = File(folder(root, args["capture_id"], args["file_id"]), "$index.bin").readBytes()
                             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
                             cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
                             cipher.updateAAD("${args["capture_id"]}/${args["file_id"]}/$index".toByteArray())

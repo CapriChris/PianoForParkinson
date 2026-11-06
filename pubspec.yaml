@@ -1,7 +1,7 @@
 name: piano_practice
 description: 琴伴 — internal Android prototype for piano practice.
 publish_to: none
-version: 0.1.63+64
+version: 0.1.64+65
 environment:
   sdk: '>=3.13.5 <4.0.0'
 dependencies:

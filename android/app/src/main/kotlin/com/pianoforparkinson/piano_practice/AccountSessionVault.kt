@@ -27,26 +27,26 @@ class AccountSessionVault(private val context: Context) {
             generateKey()
         }
     }
-    @Synchronized private fun read(): String? {
-        if (!file.baseFile.exists()) return null
-        val bytes = file.readFully()
+    @Synchronized private fun read(target: AtomicFile = file): String? {
+        if (!target.baseFile.exists()) return null
+        val bytes = target.readFully()
         require(bytes.size in 29..65536)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
         return cipher.doFinal(bytes.copyOfRange(12, bytes.size)).toString(Charsets.UTF_8)
     }
-    @Synchronized private fun write(value: String) {
+    @Synchronized private fun write(value: String, target: AtomicFile = file) {
         val bytes = value.toByteArray(Charsets.UTF_8)
         require(bytes.size <= 60000)
         val cipher = Cipher.getInstance("AES/GCM/NoPadding")
         cipher.init(Cipher.ENCRYPT_MODE, key())
-        val stream = file.startWrite()
+        val stream = target.startWrite()
         try {
             stream.write(cipher.iv)
             stream.write(cipher.doFinal(bytes))
-            file.finishWrite(stream)
+            target.finishWrite(stream)
         } catch (error: Exception) {
-            file.failWrite(stream)
+            target.failWrite(stream)
             throw error
         }
     }
@@ -56,6 +56,8 @@ class AccountSessionVault(private val context: Context) {
                 when (call.method) {
                     "read" -> result.success(read())
                     "write" -> { write(call.argument<String>("value")!!); result.success(null) }
+                    "readRevocations" -> result.success(read(AtomicFile(File(context.noBackupFilesDir, "account-revocations-v1"))))
+                    "writeRevocations" -> { write(call.argument<String>("value")!!, AtomicFile(File(context.noBackupFilesDir, "account-revocations-v1"))); result.success(null) }
                     "clear" -> { file.delete(); result.success(null) }
                     "acquire" -> result.success(AccountDataLease.acquire(context, "ui"))
                     "release" -> { AccountDataLease.release("ui"); result.success(null) }

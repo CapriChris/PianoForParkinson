@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/accounts/account_api.dart';
@@ -9,6 +10,14 @@ import 'package:piano_practice/integration/remote_api.dart';
 class MemoryVault extends AccountVault {
   AccountSession? value;
   bool failWrite = false;
+  String? revocations;
+  @override
+  Future<String?> readRevocations() async => revocations;
+  @override
+  Future<void> writeRevocations(String value) async {
+    revocations = value;
+  }
+
   @override
   Future<AccountSession?> read() async => value;
   @override
@@ -62,6 +71,8 @@ class AuthTransport extends RemoteApi {
   AuthTransport() : super(accountApiBase);
   final calls = <String>[];
   Json? registration;
+  String? refreshPatient;
+  Completer<void>? logoutGate;
   Completer<void>? gate;
   bool rejectRefresh = false, offline = false, forbidden = false;
   int refreshes = 0;
@@ -79,12 +90,20 @@ class AuthTransport extends RemoteApi {
       refreshes++;
       if (gate != null) await gate!.future;
       if (rejectRefresh) throw const RemoteApiException(401, 'expired');
-      return {...response(), 'refresh_token': 'n' * 64};
+      return {
+        ...response(
+          patient: refreshPatient ?? '22222222-2222-4222-8222-222222222222',
+        ),
+        'refresh_token': 'n' * 64,
+      };
     }
     if (path.endsWith('/me') && forbidden) {
       throw const RemoteApiException(403, 'denied');
     }
-    if (path.endsWith('/logout')) return {};
+    if (path.endsWith('/logout')) {
+      await logoutGate?.future;
+      return {};
+    }
     return response();
   }
 }
@@ -101,6 +120,74 @@ class DelayedVault extends MemoryVault {
 }
 
 void main() {
+  test(
+    'refresh persistence failure locks the old in-memory identity',
+    () async {
+      final vault = MemoryVault()
+        ..value = savedSession()
+        ..failWrite = true;
+      var invalidated = false;
+      final api = AccountApi(
+        vault: vault,
+        transport: AuthTransport(),
+        invalidated: () => invalidated = true,
+      )..session = vault.value;
+      await expectLater(api.ensureAccess(), throwsStateError);
+      expect(api.signedIn, isFalse);
+      expect(vault.value, isNull);
+      expect(invalidated, isTrue);
+    },
+  );
+  test('refresh cannot substitute a different patient UUID', () async {
+    final vault = MemoryVault()..value = savedSession();
+    var invalidated = false;
+    final api = AccountApi(
+      vault: vault,
+      transport: AuthTransport()
+        ..refreshPatient = '33333333-3333-4333-8333-333333333333',
+      invalidated: () => invalidated = true,
+    )..session = vault.value;
+    await expectLater(api.ensureAccess(), throwsFormatException);
+    expect(api.signedIn, isFalse);
+    expect(vault.value, isNull);
+    expect(invalidated, isTrue);
+  });
+  test(
+    'offline logout queues encrypted compensation and retry drains it',
+    () async {
+      final vault = MemoryVault()..value = savedSession();
+      final transport = AuthTransport()..offline = true;
+      final api = AccountApi(vault: vault, transport: transport)
+        ..session = vault.value;
+      await api.logout();
+      expect(api.signedIn, isFalse);
+      expect(vault.value, isNull);
+      expect(
+        (jsonDecode(vault.revocations!) as List).single['refresh_token'],
+        savedSession().refreshToken,
+      );
+      transport.offline = false;
+      await api.drainRevocations();
+      expect(jsonDecode(vault.revocations!), isEmpty);
+    },
+  );
+  test(
+    'awaited logout includes the server revocation acknowledgment',
+    () async {
+      final vault = MemoryVault()..value = savedSession();
+      final transport = AuthTransport()..logoutGate = Completer<void>();
+      final api = AccountApi(vault: vault, transport: transport)
+        ..session = vault.value;
+      var done = false;
+      final logout = api.logout().then((_) => done = true);
+      await Future<void>.delayed(Duration.zero);
+      expect(api.signedIn, isFalse);
+      expect(done, isFalse);
+      transport.logoutGate!.complete();
+      await logout;
+      expect(jsonDecode(vault.revocations!), isEmpty);
+    },
+  );
   test(
     'logout serializes credential deletion behind an in-progress write',
     () async {
@@ -190,6 +277,9 @@ void main() {
     await rejected;
     expect(api.signedIn, isFalse);
     expect(vault.value, isNull);
+    await api.drainRevocations();
+    expect(transport.calls.where((path) => path.endsWith('/logout')).length, 2);
+    expect(jsonDecode(vault.revocations!), isEmpty);
   });
   test('failed secure write never activates a login', () async {
     final vault = MemoryVault()..failWrite = true;

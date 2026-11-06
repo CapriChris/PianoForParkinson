@@ -73,6 +73,10 @@ class AccountVault {
     {'value': jsonEncode(session.toJson())},
   );
   Future<void> clear() => channel.invokeMethod<void>('clear');
+  Future<String?> readRevocations() =>
+      channel.invokeMethod<String>('readRevocations');
+  Future<void> writeRevocations(String value) =>
+      channel.invokeMethod<void>('writeRevocations', {'value': value});
   Future<bool> acquire() async =>
       await channel.invokeMethod<bool>('acquire') == true;
   Future<void> release() => channel.invokeMethod<void>('release');
