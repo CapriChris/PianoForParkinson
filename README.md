@@ -1,8 +1,8 @@
 # 琴伴 · Android 内部演示
 
-## 最新版本 0.1.63（构建 64）
+## 最新源码 0.1.64（构建 65）
 
-新增注册登录、按账号隔离数据和自动同步，更新 App 图标、账号页共用插画与 8–16 位新密码提示。训练、计划与记录必须登录后使用。账号注册依赖配套后端和账号数据库迁移，Web 代码见 [草稿合并请求 #1](https://github.com/WuChangqing1/PD-Rehab-Web/pull/1)；合并部署后进行公网注册和真机验收。[更新说明](docs/2026-11-06-0.1.63-更新说明.md) · [部署与联调交接](docs/2026-11-06-账号注册登录与自动同步交接.md)
+保留 0.1.63 的账号界面、品牌和训练功能，补齐退出撤销补偿、账号切换关库等待及旧版待上传录像的安全目录迁移。注册前主动确认训练记录/计划自动同步，录像与 AI 另行授权。配套 Web 账号 API 已于 2026-11-07 上线。详见 [本版验证](validation/release-0.1.64.md) 与 [后端上线记录](https://github.com/WuChangqing1/PD-Rehab-Web/blob/main/docs/mobile-accounts-release-20261107.md)。本轮 ARM64 QA 包单独交付，未替换下方旧版公开安装包。
 
 ## 训练视频采集开发进度
 
@@ -10,7 +10,7 @@
 
 详见 [实施与 Web 交接](docs/2026-11-04-训练视频采集实施与Web交接.md) 和 [设计文档](docs/2026-11-04-训练视频采集与Web面部分析设计.md)。
 
-## 下载 0.1.63（构建 64）
+## 上一个公开安装包 0.1.63（构建 64）
 
 Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，最低支持 Android 7.0（API 24）。四段舞蹈视频随包提供，可离线播放。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.63/qinban-0.1.63-android-universal.apk) · [发布说明](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.63) · [SHA-256 校验文件](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.63/SHA256SUMS-0.1.63.txt)
 
@@ -51,7 +51,7 @@ flutter run -d <Android设备ID>
 flutter build apk --release
 ```
 
-运行或构建双端联调版时，添加以下参数。将示例网关地址替换成自己的 HTTPS 地址。Web 互联的 API 地址在 App 的「云端服务联调」页填写。
+运行或构建双端联调版时，添加以下参数。将示例网关地址替换成自己的 HTTPS 地址。正式账号默认连接 `https://ccqspace.site/pd-rehab/api`。如需预发布环境，可在构建时添加 `--dart-define=PD_API_BASE=https://staging.example.com/api`；地址必须为手机可达的可信 HTTPS API。
 
 ```powershell
 flutter build apk --release --dart-define=PD_CLOUD_INTEGRATION=true --dart-define=QIN_AI_GATEWAY=https://ai.example.com/ --dart-define=QIN_AI_PROVIDER_NAME=DeepSeek
