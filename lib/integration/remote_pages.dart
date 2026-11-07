@@ -610,7 +610,10 @@ class _RemoteFacePageState extends State<RemoteFacePage> {
       );
       if (file == null) return;
       await player?.dispose();
-      player = VideoPlayerController.file(File(file.path));
+      player = VideoPlayerController.file(
+        File(file.path),
+        videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+      );
       await player!.initialize();
       setState(() {
         video = file;

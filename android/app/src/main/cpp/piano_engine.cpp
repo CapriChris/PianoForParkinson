@@ -22,6 +22,8 @@ public:
     std::atomic<int> active{0};
     std::atomic<int64_t> rendered{0}, anchor{0};
     std::atomic<bool> running{false}, failed{false};
+    std::atomic<float> outputGain{1.f};
+    float renderedGain=1.f;
     int64_t lastXruns=0;
     bool push(Command c) {
         auto w=write.load(std::memory_order_relaxed);
@@ -74,7 +76,9 @@ public:
                     value+=(track[n]+(track[n+1]-track[n])*static_cast<float>(p-n))*trackGain;
                 }
             }
-            out[2*i]=out[2*i+1]=qin::Mixer::limit(value);
+            // Smooth notification ducking without changing timing or active voices.
+            renderedGain += (outputGain.load(std::memory_order_relaxed)-renderedGain)*.002f;
+            out[2*i]=out[2*i+1]=qin::Mixer::limit(value*renderedGain);
         }
         rendered=first+frames; active=mixer.count();
         return oboe::DataCallbackResult::Continue;
@@ -124,6 +128,12 @@ extern "C" JNIEXPORT void JNICALL JNI(reset)(JNIEnv*,jobject) {
 }
 extern "C" JNIEXPORT void JNICALL JNI(suspendStream)(JNIEnv*,jobject) { engine.close(); }
 extern "C" JNIEXPORT jboolean JNICALL JNI(open)(JNIEnv*,jobject) { return engine.open(); }
+extern "C" JNIEXPORT void JNICALL JNI(setOutputGain)(JNIEnv*,jobject,jfloat gain) {
+    engine.outputGain=std::max(0.f,std::min(1.f,gain));
+}
+extern "C" JNIEXPORT jint JNICALL JNI(outputDeviceId)(JNIEnv*,jobject) {
+    return engine.stream ? engine.stream->getDeviceId() : 0;
+}
 extern "C" JNIEXPORT void JNICALL JNI(loadSample)(JNIEnv *e,jobject,jint id,jfloatArray data,jint rate,jint root,jint start,jint end,jint fade) {
     if (id<0 || id>=128 || engine.stream) return;
     auto &s=engine.mixer.samples[id]; s.pcm=floats(e,data); s.rate=rate; s.root=root;

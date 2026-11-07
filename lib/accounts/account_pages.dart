@@ -6,6 +6,7 @@ import '../app/app_controller.dart';
 import '../app/piano_app.dart';
 import '../integration/remote_api.dart';
 import '../ui/qin_theme.dart';
+import '../ui/qin_press.dart';
 import 'account_controller.dart';
 import 'password_rules.dart';
 
@@ -70,13 +71,17 @@ Future<void> showRecoveryCode(BuildContext context, String code) =>
             ),
           ),
           actions: [
-            TextButton(
+            QinTextButton(
               onPressed: () async {
                 await Clipboard.setData(ClipboardData(text: code));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(const SnackBar(content: Text('恢复码已复制')));
+                }
               },
               child: const Text('复制恢复码'),
             ),
-            FilledButton(
+            QinFilledButton(
               onPressed: () => Navigator.pop(context),
               child: const Text('我已保存'),
             ),
@@ -160,16 +165,19 @@ class _AccountPasswordFieldState extends State<_AccountPasswordField> {
         minHeight: 48,
       ),
       suffixIcon: focus.hasFocus
-          ? IconButton(
-              key: ValueKey('${widget.id}-visibility'),
-              focusNode: toggleFocus,
-              alignment: Alignment.centerRight,
-              padding: EdgeInsets.zero,
-              tooltip: visible ? '隐藏密码' : '显示密码',
-              onPressed: widget.enabled
+          ? QinPress(
+              onActivate: widget.enabled
                   ? () => setState(() => visible = !visible)
                   : null,
-              icon: Icon(visible ? Icons.visibility : Icons.visibility_off),
+              builder: (activate) => IconButton(
+                key: ValueKey('${widget.id}-visibility'),
+                focusNode: toggleFocus,
+                alignment: Alignment.centerRight,
+                padding: EdgeInsets.zero,
+                tooltip: visible ? '隐藏密码' : '显示密码',
+                onPressed: activate,
+                icon: Icon(visible ? Icons.visibility : Icons.visibility_off),
+              ),
             )
           : null,
     ),
@@ -291,28 +299,6 @@ class _LoginPageState extends State<LoginPage> {
       error = null;
     });
     try {
-      if (register) {
-        final approved = await showDialog<bool>(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('确认自动同步'),
-            content: const Text(
-              '是否允许将训练记录和训练计划自动同步到您的 Web 档案？训练录像与 AI 服务会另行征求授权。',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('暂不注册'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('同意同步并注册'),
-              ),
-            ],
-          ),
-        );
-        if (!mounted || approved != true) return;
-      }
       if (reset) {
         final code = await widget.accounts.api.resetPassword(
           username.text,
@@ -512,20 +498,51 @@ class _LoginPageState extends State<LoginPage> {
                                 ),
                               ),
                             const SizedBox(height: 18),
-                            FilledButton(
+                            QinFilledButton(
+                              key: const ValueKey('account-submit'),
                               onPressed: busy ? null : submit,
-                              child: Text(
-                                busy
-                                    ? '请稍候…'
-                                    : reset
-                                    ? '重置密码'
-                                    : register
-                                    ? '注册并登录'
-                                    : '登录',
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  if (busy) ...[
+                                    const ExcludeSemantics(
+                                      child: SizedBox(
+                                        key: ValueKey(
+                                          'account-submit-progress',
+                                        ),
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2.5,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                  ],
+                                  Flexible(
+                                    child: Semantics(
+                                      liveRegion: busy,
+                                      child: Text(
+                                        busy
+                                            ? reset
+                                                  ? '重置中…'
+                                                  : register
+                                                  ? '注册中…'
+                                                  : '登录中…'
+                                            : reset
+                                            ? '重置密码'
+                                            : register
+                                            ? '注册并登录'
+                                            : '登录',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                             const SizedBox(height: 8),
-                            TextButton(
+                            QinTextButton(
                               onPressed: busy
                                   ? null
                                   : () => changeMode(
@@ -536,7 +553,7 @@ class _LoginPageState extends State<LoginPage> {
                               ),
                             ),
                             if (!register && !reset)
-                              TextButton(
+                              QinTextButton(
                                 onPressed: busy
                                     ? null
                                     : () => changeMode('reset'),
@@ -608,11 +625,11 @@ class _AccountPageState extends State<AccountPage> {
           ),
         ),
         actions: [
-          TextButton(
+          QinTextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('取消'),
           ),
-          FilledButton(
+          QinFilledButton(
             onPressed: () {
               if (form.currentState!.validate()) Navigator.pop(context, true);
             },
@@ -643,7 +660,16 @@ class _AccountPageState extends State<AccountPage> {
   Widget build(BuildContext context) {
     final c = widget.c, session = widget.c.accountApi!.session;
     return Scaffold(
-      appBar: AppBar(title: const Text('我的账号')),
+      appBar: AppBar(
+        title: const Text('我的账号'),
+        leading: ModalRoute.of(context)?.canPop == true
+            ? QinIconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                onPressed: () => Navigator.maybePop(context),
+                icon: const BackButtonIcon(),
+              )
+            : null,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
@@ -671,7 +697,7 @@ class _AccountPageState extends State<AccountPage> {
                 child: Text(message!),
               ),
             const SizedBox(height: 16),
-            OutlinedButton(
+            QinOutlinedButton(
               onPressed: busy
                   ? null
                   : () async {
@@ -690,12 +716,12 @@ class _AccountPageState extends State<AccountPage> {
                     },
               child: const Text('立即同步'),
             ),
-            OutlinedButton(
+            QinOutlinedButton(
               onPressed: busy ? null : changePassword,
               child: const Text('修改密码'),
             ),
             const SizedBox(height: 24),
-            TextButton(
+            QinTextButton(
               onPressed: busy
                   ? null
                   : () async {
@@ -705,11 +731,11 @@ class _AccountPageState extends State<AccountPage> {
                           title: const Text('退出账号？'),
                           content: const Text('本机记录会保留在此账号中。退出后需要登录才能使用训练和计划。'),
                           actions: [
-                            TextButton(
+                            QinTextButton(
                               onPressed: () => Navigator.pop(context, false),
                               child: const Text('取消'),
                             ),
-                            FilledButton(
+                            QinFilledButton(
                               onPressed: () => Navigator.pop(context, true),
                               child: const Text('退出登录'),
                             ),

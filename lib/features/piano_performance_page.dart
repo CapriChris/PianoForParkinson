@@ -60,6 +60,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
   DateTime? started;
   Animation<double>? routeAnimation;
   int epoch = 0;
+  int resumeBeatsRemaining = 0;
   String? error;
   @override
   void initState() {
@@ -202,6 +203,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
 
   void pause() {
     ++epoch;
+    resumeBeatsRemaining = 0;
     if (player.mode == ScrollPieceMode.ready) {
       autoStartAttempted = true;
       player.start();
@@ -224,6 +226,15 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       if (!mounted || token != epoch) return;
       await backing.prepare(widget.tempo);
       if (!mounted || token != epoch) return;
+      // Keep the score frozen while the user prepares to play again.
+      for (var beat = 3; beat > 0; beat--) {
+        setState(() => resumeBeatsRemaining = beat);
+        await Future<void>.delayed(
+          Duration(microseconds: 60000000 ~/ widget.tempo),
+        );
+        if (!mounted || token != epoch) return;
+      }
+      resumeBeatsRemaining = 0;
       player.resume();
       unawaited(widget.capture?.setRunning(true));
       await backing.start(player);
@@ -341,6 +352,23 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                                   chinese: c.chinese,
                                 ),
                               ),
+                              if (resumeBeatsRemaining > 0)
+                                Positioned.fill(
+                                  child: Center(
+                                    child: Semantics(
+                                      liveRegion: true,
+                                      child: Text(
+                                        c.text(
+                                          '准备继续 · $resumeBeatsRemaining',
+                                          'Get ready · $resumeBeatsRemaining',
+                                        ),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineMedium,
+                                      ),
+                                    ),
+                                  ),
+                                ),
                               if (error != null)
                                 Positioned.fill(
                                   child: ColoredBox(
@@ -390,6 +418,10 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                               setState(() {});
                             },
                             onUp: (pointer, key, cancel, coordinates) {
+                              if (cancel) {
+                                pause();
+                                return;
+                              }
                               player.up(pointer);
                               audio.note(key ?? 0, false, pointer);
                               autoStopped.remove(pointer);

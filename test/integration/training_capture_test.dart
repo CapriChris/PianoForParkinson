@@ -212,7 +212,26 @@ void main() {
     () async {
       final capture = await service.prepare();
       await capture.setRunning(true);
+      capture.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await capture.interrupt();
+      expect(camera.calls.where((c) => c == 'stop').length, 1);
+      capture.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(camera.calls.where((c) => c == 'start').length, 1);
+    },
+  );
+  test(
+    'inactive notification keeps recording, real departure seals it',
+    () async {
+      final capture = await service.prepare();
+      await capture.setRunning(true);
       capture.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      await Future<void>.delayed(Duration.zero);
+      expect(camera.calls, ['start']);
+      capture.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await Future<void>.delayed(Duration.zero);
+      expect(camera.calls, ['start']);
+      capture.didChangeAppLifecycleState(AppLifecycleState.paused);
       await capture.interrupt();
       expect(camera.calls.where((c) => c == 'stop').length, 1);
       capture.didChangeAppLifecycleState(AppLifecycleState.resumed);

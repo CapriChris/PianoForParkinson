@@ -20,12 +20,15 @@ class FakeDanceVideo extends VideoPlayerPlatform {
   final sources = <String>[];
   final positions = <int, Duration>{};
   final playing = <int>{};
+  final volumes = <int, double>{};
+  VideoPlayerOptions? options;
   int next = 0;
   @override
   Future<void> init() async {}
   @override
   Future<int?> createWithOptions(VideoCreationOptions options) async {
     final id = ++next;
+    this.options = options.videoPlayerOptions;
     sources.add(options.dataSource.asset!);
     streams[id] = StreamController<VideoEvent>();
     positions[id] = Duration.zero;
@@ -63,7 +66,10 @@ class FakeDanceVideo extends VideoPlayerPlatform {
   @override
   Future<void> setLooping(int id, bool looping) async {}
   @override
-  Future<void> setVolume(int id, double volume) async {}
+  Future<void> setVolume(int id, double volume) async {
+    volumes[id] = volume;
+  }
+
   @override
   Future<void> setPlaybackSpeed(int id, double speed) async {}
   @override
@@ -157,6 +163,115 @@ void main() {
     await tester.tap(find.text('open'));
     await advance(tester);
   }
+
+  testWidgets(
+    'dance ignores notification duck and waits for manual resume after takeover',
+    (tester) async {
+      final c = setup(tester);
+      await open(tester, c, []);
+      final id = platform.next;
+      expect(platform.playing, contains(id));
+      expect(platform.options!.mixWithOthers, isTrue);
+      expect(platform.options!.allowBackgroundPlayback, isTrue);
+      final observer =
+          tester.state(find.byType(DancePlayerPage)) as WidgetsBindingObserver;
+      observer.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      c.handlePlaybackEvent('AUDIO_FOCUS_DUCK');
+      await advance(tester);
+      expect(platform.playing, contains(id));
+      expect(platform.volumes[id], .25);
+      c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      await advance(tester);
+      expect(platform.volumes[id], 1);
+      tester
+          .widget<DanceVideoSurface>(find.byType(DanceVideoSurface))
+          .onVolume!(.6);
+      await advance(tester);
+      c.handlePlaybackEvent('AUDIO_FOCUS_DUCK');
+      await advance(tester);
+      expect(platform.volumes[id], closeTo(.15, .001));
+      c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      await advance(tester);
+      expect(platform.volumes[id], .6);
+      c.handlePlaybackEvent('WINDOW_FOCUS_LOST');
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      c.handlePlaybackEvent('WINDOW_FOCUS_GAIN');
+      c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      tester
+          .widget<DanceVideoSurface>(find.byType(DanceVideoSurface))
+          .onToggle();
+      await advance(tester);
+      expect(platform.playing, contains(id));
+      observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'late dance focus grant cannot restart after a second interruption',
+    (tester) async {
+      final c = setup(tester);
+      await open(tester, c, []);
+      final id = platform.next;
+      c.handlePlaybackEvent('AUDIO_FOCUS_LOST');
+      await advance(tester);
+      final grant = Completer<void>();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+            const MethodChannel('piano_training/platform/v1'),
+            (call) async {
+              if (call.method == 'requestTrainingAudioFocus') {
+                await grant.future;
+              }
+              return {
+                'ok': true,
+                'request_id': (call.arguments as Map)['request_id'],
+                'data': {'granted': true},
+              };
+            },
+          );
+      tester
+          .widget<DanceVideoSurface>(find.byType(DanceVideoSurface))
+          .onToggle();
+      await tester.pump();
+      c.handlePlaybackEvent('WINDOW_FOCUS_LOST');
+      grant.complete();
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    },
+  );
+
+  testWidgets('dance buffering freezes until the user chooses to continue', (
+    tester,
+  ) async {
+    final c = setup(tester);
+    await open(tester, c, []);
+    final id = platform.next;
+    platform.streams[id]!.add(
+      VideoEvent(eventType: VideoEventType.bufferingStart),
+    );
+    await advance(tester);
+    expect(platform.playing, isNot(contains(id)));
+    platform.streams[id]!.add(
+      VideoEvent(eventType: VideoEventType.bufferingEnd),
+    );
+    await advance(tester);
+    expect(platform.playing, isNot(contains(id)));
+    await tester.pumpWidget(const SizedBox());
+    await tester.pump();
+  });
 
   testWidgets('preparation is concise and course follows selected language', (
     tester,

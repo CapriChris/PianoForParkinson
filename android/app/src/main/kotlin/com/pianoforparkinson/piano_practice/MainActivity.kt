@@ -1,6 +1,9 @@
 package com.pianoforparkinson.piano_practice
 
 import android.content.Context
+import android.content.BroadcastReceiver
+import android.content.Intent
+import android.content.IntentFilter
 import android.media.*
 import android.net.ConnectivityManager
 import android.net.Network
@@ -54,6 +57,7 @@ class MainActivity : FlutterActivity() {
     private var gain = 850
     @Volatile private var ready = false
     @Volatile private var foreground = true
+    @Volatile private var windowFocused = true
     private var trainingFullscreen = false
     private var sink: EventChannel.EventSink? = null
     private var connectivity: ConnectivityManager? = null
@@ -67,17 +71,64 @@ class MainActivity : FlutterActivity() {
         .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC).build()
     private val focusListener = AudioManager.OnAudioFocusChangeListener { change ->
         audioHandler.post {
-            focusGranted = change == AudioManager.AUDIOFOCUS_GAIN
-            if (!focusGranted) {
-                allOff(); piano.suspendStream(); tts?.stop(); publish("AUDIO_FOCUS_LOST")
+            when (change) {
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    focusGranted = true
+                    piano.setOutputGain(1f)
+                    publish("AUDIO_FOCUS_GAIN") // Restore volume, never resume playback.
+                }
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                    // Notification sounds may lower volume without stopping clocks/voices.
+                    // Android 8+ normally ducks automatically; this also covers older devices.
+                    if (focusGranted) {
+                        piano.setOutputGain(.25f)
+                        publish("AUDIO_FOCUS_DUCK")
+                    }
+                }
+                else -> stopForInterruption("AUDIO_FOCUS_LOST")
             }
         }
     }
     private var focusRequest: AudioFocusRequest? = null
-    private val devices = object : AudioDeviceCallback() {
-        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) { audioHandler.post { allOff(); piano.suspendStream(); tts?.stop() }; publish("AUDIO_ROUTE_CHANGED") }
-        override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) { audioHandler.post { allOff(); piano.suspendStream(); tts?.stop() }; publish("AUDIO_ROUTE_CHANGED") }
+    private var lastOutputDevices: Set<Int>? = null
+    private val routeCheck = object : Runnable {
+        override fun run() {
+            if (isDestroyed || !foreground) return
+            if (Build.VERSION.SDK_INT >= 33) {
+                val next = runCatching {
+                    audioManager.getAudioDevicesForAttributes(audioAttributes).map { it.id }.toSet()
+                }.getOrNull()?.takeIf { it.isNotEmpty() }
+                val previous = lastOutputDevices
+                if (next != null) {
+                    lastOutputDevices = next
+                    if (previous != null && previous != next) {
+                        audioHandler.post { stopForInterruption("AUDIO_ROUTE_CHANGED") }
+                    }
+                }
+            }
+            handler.postDelayed(this, 500)
+        }
     }
+    private val noisyReceiver = object : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            if (intent?.action == AudioManager.ACTION_AUDIO_BECOMING_NOISY) {
+                audioHandler.post { stopForInterruption("AUDIO_ROUTE_CHANGED") }
+            }
+        }
+    }
+    private val devices = object : AudioDeviceCallback() {
+        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
+            // A newly connected microphone/unused Bluetooth device is not a route change.
+            handler.removeCallbacks(routeCheck); handler.postDelayed(routeCheck, 100)
+        }
+        override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) {
+            if (Build.VERSION.SDK_INT < 33 && removed?.any { it.isSink && it.id == pianoOutputDevice } == true) {
+                audioHandler.post { stopForInterruption("AUDIO_ROUTE_CHANGED") }
+            }
+            handler.removeCallbacks(routeCheck); handler.postDelayed(routeCheck, 100)
+        }
+    }
+    @Volatile private var pianoOutputDevice = 0
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
@@ -94,6 +145,13 @@ class MainActivity : FlutterActivity() {
                 .setAudioAttributes(audioAttributes).setOnAudioFocusChangeListener(focusListener).build()
         }
         audioManager.registerAudioDeviceCallback(devices, handler)
+        if (Build.VERSION.SDK_INT >= 33) {
+            registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY), RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(noisyReceiver, IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY))
+        }
+        handler.post(routeCheck)
         tts = TextToSpeech(this) { status -> ttsReady = status == TextToSpeech.SUCCESS }
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) { publishSpeech("TTS_START", utteranceId) }
@@ -112,7 +170,7 @@ class MainActivity : FlutterActivity() {
                 // Asset decoding, focus and engine control stay off the UI thread.
                 // Keep all audio state and release ramps on one serial worker.
                 if (call.method in setOf("prepareAudio", "playNote", "stopVoice",
-                        "allNotesOff", "releaseAudio", "activateGeneration", "getAudioState",
+                        "allNotesOff", "releaseAudio", "activateGeneration", "getAudioState", "requestTrainingAudioFocus",
                         "speakLocal", "stopSpeech", "preparePieceBacking",
                         "syncPieceBacking", "stopPieceBacking", "pausePieceBacking", "getPieceClock")) {
                     audioHandler.post { handle(call, result, flutterEngine) }
@@ -194,6 +252,9 @@ class MainActivity : FlutterActivity() {
                     check(piano.open())
                     ready = true
                     answer(mapOf("loaded_note_ids" to (0..9).toList(), "engine" to "OBOE", "piano_samples" to 17))
+                }
+                "requestTrainingAudioFocus" -> {
+                    answer(mapOf("granted" to acquireFocus()))
                 }
                 "preparePieceBacking" -> {
                     if (!foreground) { answer(error = "E_AUDIO_BACKGROUND"); return }
@@ -293,6 +354,7 @@ class MainActivity : FlutterActivity() {
                     val position = call.argument<Number>("position_us")?.toLong() ?: 0L
                     if (!pieceBackingStarted || call.argument<Boolean>("seek") == true) {
                         check(piano.command(4, position = position))
+                        pianoOutputDevice = piano.outputDeviceId()
                         pieceBackingStarted = true
                     }
                     answer(mapOf("accepted" to true, "engine" to "OBOE"))
@@ -330,6 +392,7 @@ class MainActivity : FlutterActivity() {
                     gain = (call.argument<Number>("gain_permille")?.toInt() ?: 850).coerceIn(0,1000)
                     val voice = ++voiceToken
                     check(piano.command(1, voice, key, ratePermille / 1000f, gain / 1000f * .65f))
+                    pianoOutputDevice = piano.outputDeviceId()
                     answer(mapOf("voice_id" to voice, "applied_gain_permille" to gain))
                 }
                 "stopVoice" -> { piano.command(2, id = call.argument<Number>("voice_id")!!.toInt()); answer() }
@@ -376,12 +439,20 @@ class MainActivity : FlutterActivity() {
     private fun io.flutter.embedding.engine.dart.DartExecutor.flutterLoaderLookup(path: String): String =
         io.flutter.FlutterInjector.instance().flutterLoader().getLookupKeyForAsset(path)
     private fun acquireFocus(): Boolean {
+        if (!foreground || !windowFocused) return false
         if (!focusGranted) {
             val focused = if (Build.VERSION.SDK_INT >= 26) audioManager.requestAudioFocus(focusRequest!!)
                 else @Suppress("DEPRECATION") audioManager.requestAudioFocus(focusListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN)
             focusGranted = focused == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            if (focusGranted) { piano.setOutputGain(1f); publish("AUDIO_FOCUS_GAIN") }
         }
-        return foreground && focusGranted
+        return foreground && windowFocused && focusGranted
+    }
+
+    private fun stopForInterruption(reason: String, notify: Boolean = true) {
+        focusGranted = false
+        allOff(); piano.suspendStream(); piano.setOutputGain(1f); tts?.stop()
+        if (notify) publish(reason)
     }
     private fun localLocales(): List<String> = if (!ttsReady) emptyList() else
         tts?.voices?.filter { !it.isNetworkConnectionRequired }?.map { it.locale.toLanguageTag() }?.distinct() ?: emptyList()
@@ -434,15 +505,32 @@ class MainActivity : FlutterActivity() {
     }
     override fun onWindowFocusChanged(hasFocus: Boolean) {
         super.onWindowFocusChanged(hasFocus)
+        windowFocused = hasFocus
         if (hasFocus) applyTrainingDisplay()
+        // Focusable system panels, dialogs and interacting chat windows take input.
+        // Non-focusable banners and volume indicators never enter this branch.
+        if (!hasFocus) {
+            publish("WINDOW_FOCUS_LOST")
+            audioHandler.post { stopForInterruption("WINDOW_FOCUS_LOST", false) }
+        }
+        else publish("WINDOW_FOCUS_GAIN")
     }
-    override fun onResume() { super.onResume(); foreground = true }
+    override fun onResume() {
+        super.onResume(); foreground = true
+        if (::audioManager.isInitialized) {
+            handler.removeCallbacks(routeCheck); handler.post(routeCheck)
+        }
+    }
     override fun onPause() {
         foreground = false
-        audioHandler.post { allOff(); piano.suspendStream(); focusGranted = false }
-        tts?.stop(); publish("AUDIO_FOCUS_LOST"); super.onPause()
+        handler.removeCallbacks(routeCheck)
+        publish("INTERRUPTED_BACKGROUND")
+        audioHandler.post { stopForInterruption("INTERRUPTED_BACKGROUND", false) }
+        super.onPause()
     }
     override fun onDestroy() {
+        handler.removeCallbacks(routeCheck)
+        runCatching { unregisterReceiver(noisyReceiver) }
         AccountBackgroundSync.uiEngine = null
         if (Build.VERSION.SDK_INT >= 24) runCatching { connectivity?.unregisterNetworkCallback(networkCallback) }
         audioHandler.post {

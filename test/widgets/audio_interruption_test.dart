@@ -70,7 +70,12 @@ void main() {
     'S2_RHYTHM',
     'M1_ALTERNATE',
   ]) {
-    for (final reason in ['AUDIO_FOCUS_LOST', 'INTERRUPTED_BACKGROUND']) {
+    for (final reason in [
+      'AUDIO_FOCUS_LOST',
+      'INTERRUPTED_BACKGROUND',
+      'WINDOW_FOCUS_LOST',
+      'AUDIO_ROUTE_CHANGED',
+    ]) {
       testWidgets(
         '$taskId $reason stops audio and speech without scoring or automatic resume',
         (tester) async {
@@ -94,7 +99,7 @@ void main() {
           if (reason == 'INTERRUPTED_BACKGROUND') {
             c.didChangeAppLifecycleState(AppLifecycleState.paused);
           } else {
-            c.interruptPlayback(reason);
+            c.handlePlaybackEvent(reason);
           }
           await tester.pumpAndSettle();
           expect(task.phase, 'paused');
@@ -117,6 +122,47 @@ void main() {
       );
     }
   }
+  testWidgets(
+    'notification duck and inactive do not interrupt an active trial',
+    (tester) async {
+      final clock = ManualClock(), c = controller(ManualClock());
+      final task = TaskEngine(
+        config: config,
+        clock: clock,
+        taskId: 'S2_RHYTHM',
+        mode: 'ASSIST',
+        level: 1,
+        song: [0, 1, 2, 1, 0, 1, 2, 0],
+        seed: 47,
+      );
+      ready(task, clock);
+      c.engine = task;
+      c.content.config = config;
+      final phase = task.phase;
+      final attempts = task.attempts.length;
+      c.didChangeAppLifecycleState(AppLifecycleState.inactive);
+      c.handlePlaybackEvent('AUDIO_FOCUS_DUCK');
+      await tester.pump();
+      expect(c.audioDucked.value, isTrue);
+      expect(task.phase, phase);
+      expect(task.attempts.length, attempts);
+      expect(c.previewInterruptions.value, 0);
+      expect(calls.where((c) => c.method == 'allNotesOff'), isEmpty);
+      c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      c.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await tester.pump();
+      expect(c.audioDucked.value, isFalse);
+      expect(task.phase, phase);
+      c.handlePlaybackEvent('WINDOW_FOCUS_LOST');
+      await tester.pump();
+      expect(task.phase, 'paused');
+      c.handlePlaybackEvent('WINDOW_FOCUS_GAIN');
+      c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      await tester.pump();
+      expect(task.phase, 'paused');
+      c.dispose();
+    },
+  );
   testWidgets(
     'background blocks sandbox and speech, late voice replies are stopped',
     (tester) async {

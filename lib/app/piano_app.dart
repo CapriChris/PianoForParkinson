@@ -193,16 +193,6 @@ class _OnboardingState extends State<Onboarding> {
       if (!didPop && step > 0) setState(() => step--);
     },
     child: Scaffold(
-      appBar: c.onSignOut == null
-          ? null
-          : AppBar(
-              actions: [
-                TextButton(
-                  onPressed: c.onSignOut,
-                  child: Text(c.text('退出账号', 'Sign out')),
-                ),
-              ],
-            ),
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) => SingleChildScrollView(
@@ -2983,21 +2973,6 @@ class SettingsPage extends StatelessWidget {
                                     ),
                                   ),
                                   const SizedBox(height: 24),
-                                  if (c.accountApi != null)
-                                    QinOutlinedButton.icon(
-                                      onPressed: () => Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => AccountPage(c: c),
-                                        ),
-                                      ),
-                                      icon: const Icon(
-                                        Icons.account_circle_outlined,
-                                      ),
-                                      label: Text(
-                                        c.text('我的账号与同步', 'Account and sync'),
-                                      ),
-                                    ),
                                   if (c.accountApi == null &&
                                       const bool.fromEnvironment(
                                         'PD_CLOUD_INTEGRATION',
@@ -3044,6 +3019,27 @@ class SettingsPage extends StatelessWidget {
                                         const SizedBox(height: 8),
                                         AssistantPrivacyTile(c: c),
                                         const SizedBox(height: 12),
+                                        if (c.accountApi != null) ...[
+                                          QinOutlinedButton.icon(
+                                            onPressed: () => Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    AccountPage(c: c),
+                                              ),
+                                            ),
+                                            icon: const Icon(
+                                              Icons.account_circle_outlined,
+                                            ),
+                                            label: Text(
+                                              c.text(
+                                                '我的账号与同步',
+                                                'Account and sync',
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 16),
+                                        ],
                                         QinOutlinedButton.icon(
                                           onPressed: () => Navigator.push(
                                             context,

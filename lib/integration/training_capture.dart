@@ -1,8 +1,12 @@
 import 'dart:async';
+
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:camera/camera.dart';
+
+import '../platform/training_interruption.dart';
+
 import 'package:crypto/crypto.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:flutter/foundation.dart';
@@ -823,7 +827,11 @@ class TrainingCapture extends ChangeNotifier with WidgetsBindingObserver {
   });
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _foreground = state == AppLifecycleState.resumed;
-    if (!_foreground) unawaited(interrupt());
+    if (trainingIsHidden(state)) {
+      _foreground = false;
+      unawaited(interrupt());
+    } else if (state == AppLifecycleState.resumed) {
+      _foreground = true;
+    }
   }
 }

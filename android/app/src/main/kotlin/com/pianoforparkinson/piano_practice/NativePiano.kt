@@ -10,6 +10,8 @@ class NativePiano {
     external fun reset()
     external fun suspendStream()
     external fun open(): Boolean
+    external fun setOutputGain(gain: Float)
+    external fun outputDeviceId(): Int
     external fun loadSample(id: Int, pcm: FloatArray, rate: Int, root: Int,
                             loopStart: Int, loopEnd: Int, crossfade: Int)
     external fun command(kind: Int, id: Int = 0, note: Int = 0, ratio: Float = 1f,

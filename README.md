@@ -1,8 +1,14 @@
 # 琴伴 · Android 内部演示
 
-## 最新源码 0.1.64（构建 65）
+## 最新版本 0.1.66（构建 67）
 
-保留 0.1.63 的账号界面、品牌和训练功能，补齐退出撤销补偿、账号切换关库等待及旧版待上传录像的安全目录迁移。注册前主动确认训练记录/计划自动同步，录像与 AI 另行授权。配套 Web 账号 API 已于 2026-11-07 上线。详见 [本版验证](validation/release-0.1.64.md) 与 [后端上线记录](https://github.com/WuChangqing1/PD-Rehab-Web/blob/main/docs/mobile-accounts-release-20261107.md)。本轮 ARM64 QA 包单独交付，未替换下方旧版公开安装包。
+调整设置页账号入口和首次引导，补齐“我的账号”页及弹窗按钮按压反馈；区分通知降音量与真正中断，统一钢琴训练、曲目和舞蹈的暂停/手动恢复规则。曲目继续前新增三拍视觉准备，舞蹈缓冲后等待手动继续，通知结束恢复原音量。[更新说明](docs/2026-11-07-0.1.66-更新说明.md) · [构建与验证](validation/release-0.1.66.md)。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.66/qinban-0.1.66-android-universal.apk) · [GitHub 发布页](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.66)。
+
+## 上一本机整合版本 0.1.65（构建 66）
+
+同步 2026-11-07 队友 App main `4a5197c` 的会话撤销、账号切换和录像目录迁移修复，保留本机账号页按钮按压、加载状态和防重复提交反馈。按既定产品要求，注册/登录即开启训练记录及计划云端同步，不增加注册确认弹窗；训练录像与 AI 仍独立授权。配套 Web 账号 API 已上线，本机 Web 已同步至 `20761b9`。
+
+[本次更新与真机验收清单](docs/2026-11-07-0.1.65-更新与验收.md) · [0.1.64 队友验证](validation/release-0.1.64.md) · [后端上线记录](https://github.com/WuChangqing1/PD-Rehab-Web/blob/main/docs/mobile-accounts-release-20261107.md)。本机整合版本尚未推送 GitHub。
 
 ## 训练视频采集开发进度
 

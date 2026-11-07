@@ -15,6 +15,7 @@ import '../domain/cognitive_tasks.dart';
 import '../domain/intro_lessons.dart';
 import '../domain/task_engine.dart';
 import '../platform/platform_service.dart';
+import '../platform/training_interruption.dart';
 import 'speech_navigation_observer.dart';
 import '../integration/auto_sync.dart';
 import '../accounts/account_api.dart';
@@ -31,6 +32,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   int _assistantConsentRevision = 0;
   bool _assistantRevoking = false;
   final previewInterruptions = ValueNotifier<int>(0);
+  final audioDucked = ValueNotifier<bool>(false);
   final trainingUpdates = ValueNotifier<int>(0);
   int _syncTrainingViews = 0;
   void holdCloudSync() => _syncTrainingViews++;
@@ -131,7 +133,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
           }
           return;
         }
-        interruptPlayback(kind as String);
+        handlePlaybackEvent(kind as String);
       },
       onError: (_) {
         interruptPlayback('E_PLATFORM');
@@ -959,7 +961,23 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     _previewTokens.clear();
     if (engine != null && !engine!.ended) pause(reason);
     previewInterruptions.value++;
+    unawaited(_captures?.active?.interrupt());
     unawaited(stopAllPlayback().catchError((_) {}));
+  }
+
+  void handlePlaybackEvent(String kind) {
+    if (_disposed) return;
+    if (kind == 'AUDIO_FOCUS_DUCK' || kind == 'AUDIO_FOCUS_GAIN') {
+      audioDucked.value = kind == 'AUDIO_FOCUS_DUCK';
+      return;
+    }
+    if (kind == 'WINDOW_FOCUS_GAIN') return;
+    audioDucked.value = false;
+    if (kind == 'INTERRUPTED_BACKGROUND') {
+      _backgrounded = true;
+      cloudSync.foreground = false;
+    }
+    interruptPlayback(kind);
   }
 
   Future<void> stopSpeech({Object? owner}) async {
@@ -992,11 +1010,14 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _backgrounded = state != AppLifecycleState.resumed;
-    cloudSync.foreground = !_backgrounded;
-    if (_backgrounded) {
-      interruptPlayback('INTERRUPTED_BACKGROUND');
-    } else {
+    if (trainingIsHidden(state)) {
+      final wasBackgrounded = _backgrounded;
+      _backgrounded = true;
+      cloudSync.foreground = false;
+      if (!wasBackgrounded) interruptPlayback('INTERRUPTED_BACKGROUND');
+    } else if (state == AppLifecycleState.resumed) {
+      _backgrounded = false;
+      cloudSync.foreground = true;
       if (accountApi != null) unawaited(connectAccount());
       cloudSync.trigger();
       unawaited(refreshRecommendations());
@@ -1015,6 +1036,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     _recorder?.cancel();
     _platformEvents?.cancel();
     previewInterruptions.dispose();
+    audioDucked.dispose();
     cloudSync.close();
     trainingUpdates.dispose();
     activeSpeech.dispose();

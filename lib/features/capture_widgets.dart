@@ -516,17 +516,6 @@ class _CaptureLibraryPageState extends State<CaptureLibraryPage> {
                 );
           return QinPageList(
             children: [
-              QinOutlinedButton.icon(
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => CloudIntegrationPage(controller: c),
-                  ),
-                ),
-                icon: const Icon(Icons.cloud_outlined),
-                label: Text(c.text('连接训练档案', 'Connect training profile')),
-              ),
-              const SizedBox(height: 12),
               Text(
                 c.text(
                   '采集每次默认关闭。待上传录像在本机最多保留 7 天，视频不会发给 AI 问答模型。',

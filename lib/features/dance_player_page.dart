@@ -12,6 +12,7 @@ import 'package:video_player/video_player.dart';
 import '../app/app_controller.dart';
 import '../domain/contracts.dart';
 import '../domain/dance_training.dart';
+import '../platform/training_interruption.dart';
 import '../ui/qin_components.dart';
 import '../ui/qin_theme.dart';
 import 'dance_result_page.dart';
@@ -62,6 +63,9 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       prompted = false,
       dialogOpen = false;
   bool scrubbing = false, resumeAfterScrub = false;
+  bool interrupted = false;
+  int playRevision = 0;
+  double volumeLevel = 1;
   VideoPlayerController? scrubController;
   Future<void> scrubPause = Future.value();
   String? failure;
@@ -72,6 +76,8 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     super.initState();
     c.holdCloudSync();
     WidgetsBinding.instance.addObserver(this);
+    c.previewInterruptions.addListener(interrupt);
+    c.audioDucked.addListener(updateVolume);
     timer = Timer.periodic(const Duration(milliseconds: 250), (_) => sample());
     unawaited(selectPart(0));
   }
@@ -81,6 +87,11 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (controller == null || !ready) return;
     final value = controller.value,
         now = widget.nowMilliseconds?.call() ?? clock.elapsedMilliseconds;
+    if (wasPlaying && (value.isBuffering || value.hasError)) {
+      // Buffering must not silently resume or credit time without a usable video.
+      interrupt();
+      return;
+    }
     ledgers[selected].observe(
       from: previous,
       to: value.position.inMilliseconds,
@@ -127,6 +138,70 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     }
   }
 
+  void interrupt() {
+    playRevision++;
+    interrupted = true;
+    resumeAfterScrub = false;
+    wasPlaying = false;
+    captureRunning = false;
+    final controller = video;
+    if (controller != null) {
+      unawaited(controller.pause().catchError((Object _) {}));
+    }
+    unawaited(widget.capture?.setRunning(false));
+    if (mounted) setState(() {});
+  }
+
+  void updateVolume() {
+    final controller = video;
+    if (controller != null) {
+      unawaited(
+        controller
+            .setVolume(volumeLevel * (c.audioDucked.value ? .25 : 1))
+            .catchError((Object _) {}),
+      );
+    }
+  }
+
+  Future<void> play(VideoPlayerController controller) async {
+    final revision = ++playRevision;
+    try {
+      final result = await c.platform.call('requestTrainingAudioFocus', {});
+      if (!mounted ||
+          controller != video ||
+          revision != playRevision ||
+          !foreground ||
+          dialogOpen ||
+          interrupted) {
+        return;
+      }
+      if (result['granted'] == false) {
+        interrupt();
+        return;
+      }
+      await controller.setVolume(volumeLevel * (c.audioDucked.value ? .25 : 1));
+      if (!mounted ||
+          controller != video ||
+          revision != playRevision ||
+          !foreground ||
+          interrupted) {
+        return;
+      }
+      await controller.play();
+      if (revision != playRevision || !foreground || interrupted) {
+        await controller.pause();
+      }
+    } catch (_) {
+      if (mounted && controller == video) {
+        interrupt();
+        setState(
+          () =>
+              failure = c.text('暂时无法播放，请重试。', 'Unable to play. Please retry.'),
+        );
+      }
+    }
+  }
+
   Future<void> selectPart(int index) async {
     if (!mounted ||
         leaving ||
@@ -142,6 +217,8 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     resumeAfterScrub = false;
     scrubController = null;
     final token = ++generation;
+    playRevision++;
+    interrupted = false;
     final old = video;
     video = null;
     wasPlaying = false;
@@ -155,7 +232,12 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (!mounted || token != generation) return;
     final next = VideoPlayerController.asset(
       course.parts[index].asset,
-      videoPlayerOptions: VideoPlayerOptions(mixWithOthers: false),
+      // The shared native focus listener owns duck/pause policy for all training.
+      // Prevent the video plugin from automatically restarting after a phone call.
+      videoPlayerOptions: VideoPlayerOptions(
+        mixWithOthers: true,
+        allowBackgroundPlayback: true,
+      ),
     );
     try {
       await next.initialize();
@@ -176,7 +258,9 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       wall = widget.nowMilliseconds?.call() ?? clock.elapsedMilliseconds;
       durations[index] = next.value.duration;
       setState(() => ready = true);
-      if (foreground && !dialogOpen && !leaving) await next.play();
+      if (foreground && !dialogOpen && !leaving && !interrupted) {
+        await play(next);
+      }
     } catch (_) {
       if (video != next) await next.dispose();
       if (mounted && token == generation) {
@@ -281,7 +365,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     scrubbing = false;
     resumeAfterScrub = false;
     scrubController = null;
-    if (resume) await controller.play();
+    if (resume && !interrupted) await play(controller);
   }
 
   Future<void> changeRate(double rate) async {
@@ -295,14 +379,11 @@ class _DancePlayerPageState extends State<DancePlayerPage>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) {
+    if (trainingIsHidden(state)) {
       sample(allowPrompt: false);
       foreground = false;
-      resumeAfterScrub = false;
-      wasPlaying = false;
-      final controller = video;
-      if (controller != null) unawaited(controller.pause());
-    } else {
+      interrupt();
+    } else if (state == AppLifecycleState.resumed) {
       foreground = true;
     }
   }
@@ -444,6 +525,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     // Replacing this route prevents a second save or a return to a sealed session.
     timer?.cancel();
     generation++;
+    playRevision++;
     await SystemChrome.setPreferredOrientations(DeviceOrientation.values);
     await SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     if (!mounted) return;
@@ -467,6 +549,9 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     timer?.cancel();
     generation++;
     WidgetsBinding.instance.removeObserver(this);
+    playRevision++;
+    c.previewInterruptions.removeListener(interrupt);
+    c.audioDucked.removeListener(updateVolume);
     final controller = video;
     if (controller != null) unawaited(controller.dispose());
     unawaited(SystemChrome.setPreferredOrientations(DeviceOrientation.values));
@@ -482,6 +567,11 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     onScrubStart: beginScrub,
     onScrubEnd: endScrub,
     onRate: changeRate,
+    volumeLevel: volumeLevel,
+    onVolume: (value) {
+      setState(() => volumeLevel = value);
+      updateVolume();
+    },
     onToggle: () async {
       if (!foreground || busy || dialogOpen || scrubbing) return;
       final controller = video;
@@ -491,8 +581,9 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       if (controller.value.isPlaying) {
         await controller.pause();
       } else {
+        interrupted = false;
         if (controller.value.isCompleted) await seek(Duration.zero);
-        await controller.play();
+        await play(controller);
       }
     },
     fullscreen: fullscreen,
@@ -609,6 +700,8 @@ class DanceVideoSurface extends StatefulWidget {
     required this.onToggle,
     required this.fullscreen,
     required this.onFullscreen,
+    this.volumeLevel,
+    this.onVolume,
   });
   final VideoPlayerController? controller;
   final bool ready, fullscreen;
@@ -617,6 +710,8 @@ class DanceVideoSurface extends StatefulWidget {
   final Future<void> Function() onScrubStart;
   final Future<void> Function(Duration) onScrubEnd;
   final Future<void> Function(double) onRate;
+  final double? volumeLevel;
+  final ValueChanged<double>? onVolume;
   @override
   State<DanceVideoSurface> createState() => _DanceVideoSurfaceState();
 }
@@ -842,7 +937,7 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
                               tooltip: t('音量', 'Volume'),
                               onPressed: toggleVolume,
                               icon: Icon(
-                                v.volume == 0
+                                (widget.volumeLevel ?? v.volume) == 0
                                     ? Icons.volume_off
                                     : Icons.volume_up,
                               ),
@@ -934,9 +1029,13 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
                       child: Slider(
                         key: const ValueKey('dance-volume-slider'),
                         padding: const EdgeInsets.symmetric(horizontal: 10),
-                        value: v!.volume,
+                        value: widget.volumeLevel ?? v!.volume,
                         onChanged: (value) {
-                          unawaited(controller.setVolume(value));
+                          if (widget.onVolume != null) {
+                            widget.onVolume!(value);
+                          } else {
+                            unawaited(controller.setVolume(value));
+                          }
                           setState(() {});
                         },
                         activeColor: context.qin.primary,

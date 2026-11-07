@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -9,8 +10,31 @@ import 'package:piano_practice/accounts/account_pages.dart';
 import 'package:piano_practice/accounts/account_session.dart';
 import 'package:piano_practice/app/app_controller.dart';
 import 'package:piano_practice/app/piano_app.dart';
+import 'package:piano_practice/integration/remote_api.dart';
 
 import 'account_api_test.dart';
+
+class PendingAccountTransport extends AuthTransport {
+  final requestDone = Completer<void>();
+  int submissions = 0;
+
+  @override
+  Future<Map<String, dynamic>> request(
+    String method,
+    String path, {
+    Object? data,
+    Map<String, String>? query,
+  }) async {
+    if (path.endsWith('/login') ||
+        path.endsWith('/register') ||
+        path.endsWith('/reset-password')) {
+      submissions++;
+      await requestDone.future;
+      throw const RemoteApiException(0, '连接暂时不可用，请重试。');
+    }
+    return super.request(method, path, data: data, query: query);
+  }
+}
 
 class AccountTestApp extends AppController {
   AccountTestApp(
@@ -206,10 +230,13 @@ void main() {
     await tester.pump();
   });
 
-  Future<AccountController> openLogin(WidgetTester tester) async {
+  Future<AccountController> openLogin(
+    WidgetTester tester, {
+    AuthTransport? transport,
+  }) async {
     final accounts = AccountController(
       vault: MemoryVault(),
-      transport: AuthTransport(),
+      transport: transport ?? AuthTransport(),
       appFactory: AccountTestApp.new,
     );
     await tester.pumpWidget(AccountApplication(accounts: accounts));
@@ -375,7 +402,7 @@ void main() {
   );
 
   testWidgets(
-    'registration requires an affirmative automatic sync confirmation',
+    'registration starts automatic sync without an extra confirmation',
     (tester) async {
       final accounts = await openLogin(tester);
       await tester.tap(find.text('没有账号？注册'));
@@ -399,18 +426,7 @@ void main() {
       await tester.ensureVisible(find.text('注册并登录'));
       await tester.tap(find.text('注册并登录'));
       await tester.pumpAndSettle();
-      expect(find.text('确认自动同步'), findsOneWidget);
-      expect((accounts.api.transport as AuthTransport).registration, isNull);
-      expect(accounts.api.signedIn, isFalse);
-      await tester.tap(find.text('暂不注册'));
-      await tester.pumpAndSettle();
-      expect((accounts.api.transport as AuthTransport).registration, isNull);
-      expect(find.byType(HomePage), findsNothing);
-      await tester.tap(find.text('注册并登录'));
-      await tester.pumpAndSettle();
-      expect(find.text('确认自动同步'), findsOneWidget);
-      await tester.tap(find.text('同意同步并注册'));
-      await tester.pumpAndSettle();
+      expect(find.text('确认自动同步'), findsNothing);
       expect(find.byType(HomePage), findsOneWidget);
       expect(
         (accounts.api.transport as AuthTransport)
@@ -491,6 +507,102 @@ void main() {
           '密码须为8-16位',
         );
         expect((accounts.api.transport as AuthTransport).registration, isNull);
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
+  for (final mode in ['login', 'register', 'reset']) {
+    testWidgets(
+      'account $mode press/cancel, loading and duplicate submit feedback',
+      (tester) async {
+        final transport = PendingAccountTransport();
+        await openLogin(tester, transport: transport);
+        if (mode != 'login') {
+          final link = find.text(mode == 'register' ? '没有账号？注册' : '忘记密码');
+          await tester.ensureVisible(link);
+          await tester.tap(link);
+          await tester.pumpAndSettle();
+        }
+        await tester.enterText(
+          find.byKey(const ValueKey('account-username')),
+          'patient_one',
+        );
+        if (mode == 'register') {
+          await tester.enterText(
+            find.byKey(const ValueKey('account-nickname')),
+            '用户',
+          );
+        }
+        await tester.enterText(
+          find.byKey(const ValueKey('account-password')),
+          'test-pass-123',
+        );
+        if (mode != 'login') {
+          await tester.enterText(
+            find.byKey(const ValueKey('account-confirmation')),
+            'test-pass-123',
+          );
+        }
+        if (mode == 'reset') {
+          await tester.enterText(
+            find.widgetWithText(TextFormField, '账号恢复码'),
+            'r' * 32,
+          );
+        }
+        final button = find.descendant(
+          of: find.byKey(const ValueKey('account-submit')),
+          matching: find.byType(FilledButton),
+        );
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        final original = tester.getRect(button);
+        final press = await tester.startGesture(tester.getCenter(button));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 80));
+        expect(tester.getRect(button).width, lessThan(original.width));
+        expect(transport.submissions, 0);
+        await press.cancel();
+        await tester.pumpAndSettle();
+        expect(tester.getRect(button).width, closeTo(original.width, .01));
+        expect(transport.submissions, 0);
+        await tester.tap(button);
+        for (var frame = 0; frame < 20; frame++) {
+          await tester.pump(const Duration(milliseconds: 20));
+        }
+        expect(transport.submissions, 1);
+        expect(
+          find.byKey(const ValueKey('account-submit-progress')),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            mode == 'login'
+                ? '登录中…'
+                : mode == 'register'
+                ? '注册中…'
+                : '重置中…',
+          ),
+          findsOneWidget,
+        );
+        expect(tester.widget<FilledButton>(button).onPressed, isNull);
+        expect(
+          tester
+              .widgetList<TextButton>(find.byType(TextButton))
+              .every((value) => value.onPressed == null),
+          isTrue,
+        );
+        await tester.tap(button);
+        await tester.pump(const Duration(milliseconds: 250));
+        expect(transport.submissions, 1);
+        transport.requestDone.complete();
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('account-submit-progress')),
+          findsNothing,
+        );
+        expect(tester.widget<FilledButton>(button).onPressed, isNotNull);
+        expect(find.text('连接暂时不可用，请重试。'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );
