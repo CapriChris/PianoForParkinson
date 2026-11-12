@@ -71,6 +71,7 @@ android {
 }
 
 dependencies {
+    implementation("com.tencent.mm.opensdk:wechat-sdk-android:6.8.40")
     implementation("androidx.work:work-runtime:2.11.1")
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation("com.google.oboe:oboe:1.11.0") }

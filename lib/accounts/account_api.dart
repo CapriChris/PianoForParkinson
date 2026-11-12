@@ -106,6 +106,59 @@ class AccountApi extends RemoteApi {
     return body;
   }
 
+  Future<Json> loginProviders() => _send('GET', '/mobile/auth/providers');
+
+  Future<Json> loginIdentities() => request('GET', '/mobile/auth/identities');
+
+  Future<Json> sendSms(String phone, {bool binding = false}) => binding
+      ? request(
+          'POST',
+          '/mobile/auth/identities/sms/challenge',
+          data: {'phone': phone},
+        )
+      : _send('POST', '/mobile/auth/sms/challenge', data: {'phone': phone});
+
+  Future<Json> wechatChallenge({bool binding = false}) => binding
+      ? request('POST', '/mobile/auth/identities/wechat/challenge')
+      : _send('POST', '/mobile/auth/wechat/challenge');
+
+  Future<Json> authenticateSms(String challengeId, String code) =>
+      _externalLogin('sms', {'challenge_id': challengeId, 'code': code});
+
+  Future<Json> authenticateWechat(
+    String challengeId,
+    String code,
+    String state,
+  ) => _externalLogin('wechat', {
+    'challenge_id': challengeId,
+    'code': code,
+    'state': state,
+  });
+
+  Future<Json> _externalLogin(String provider, Json proof) async {
+    final epoch = ++_epoch;
+    final body = await _send(
+      'POST',
+      '/mobile/auth/$provider/login',
+      data: {...proof, 'sync_consent_version': 'account-sync-v1'},
+    );
+    await _accept(body, uuid(), epoch);
+    return body;
+  }
+
+  Future<Json> bindSms(String challengeId, String code) => request(
+    'POST',
+    '/mobile/auth/identities/sms/bind',
+    data: {'challenge_id': challengeId, 'code': code},
+  );
+
+  Future<Json> bindWechat(String challengeId, String code, String state) =>
+      request(
+        'POST',
+        '/mobile/auth/identities/wechat/bind',
+        data: {'challenge_id': challengeId, 'code': code, 'state': state},
+      );
+
   Future<void> ensureAccess({bool force = false}) async {
     if (!signedIn) throw const RemoteApiException(401, '请重新登录。');
     if (!force &&

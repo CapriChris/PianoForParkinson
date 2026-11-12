@@ -16,6 +16,11 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher">
+        <activity android:name=".accounts.WechatCallbackActivity"
+            android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"
+            android:launchMode="singleTop" />
+        <activity-alias android:name="${applicationId}.wxapi.WXEntryActivity"
+            android:targetActivity=".accounts.WechatCallbackActivity" android:exported="true" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -57,6 +62,7 @@
 
          In particular, this is used by the Flutter engine in io.flutter.plugin.text.ProcessTextPlugin. -->
     <queries>
+        <package android:name="com.tencent.mm" />
         <intent>
             <action android:name="android.intent.action.TTS_SERVICE" />
         </intent>

@@ -162,6 +162,30 @@ class AccountController extends ChangeNotifier {
     if (api.session != null && app == null) await _open(api.session!);
   }
 
+  Future<Json> authenticateSms(String challengeId, String code) =>
+      _external(() => api.authenticateSms(challengeId, code));
+
+  Future<Json> authenticateWechat(
+    String challengeId,
+    String code,
+    String state,
+  ) => _external(() => api.authenticateWechat(challengeId, code, state));
+
+  Future<Json> _external(Future<Json> Function() authenticate) async {
+    if (busy || _leaving != null || app != null) throw StateError('请稍候。');
+    busy = true;
+    message = null;
+    changed();
+    try {
+      await _acquire();
+      if (_closed) throw StateError('Account controller closed');
+      return await authenticate();
+    } finally {
+      busy = false;
+      changed();
+    }
+  }
+
   Future<void> invalidate() {
     message = '登录或档案权限已失效，请重新登录。';
     return logout();

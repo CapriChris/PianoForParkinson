@@ -9,8 +9,11 @@ import '../ui/qin_theme.dart';
 import '../ui/qin_press.dart';
 import 'account_controller.dart';
 import 'password_rules.dart';
+import 'external_account_pages.dart';
+import '../platform/wechat_login.dart';
 
 String accountError(Object error) {
+  if (error is WechatLoginError) return error.message;
   if (error is RemoteApiException) {
     if (error.status == 404 || error.status == 405) {
       return '服务器尚未启用用户账号服务，请联系维护人员部署新版后端。';
@@ -186,8 +189,8 @@ class _AccountPasswordFieldState extends State<_AccountPasswordField> {
   );
 }
 
-class _AccountHeader extends StatelessWidget {
-  const _AccountHeader({required this.title});
+class AccountHeader extends StatelessWidget {
+  const AccountHeader({super.key, required this.title});
   final String title;
 
   @override
@@ -346,7 +349,7 @@ class _LoginPageState extends State<LoginPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _AccountHeader(
+              AccountHeader(
                 title: reset
                     ? '重置密码'
                     : register
@@ -559,6 +562,13 @@ class _LoginPageState extends State<LoginPage> {
                                     : () => changeMode('reset'),
                                 child: const Text('忘记密码'),
                               ),
+                            if (!register && !reset)
+                              ExternalLoginActions(
+                                accounts: widget.accounts,
+                                onBusy: (value) {
+                                  if (mounted) setState(() => working = value);
+                                },
+                              ),
                           ],
                         ),
                       ),
@@ -697,6 +707,13 @@ class _AccountPageState extends State<AccountPage> {
                 child: Text(message!),
               ),
             const SizedBox(height: 16),
+            AccountLoginMethods(
+              c: c,
+              disabled: busy,
+              onBusy: (value) {
+                if (mounted) setState(() => busy = value);
+              },
+            ),
             QinOutlinedButton(
               onPressed: busy
                   ? null

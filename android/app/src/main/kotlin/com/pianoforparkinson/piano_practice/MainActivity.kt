@@ -1,4 +1,5 @@
 package com.pianoforparkinson.piano_practice
+import com.pianoforparkinson.piano_practice.accounts.WechatLoginBridge
 
 import android.content.Context
 import android.content.BroadcastReceiver
@@ -131,6 +132,7 @@ class MainActivity : FlutterActivity() {
     @Volatile private var pianoOutputDevice = 0
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        WechatLoginBridge.register(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         AccountSessionVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         AccountBackgroundSync.uiEngine = flutterEngine
