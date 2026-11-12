@@ -2,7 +2,7 @@
 
 ## 范围与基线
 
-从 GitHub 最新 main `25b27b09da050e658d62a297b9cc66df06f9a7fa`（0.1.66+67）重新克隆，隔离分支 `codex/dance-stream-cache-20261112`。本轮仅改中文三段舞蹈的视频来源和 Android 播放缓存；不调整钢琴按键布局、账号、同步、训练计划、计时及记录算法。Fandango 仍随包。未推送 GitHub、发布 Release 或覆盖线上 App；视频服务器沿用已完成的独立静态托管。
+从 GitHub 最新 main `25b27b09da050e658d62a297b9cc66df06f9a7fa`（0.1.66+67）重新克隆，隔离分支 `codex/dance-stream-cache-20261112`。本轮仅改中文三段舞蹈的视频来源和 Android 播放缓存；不调整钢琴按键布局、账号、同步、训练计划、计时及记录算法。Fandango 仍随包。后续获得用户“推送并部署”授权，源码发布目标为 GitHub main，已将同一 QA 安装包开放服务器下载，详见 [部署记录](deploy-0.1.67.md)。未创建 GitHub Release，不覆盖原正式 App；视频服务器沿用已完成的独立静态托管。
 
 ## 使用
 
@@ -53,7 +53,7 @@ python tools/check_dance_cache_apk.py NEW.apk --baseline BASELINE.apk --output p
 
 新版 APK SHA-256：`9253a5ecbba238777a5a12fac44c3e849909c1e9d03ae3481b7565612386a064`。基线 APK SHA-256：`80c72801e4dfbf9c2c3e38f9752df55561e97a45719a54e0d4af613a7b34b1b5`。
 
-本地原生提交：`7236051aedf49b154cc1bbe5128a253d1bceb27b`。应用接入及文档提交见此记录对应的下一次本地 Git 提交。审查发现的加载中退出、后台读取以及缓存初始化失败时的身份识别问题均已修复；二次只读审查没有剩余已确认的重要问题。
+核心原生提交：`7236051aedf49b154cc1bbe5128a253d1bceb27b`。应用接入提交为 `5488e9d`，发布文档与受限发布脚本由后续提交维护。审查发现的加载中退出、后台读取以及缓存初始化失败时的身份识别问题均已修复；二次只读审查没有剩余已确认的重要问题。
 
 
 ## 真机验收（尚未执行）

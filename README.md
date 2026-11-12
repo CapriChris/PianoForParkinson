@@ -1,10 +1,10 @@
 # 琴伴 · Android 内部演示
 
-## 本地联调版本 0.1.67（构建 68）
+## 最新联调版本 0.1.67（构建 68）
 
-中文舞蹈三部分已接入服务器在线播放及 Android 播放缓存；Fandango 继续随包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/dance-stream-cache-20261112.md)。本版本尚未推送、发布 Release 或完成 Android 真机验收。
+中文舞蹈三部分已接入服务器在线播放及 Android 播放缓存；Fandango 继续随包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/dance-stream-cache-20261112.md)。[下载 ARM64 联调 APK](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.67/PianoForParkinson-0.1.67-dance-cache-QA-arm64.apk) · [SHA-256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.67/SHA256SUMS.txt) · [部署记录](validation/deploy-0.1.67.md)。包名为独立的 `.validation`，不覆盖正式 App；目前尚未完成 Android 真机验收。本次未创建 GitHub Release。
 
-## 当前公开版本 0.1.66（构建 67）
+## 原正式包 0.1.66（构建 67）
 
 调整设置页账号入口和首次引导，补齐“我的账号”页及弹窗按钮按压反馈；区分通知降音量与真正中断，统一钢琴训练、曲目和舞蹈的暂停/手动恢复规则。曲目继续前新增三拍视觉准备，舞蹈缓冲后等待手动继续，通知结束恢复原音量。[更新说明](docs/2026-11-07-0.1.66-更新说明.md) · [构建与验证](validation/release-0.1.66.md)。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.66/qinban-0.1.66-android-universal.apk) · [GitHub 发布页](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.66)。
 
