@@ -1,6 +1,7 @@
-"""Restore exact offline playback assets from originals or a release APK.
+"""Restore exact bundled playback assets from originals or a release APK.
 
-Only the four manifest-listed files are copied; originals are never modified.
+Only bundled manifest-listed files are required; originals are never modified.
+Use --include-remote to restore the three online MP4 originals for local archives.
 No third-party Python dependencies or video transcoding are required.
 """
 import argparse
@@ -23,15 +24,20 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--from-apk', type=Path, help='Extract videos from a downloaded Qinban release APK.')
     parser.add_argument('--check', action='store_true', help='Only verify existing playback assets.')
+    parser.add_argument('--include-remote', action='store_true', help='Also restore/check originals now served remotely; not needed to build.')
     args = parser.parse_args()
     root = Path(__file__).resolve().parents[1] / 'assets' / 'video'
     manifest = json.loads((root / 'manifest.json').read_text(encoding='utf-8'))
+    packaged = (root.parents[1] / 'pubspec.yaml').read_text(encoding='utf-8')
+    bundled = {line.strip()[2:] for line in packaged.splitlines() if line.strip().startswith('- assets/video/')}
     archive = zipfile.ZipFile(args.from_apk) if args.from_apk else None
     try:
         for asset in manifest['assets']:
             name = asset['name']
             if Path(name).name != name or '/' in name or '\\' in name:
                 raise ValueError('Manifest filenames must not contain directories')
+            if not args.include_remote and f'assets/video/{name}' not in bundled:
+                continue
             target = root / name
             if target.exists():
                 if not matches(target, asset):

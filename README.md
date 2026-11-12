@@ -1,6 +1,10 @@
 # 琴伴 · Android 内部演示
 
-## 最新版本 0.1.66（构建 67）
+## 本地联调版本 0.1.67（构建 68）
+
+中文舞蹈三部分已接入服务器在线播放及 Android 播放缓存；Fandango 继续随包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/dance-stream-cache-20261112.md)。本版本尚未推送、发布 Release 或完成 Android 真机验收。
+
+## 当前公开版本 0.1.66（构建 67）
 
 调整设置页账号入口和首次引导，补齐“我的账号”页及弹窗按钮按压反馈；区分通知降音量与真正中断，统一钢琴训练、曲目和舞蹈的暂停/手动恢复规则。曲目继续前新增三拍视觉准备，舞蹈缓冲后等待手动继续，通知结束恢复原音量。[更新说明](docs/2026-11-07-0.1.66-更新说明.md) · [构建与验证](validation/release-0.1.66.md)。[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.66/qinban-0.1.66-android-universal.apk) · [GitHub 发布页](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.66)。
 
@@ -32,7 +36,7 @@ Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，�
 - **双端互联**通过「设置 → 我的账号与同步」查看状态，使用本人账号自动关联患者档案并同步记录。[双端交接说明](CROSS_CLIENT_INTEGRATION_HANDOFF.md) · [接口协议](cross_client_openapi_integration.json)
 - **布局适配**覆盖练习与记录分类、钢琴曲目列表和计划表单，并修复相邻琴键遮挡按键粒子的问题。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md)
 
-旧版安装包仍可在历史 Release 查阅。视频按需下载列入未来开发计划。[0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [未来开发计划](docs/未来开发计划.md)
+旧版安装包仍可在历史 Release 查阅。中文三段视频的在线播放与缓存正在本地联调。[0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [未来开发计划](docs/未来开发计划.md)
 
 ## 0.1.56 舞蹈、训练计划与统一记录
 
@@ -47,7 +51,7 @@ Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，�
 
 ## 从仓库构建
 
-仓库根目录对应原项目的 `app` 目录。安装Flutter、Python 3.11+、Android SDK和JDK后，先按[视频资源说明](assets/video/README.md)从Release APK恢复四个视频，再在仓库根目录执行：
+仓库根目录对应原项目的 `app` 目录。安装Flutter、Python 3.11+、Android SDK和JDK后，先按[视频资源说明](assets/video/README.md)从Release APK恢复仍需随包的Fandango视频，再在仓库根目录执行：
 
 ```powershell
 flutter pub get

@@ -1,0 +1,64 @@
+{
+  "schemaVersion": 1,
+  "resourceVersion": "v1",
+  "access": "public-read-only",
+  "items": [
+    {
+      "courseId": "hkpdf-balance-six",
+      "partId": "balance-six-1",
+      "resourceVersion": "v1",
+      "fileName": "balance-six-part-1.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-1.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 34614645,
+      "sha256": "c4d0b3d534eeea941683167c488042b373d81573ebbd29e7914cfb6d9048488b",
+      "durationSeconds": 77.88,
+      "averageBitrateBps": 3555690,
+      "videoCodec": "hevc",
+      "width": 1280,
+      "height": 720,
+      "audioCodecs": [
+        "aac"
+      ]
+    },
+    {
+      "courseId": "hkpdf-balance-six",
+      "partId": "balance-six-2",
+      "resourceVersion": "v1",
+      "fileName": "balance-six-part-2.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-2.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 173248152,
+      "sha256": "6adc1436249496af22e4d16c8b5009df8ed103af509523bc66fc261114d7591c",
+      "durationSeconds": 388.355,
+      "averageBitrateBps": 3568861,
+      "videoCodec": "hevc",
+      "width": 1280,
+      "height": 720,
+      "audioCodecs": [
+        "aac"
+      ]
+    },
+    {
+      "courseId": "hkpdf-balance-six",
+      "partId": "balance-six-3",
+      "resourceVersion": "v1",
+      "fileName": "balance-six-part-3.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-3.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 12174975,
+      "sha256": "b094dd7196351d154f143f7891f7fd99a89aaba62f5e6ab69f89e3760134532f",
+      "durationSeconds": 28.004,
+      "averageBitrateBps": 3478067,
+      "videoCodec": "hevc",
+      "width": 1280,
+      "height": 720,
+      "audioCodecs": [
+        "aac"
+      ]
+    }
+  ],
+  "deferredPartIds": [
+    "fandango-4"
+  ]
+}

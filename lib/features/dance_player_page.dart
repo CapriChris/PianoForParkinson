@@ -13,6 +13,7 @@ import '../app/app_controller.dart';
 import '../domain/contracts.dart';
 import '../domain/dance_training.dart';
 import '../platform/training_interruption.dart';
+import '../platform/dance_video_source.dart';
 import '../ui/qin_components.dart';
 import '../ui/qin_theme.dart';
 import 'dance_result_page.dart';
@@ -69,6 +70,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   VideoPlayerController? scrubController;
   Future<void> scrubPause = Future.value();
   String? failure;
+  bool networkNotice = false, networkSource = false;
   AppController get c => widget.c;
 
   @override
@@ -145,7 +147,14 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     wasPlaying = false;
     captureRunning = false;
     final controller = video;
-    if (controller != null) {
+    if (!ready) {
+      // A controller cannot forward pause before its initialized event. Cancel
+      // both pending local lookup and pending native initialization instead.
+      generation++;
+      video = null;
+      unawaited(controller?.dispose());
+      failure = c.text('视频已暂停，准备好后请重试。', 'Video paused. Retry when ready.');
+    } else if (controller != null) {
       unawaited(controller.pause().catchError((Object _) {}));
     }
     unawaited(widget.capture?.setRunning(false));
@@ -227,19 +236,24 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       ready = false;
       failure = null;
       prompted = false;
+      networkNotice = false;
+      networkSource = false;
     });
     if (old != null) await old.dispose();
     if (!mounted || token != generation) return;
-    final next = VideoPlayerController.asset(
-      course.parts[index].asset,
-      // The shared native focus listener owns duck/pause policy for all training.
-      // Prevent the video plugin from automatically restarting after a phone call.
-      videoPlayerOptions: VideoPlayerOptions(
-        mixWithOthers: true,
-        allowBackgroundPlayback: true,
-      ),
-    );
+    VideoPlayerController? next;
     try {
+      final source = await resolveDanceVideoSource(course.parts[index]);
+      if (!mounted || token != generation) return;
+      networkSource = source.isRemote;
+      networkNotice = source.needsNetworkNotice;
+      next = source.createController(
+        // The shared native focus listener owns duck/pause policy for all training.
+        // Prevent the video plugin from automatically restarting after a phone call.
+        VideoPlayerOptions(mixWithOthers: true, allowBackgroundPlayback: true),
+      );
+      // Own it before initialization: switching/leaving must cancel slow reads.
+      video = next;
       await next.initialize();
       if (!mounted || token != generation) {
         await next.dispose();
@@ -262,12 +276,15 @@ class _DancePlayerPageState extends State<DancePlayerPage>
         await play(next);
       }
     } catch (_) {
-      if (video != next) await next.dispose();
+      if (video == next) video = null;
+      await next?.dispose();
       if (mounted && token == generation) {
         setState(
           () => failure = c.text(
-            '视频无法打开，请重试。',
-            'Unable to open video. Please retry.',
+            networkSource ? '视频无法打开，未缓存片段需要联网。请检查网络后重试。' : '视频无法打开，请重试。',
+            networkSource
+                ? 'Unable to play. Uncached parts need a connection. Check the network and retry.'
+                : 'Unable to open video. Please retry.',
           ),
         );
       }
@@ -667,6 +684,16 @@ class _DancePlayerPageState extends State<DancePlayerPage>
                   ),
                 ),
                 const SizedBox(height: 20),
+                if (networkNotice)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Text(
+                      c.text(
+                        '未缓存片段将使用网络流量。',
+                        'Uncached parts use network data.',
+                      ),
+                    ),
+                  ),
                 QinFilledButton(
                   key: const ValueKey('finish-dance'),
                   onPressed: busy ? null : finish,

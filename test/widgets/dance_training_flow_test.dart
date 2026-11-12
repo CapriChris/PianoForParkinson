@@ -18,9 +18,12 @@ import 'cognitive_pages_test.dart' show mocks;
 class FakeDanceVideo extends VideoPlayerPlatform {
   final streams = <int, StreamController<VideoEvent>>{};
   final sources = <String>[];
+  final dataSources = <DataSource>[];
   final positions = <int, Duration>{};
   final playing = <int>{};
   final volumes = <int, double>{};
+  final disposed = <int>{};
+  bool deferInitialization = false;
   VideoPlayerOptions? options;
   int next = 0;
   @override
@@ -29,7 +32,8 @@ class FakeDanceVideo extends VideoPlayerPlatform {
   Future<int?> createWithOptions(VideoCreationOptions options) async {
     final id = ++next;
     this.options = options.videoPlayerOptions;
-    sources.add(options.dataSource.asset!);
+    dataSources.add(options.dataSource);
+    sources.add(options.dataSource.asset ?? options.dataSource.uri!);
     streams[id] = StreamController<VideoEvent>();
     positions[id] = Duration.zero;
     return id;
@@ -37,6 +41,7 @@ class FakeDanceVideo extends VideoPlayerPlatform {
 
   @override
   Stream<VideoEvent> videoEventsFor(int id) {
+    if (deferInitialization) return streams[id]!.stream;
     streams[id]!.add(
       VideoEvent(
         eventType: VideoEventType.initialized,
@@ -49,6 +54,7 @@ class FakeDanceVideo extends VideoPlayerPlatform {
 
   @override
   Future<void> dispose(int id) async {
+    disposed.add(id);
     playing.remove(id);
     unawaited(streams[id]!.close());
   }
@@ -105,8 +111,19 @@ Future<void> advance(WidgetTester tester) async {
 void main() {
   late FakeDanceVideo platform;
   setUp(() {
+    rootBundle.evict('assets/video/remote_manifest.json');
     platform = FakeDanceVideo();
     VideoPlayerPlatform.instance = platform;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('piano_training/dance_media_cache/v1'),
+          (_) async => {
+            'complete': false,
+            'cachedBytes': 0,
+            'totalBytes': 34614645,
+            'metered': false,
+          },
+        );
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(
           const MethodChannel('piano_training/platform_events/v1'),
@@ -163,6 +180,91 @@ void main() {
     await tester.tap(find.text('open'));
     await advance(tester);
   }
+
+  testWidgets(
+    'Chinese dance streams the chosen resource without prefetching another part',
+    (tester) async {
+      final c = setup(tester);
+      await open(tester, c, []);
+      expect(platform.dataSources, hasLength(1));
+      final source = platform.dataSources.single;
+      expect(source.sourceType, DataSourceType.network);
+      expect(
+        source.uri,
+        'https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-1.mp4',
+      );
+      expect(source.httpHeaders['X-PQ-Dance-Part'], 'balance-six-1');
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    },
+  );
+
+  testWidgets('leaving during cache lookup cannot create a late player', (
+    tester,
+  ) async {
+    final pending = Completer<Map<String, Object>>();
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(
+          const MethodChannel('piano_training/dance_media_cache/v1'),
+          (_) => pending.future,
+        );
+    final c = setup(tester);
+    final writes = <Json>[];
+    await open(tester, c, writes);
+    expect(platform.dataSources, isEmpty);
+    await tester.pumpWidget(const SizedBox());
+    pending.complete({
+      'complete': false,
+      'cachedBytes': 0,
+      'totalBytes': 34614645,
+      'metered': true,
+    });
+    await advance(tester);
+    expect(platform.dataSources, isEmpty);
+    expect(writes, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('English dance keeps its bundled Fandango controller', (
+    tester,
+  ) async {
+    final c = setup(tester, locale: 'en');
+    await open(tester, c, <Json>[]);
+    expect(platform.dataSources.single.sourceType, DataSourceType.asset);
+    expect(platform.sources.single, danceAsset);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('leaving disposes a network player still initializing', (
+    tester,
+  ) async {
+    platform.deferInitialization = true;
+    final c = setup(tester);
+    await open(tester, c, <Json>[]);
+    expect(platform.dataSources, hasLength(1));
+    await tester.pumpWidget(const SizedBox());
+    await advance(tester);
+    expect(platform.disposed, contains(1));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'backgrounding cancels pending network initialization without auto resume',
+    (tester) async {
+      platform.deferInitialization = true;
+      final c = setup(tester);
+      await open(tester, c, <Json>[]);
+      final observer =
+          tester.state(find.byType(DancePlayerPage)) as WidgetsBindingObserver;
+      observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
+      await advance(tester);
+      expect(platform.disposed, contains(1));
+      observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      await advance(tester);
+      expect(platform.dataSources, hasLength(1));
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets(
     'dance ignores notification duck and waits for manual resume after takeover',
@@ -299,7 +401,10 @@ void main() {
     final c = setup(tester);
     final writes = <Json>[];
     await open(tester, c, writes);
-    expect(platform.sources.last, chineseDanceCourse.parts[0].asset);
+    expect(
+      platform.sources.last,
+      'https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-1.mp4',
+    );
     platform.positions[platform.next] = const Duration(seconds: 2);
     await advance(tester);
     await tester.tap(find.byKey(const ValueKey('dance-part-1')));
@@ -308,7 +413,10 @@ void main() {
     );
 
     await advance(tester);
-    expect(platform.sources.last, chineseDanceCourse.parts[1].asset);
+    expect(
+      platform.sources.last,
+      'https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-2.mp4',
+    );
     await tester.tap(find.byKey(const ValueKey('dance-part-0')));
     await advance(tester);
     expect(platform.positions[platform.next], const Duration(seconds: 2));
@@ -342,7 +450,10 @@ void main() {
     expect(find.text('第一部分已播放结束'), findsOneWidget);
     await tester.tap(find.byKey(const ValueKey('dance-next-part')));
     await advance(tester);
-    expect(platform.sources.last, chineseDanceCourse.parts[1].asset);
+    expect(
+      platform.sources.last,
+      'https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-2.mp4',
+    );
     await tester.tap(find.byType(BackButton));
     await advance(tester);
     expect(find.text('退出不会保存本次训练记录。'), findsOneWidget);

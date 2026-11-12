@@ -13,6 +13,10 @@ analyzer:
   exclude:
     - build/**
     - android/**
+    # Upstream plugin suites use their own pubspec/dev dependencies.
+    - third_party/video_player_android/example/**
+    - third_party/video_player_android/test/**
+    - third_party/video_player_android/pigeons/**
 
 linter:
   # The lint rules applied to this project can be customized in the

@@ -78,3 +78,5 @@ app.*.map.json
 /assets/video/*
 !/assets/video/README.md
 !/assets/video/manifest.json
+
+!/assets/video/remote_manifest.json
