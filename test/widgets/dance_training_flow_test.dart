@@ -94,6 +94,22 @@ class FakeDanceVideo extends VideoPlayerPlatform {
     positions[next] = const Duration(seconds: 30);
     streams[next]!.add(VideoEvent(eventType: VideoEventType.completed));
   }
+
+  void buffering(bool loading) {
+    streams[next]!.add(
+      VideoEvent(
+        eventType: loading
+            ? VideoEventType.bufferingStart
+            : VideoEventType.bufferingEnd,
+      ),
+    );
+    streams[next]!.add(
+      VideoEvent(
+        eventType: VideoEventType.isPlayingStateUpdate,
+        isPlaying: !loading && playing.contains(next),
+      ),
+    );
+  }
 }
 
 Future<void> advance(WidgetTester tester) async {
@@ -355,25 +371,80 @@ void main() {
     },
   );
 
-  testWidgets('dance buffering freezes until the user chooses to continue', (
+  testWidgets('dance buffering shows loading and resumes without pausing', (
     tester,
   ) async {
     final c = setup(tester);
-    await open(tester, c, []);
+    final writes = <Json>[];
+    await open(tester, c, writes);
     final id = platform.next;
-    platform.streams[id]!.add(
-      VideoEvent(eventType: VideoEventType.bufferingStart),
-    );
+    platform.buffering(true);
     await advance(tester);
-    expect(platform.playing, isNot(contains(id)));
-    platform.streams[id]!.add(
-      VideoEvent(eventType: VideoEventType.bufferingEnd),
+    expect(platform.playing, contains(id));
+    expect(find.byKey(const ValueKey('dance-loading')), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(const ValueKey('dance-play')),
+        matching: find.byIcon(Icons.pause),
+      ),
+      findsOneWidget,
     );
+    // Position polling can still report a changed position while buffering;
+    // none of that interval may count as active training.
+    platform.positions[id] = const Duration(seconds: 1);
     await advance(tester);
-    expect(platform.playing, isNot(contains(id)));
+    platform.positions[id] = const Duration(seconds: 2);
+    await advance(tester);
+    platform.buffering(false);
+    await advance(tester);
+    expect(platform.playing, contains(id));
+    expect(find.byKey(const ValueKey('dance-loading')), findsNothing);
+    final controller = tester
+        .widget<VideoPlayer>(find.byType(VideoPlayer))
+        .controller;
+    expect(controller.value.isPlaying, isTrue);
+    await tester.ensureVisible(find.byKey(const ValueKey('finish-dance')));
+    await tester.tap(find.byKey(const ValueKey('finish-dance')));
+    await advance(tester);
+    expect(writes.single['active_ms'], 0);
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
   });
+
+  for (final interruption in ['pause', 'background', 'audio focus']) {
+    testWidgets('buffering does not resume after $interruption', (
+      tester,
+    ) async {
+      final c = setup(tester);
+      await open(tester, c, []);
+      final id = platform.next;
+      platform.buffering(true);
+      await advance(tester);
+      expect(find.byKey(const ValueKey('dance-loading')), findsOneWidget);
+      if (interruption == 'pause') {
+        tester
+            .widget<DanceVideoSurface>(find.byType(DanceVideoSurface))
+            .onToggle();
+      } else if (interruption == 'background') {
+        final observer = tester.state(
+          find.byType(DancePlayerPage),
+        ) as WidgetsBindingObserver;
+        observer.didChangeAppLifecycleState(AppLifecycleState.hidden);
+        observer.didChangeAppLifecycleState(AppLifecycleState.resumed);
+      } else {
+        c.handlePlaybackEvent('AUDIO_FOCUS_LOST');
+        c.handlePlaybackEvent('AUDIO_FOCUS_GAIN');
+      }
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      expect(find.byKey(const ValueKey('dance-loading')), findsNothing);
+      platform.buffering(false);
+      await advance(tester);
+      expect(platform.playing, isNot(contains(id)));
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+    });
+  }
 
   testWidgets('preparation is concise and course follows selected language', (
     tester,

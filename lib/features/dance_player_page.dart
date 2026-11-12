@@ -65,6 +65,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       dialogOpen = false;
   bool scrubbing = false, resumeAfterScrub = false;
   bool interrupted = false;
+  bool playbackRequested = false;
   int playRevision = 0;
   double volumeLevel = 1;
   VideoPlayerController? scrubController;
@@ -89,11 +90,12 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (controller == null || !ready) return;
     final value = controller.value,
         now = widget.nowMilliseconds?.call() ?? clock.elapsedMilliseconds;
-    if (wasPlaying && (value.isBuffering || value.hasError)) {
-      // Buffering must not silently resume or credit time without a usable video.
+    if (wasPlaying && value.hasError) {
       interrupt();
       return;
     }
+    // Keep the native play intent while buffering so loading can finish and
+    // playback can resume. Buffering still contributes no training time.
     ledgers[selected].observe(
       from: previous,
       to: value.position.inMilliseconds,
@@ -128,7 +130,10 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       captureRunning = recording;
       unawaited(widget.capture?.setRunning(recording));
     }
-    if (value.isCompleted) completed[selected] = true;
+    if (value.isCompleted) {
+      completed[selected] = true;
+      playbackRequested = false;
+    }
     if (allowPrompt &&
         value.isCompleted &&
         !prompted &&
@@ -143,6 +148,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
   void interrupt() {
     playRevision++;
     interrupted = true;
+    playbackRequested = false;
     resumeAfterScrub = false;
     wasPlaying = false;
     captureRunning = false;
@@ -196,6 +202,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
           interrupted) {
         return;
       }
+      playbackRequested = true;
       await controller.play();
       if (revision != playRevision || !foreground || interrupted) {
         await controller.pause();
@@ -228,6 +235,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     final token = ++generation;
     playRevision++;
     interrupted = false;
+    playbackRequested = false;
     final old = video;
     video = null;
     wasPlaying = false;
@@ -359,7 +367,10 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (controller == null || busy || scrubbing) return;
     sample(allowPrompt: false);
     scrubbing = true;
-    resumeAfterScrub = controller.value.isPlaying;
+    resumeAfterScrub =
+        controller.value.isPlaying ||
+        (playbackRequested && controller.value.isBuffering);
+    playbackRequested = false;
     scrubController = controller;
     wasPlaying = false;
     scrubPause = controller.pause();
@@ -427,6 +438,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     sample(allowPrompt: false);
     wasPlaying = false;
     dialogOpen = true;
+    playbackRequested = false;
     final controller = video;
     if (controller != null) await controller.pause();
     if (!mounted) return;
@@ -500,6 +512,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     busy = true;
     sample(allowPrompt: false);
     wasPlaying = false;
+    playbackRequested = false;
     final controller = video;
     if (controller != null) await controller.pause();
     if (!mounted) return;
@@ -585,6 +598,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     onScrubEnd: endScrub,
     onRate: changeRate,
     volumeLevel: volumeLevel,
+    playbackRequested: playbackRequested,
     onVolume: (value) {
       setState(() => volumeLevel = value);
       updateVolume();
@@ -595,7 +609,10 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       if (controller == null) return;
       sample();
       wasPlaying = false;
-      if (controller.value.isPlaying) {
+      if (controller.value.isPlaying ||
+          (playbackRequested && controller.value.isBuffering)) {
+        playRevision++;
+        playbackRequested = false;
         await controller.pause();
       } else {
         interrupted = false;
@@ -729,6 +746,7 @@ class DanceVideoSurface extends StatefulWidget {
     required this.onFullscreen,
     this.volumeLevel,
     this.onVolume,
+    this.playbackRequested = false,
   });
   final VideoPlayerController? controller;
   final bool ready, fullscreen;
@@ -739,6 +757,7 @@ class DanceVideoSurface extends StatefulWidget {
   final Future<void> Function(double) onRate;
   final double? volumeLevel;
   final ValueChanged<double>? onVolume;
+  final bool playbackRequested;
   @override
   State<DanceVideoSurface> createState() => _DanceVideoSurfaceState();
 }
@@ -789,6 +808,9 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
   @override
   Widget build(BuildContext context) {
     final controller = widget.controller, v = controller?.value;
+    final playing =
+        v?.isPlaying == true ||
+        (widget.playbackRequested && v?.isBuffering == true);
     final zh = Localizations.localeOf(context).languageCode == 'zh';
     String t(String a, String b) => zh ? a : b;
     return ClipRRect(
@@ -839,9 +861,14 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
                   ),
                 ),
               )
-            else if (!widget.ready)
+            else if (!widget.ready || (v?.isBuffering == true && playing))
               const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+                child: IgnorePointer(
+                  child: CircularProgressIndicator(
+                    key: ValueKey('dance-loading'),
+                    color: Colors.white,
+                  ),
+                ),
               ),
             if (widget.fullscreen)
               Positioned(
@@ -859,7 +886,7 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
                   ),
                 ),
               ),
-            if (widget.ready && controller != null && controls)
+            if (widget.ready && controller != null && v != null && controls)
               Positioned(
                 left: 0,
                 right: 0,
@@ -884,14 +911,14 @@ class _DanceVideoSurfaceState extends State<DanceVideoSurface> {
                               key: const ValueKey('dance-play'),
                               style: iconStyle,
                               tooltip: t(
-                                v!.isPlaying ? '暂停' : '播放',
-                                v.isPlaying ? 'Pause' : 'Play',
+                                playing ? '暂停' : '播放',
+                                playing ? 'Pause' : 'Play',
                               ),
                               onPressed: dragging != null
                                   ? null
                                   : widget.onToggle,
                               icon: Icon(
-                                v.isPlaying ? Icons.pause : Icons.play_arrow,
+                                playing ? Icons.pause : Icons.play_arrow,
                               ),
                             ),
                             Expanded(
