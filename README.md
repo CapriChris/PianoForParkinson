@@ -1,6 +1,12 @@
 # 琴伴 · Android 内部演示
 
-## 最新联调版本 0.1.69（构建 70）
+## 最新安装包 0.1.70（构建 71）
+
+舞蹈跟练改为插画课程卡片，点击后进入独立准备页；三门课程在列表、准备页、完成页和记录卡片中使用对应插画。舞蹈、短旋律及节奏准备页共用插画尺寸规则。包含 0.1.69 的舒缓节奏和左右手提示，以及三门课程在线播放缓存、手机号登录等已有功能。[更新说明](docs/2026-11-13-0.1.70-更新说明.md) · [构建与验证](validation/release-0.1.70.md)。
+
+[下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.70/qinban-0.1.70-android-universal.apk) · [GitHub Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.70)。使用正式包名 `com.pianoforparkinson.piano_practice`，不覆盖独立 `.validation` 联调包；沿用本机内部测试开发签名，覆盖旧版须包名及签名相同。本版尚未完成真机验收。
+
+## 上一联调版本 0.1.69（构建 70）
 
 根据患者试用反馈，默认开启“设置 → 舒缓节奏”：拉长演示及题间间隔，降低节拍，不自动升速；关闭后恢复标准。M1/M2显示左手蓝色、右手橙色及真实键号。原始事件时钟、400ms按住要求和评分公式保持不变，舒缓记录单独比较。[修改及测试说明](validation/patient-experience-0.1.69.md)。
 
@@ -42,7 +48,7 @@ Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，�
 - **双端互联**通过「设置 → 我的账号与同步」查看状态，使用本人账号自动关联患者档案并同步记录。[双端交接说明](CROSS_CLIENT_INTEGRATION_HANDOFF.md) · [接口协议](cross_client_openapi_integration.json)
 - **布局适配**覆盖练习与记录分类、钢琴曲目列表和计划表单，并修复相邻琴键遮挡按键粒子的问题。[0.1.59 更新说明](docs/2026-11-03-0.1.59-更新说明.md)
 
-旧版安装包仍可在历史 Release 查阅。中文三段视频的在线播放与缓存正在本地联调。[0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) · [未来开发计划](docs/未来开发计划.md)
+旧版安装包仍可在历史 Release 查阅。当前三门课程十段视频均在线播放并自动缓存，视频不随 APK 打包；Fandango 已从当前课程移除，历史记录保留。不提供主动下载或后台下载任务。[当前资源说明](assets/video/README.md) · [0.1.56 历史 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56)
 
 ## 0.1.56 舞蹈、训练计划与统一记录
 

@@ -39,6 +39,8 @@
 | 37-balance-six-course.png | 新平衡舞步六式准备页插画 | 1536 × 1024 |
 | 38-plan-page-illustration.png | 计划页空状态插画 | 1254 × 1254 |
 | 39-plan-page-header.png | 计划页背景插画 | 1536 × 1024 |
+| 43-dance-brain-body.png | 身心协调课程卡片和准备页插画 | 1254 × 1254 |
+| 44-dance-move-shout.png | 律动与发声课程卡片和准备页插画 | 1254 × 1254 |
 
 舞蹈两张插画的运行副本位于 `assets/ui_images/`：900 × 900、900 × 600 的 WebP，沿用现有资源加载方式，合计约240 KiB；原始PNG保留在本目录。
 

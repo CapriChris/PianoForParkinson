@@ -2,13 +2,20 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import 'qin_components.dart' show qinShortLandscape;
 import 'qin_theme.dart';
 
 /// Artwork is decorative; all meaningful text remains outside the image.
 class QinArtwork extends StatelessWidget {
-  const QinArtwork({super.key, required this.asset, this.height = 150});
+  const QinArtwork({
+    super.key,
+    required this.asset,
+    this.height = 150,
+    this.alignment = Alignment.center,
+  });
   final String asset;
   final double height;
+  final AlignmentGeometry alignment;
   @override
   Widget build(BuildContext context) {
     if (context.qin.highContrast) return const SizedBox.shrink();
@@ -19,12 +26,39 @@ class QinArtwork extends StatelessWidget {
         width: double.infinity,
         height: height,
         fit: BoxFit.cover,
+        alignment: alignment,
         cacheWidth: height <= 100 ? 240 : 900,
         excludeFromSemantics: true,
         errorBuilder: (_, _, _) => const SizedBox.shrink(),
       ),
     );
   }
+}
+
+/// A single responsive artwork size for every practice preparation screen.
+class QinPreparationArtwork extends StatelessWidget {
+  const QinPreparationArtwork({
+    super.key,
+    required this.asset,
+    this.artworkKey,
+    this.alignment = Alignment.center,
+  });
+  final String asset;
+  final Key? artworkKey;
+  final AlignmentGeometry alignment;
+
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+    builder: (context, constraints) => QinArtwork(
+      key: artworkKey,
+      asset: asset,
+      alignment: alignment,
+      height: (constraints.maxWidth / 1.7).clamp(
+        100.0,
+        qinShortLandscape(context) ? 160.0 : 300.0,
+      ),
+    ),
+  );
 }
 
 String? qinPieceImage(String id) {
@@ -36,6 +70,13 @@ String? qinPieceImage(String id) {
   if (id.contains('sunshine')) return '07-sunshine.png';
   return null;
 }
+
+String? qinDanceCourseImage(String? id) => switch (id) {
+  'hkpdf-balance-six' => '37-balance-six-course.png',
+  'brain-and-body' => '43-dance-brain-body.png',
+  'move-and-shout' => '44-dance-move-shout.png',
+  _ => null,
+};
 
 String qinPracticeImage(String id) => switch (id) {
   'G1_MEMORY' => '14-melody-memory.png',

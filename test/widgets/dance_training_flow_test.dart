@@ -6,12 +6,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:video_player_platform_interface/video_player_platform_interface.dart';
 import 'package:video_player/video_player.dart';
 import 'package:piano_practice/app/app_controller.dart';
+import 'package:piano_practice/app/piano_app.dart'
+    show InstructionPage, PracticeCard;
 import 'package:piano_practice/domain/contracts.dart';
 import 'package:piano_practice/domain/dance_training.dart';
 import 'package:piano_practice/features/dance_page.dart';
 import 'package:piano_practice/features/dance_player_page.dart';
 import 'package:piano_practice/features/dance_result_page.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
+import 'package:piano_practice/ui/qin_music_art.dart';
 
 import 'cognitive_pages_test.dart' show mocks;
 
@@ -450,28 +453,153 @@ void main() {
     });
   }
 
-  testWidgets('preparation is concise and shows three independent courses', (
-    tester,
-  ) async {
-    final c = setup(tester);
-    await tester.pumpWidget(app(DancePage(c: c)));
-    await tester.pumpAndSettle();
-    expect(find.text('新平衡舞步六式'), findsOneWidget);
-    expect(find.text('身心协调'), findsOneWidget);
-    expect(find.text('律动与发声'), findsOneWidget);
-    expect(find.text('舞蹈记录'), findsNothing);
-    expect(find.text('来源与许可'), findsNothing);
-    expect(
-      find
-          .byType(Icon)
-          .evaluate()
-          .where((e) => (e.widget as Icon).icon == Icons.accessibility_new),
-      isEmpty,
+  testWidgets(
+    'catalog uses melody-style cards and keeps setup on the next page',
+    (tester) async {
+      final c = setup(tester);
+      await tester.pumpWidget(app(DancePage(c: c)));
+      await tester.pumpAndSettle();
+      expect(find.text('新平衡舞步六式'), findsOneWidget);
+      expect(find.text('身心协调'), findsOneWidget);
+      expect(find.text('律动与发声'), findsOneWidget);
+      expect(find.byType(PracticeCard), findsNWidgets(3));
+      expect(find.text('中文'), findsOneWidget);
+      expect(find.text('英文'), findsNWidgets(2));
+      expect(find.textContaining('部分'), findsNothing);
+      expect(
+        tester
+            .widget<PracticeCard>(
+              find.byKey(const ValueKey('dance-course-brain-and-body')),
+            )
+            .artwork,
+        '43-dance-brain-body.png',
+      );
+      expect(
+        tester
+            .widget<PracticeCard>(
+              find.byKey(const ValueKey('dance-course-move-and-shout')),
+            )
+            .artwork,
+        '44-dance-move-shout.png',
+      );
+      expect(find.byType(SwitchListTile), findsNothing);
+      expect(find.byKey(const ValueKey('start-dance')), findsNothing);
+      expect(find.text('舞蹈记录'), findsNothing);
+      expect(find.text('来源与许可'), findsNothing);
+      expect(
+        find
+            .byType(Icon)
+            .evaluate()
+            .where((e) => (e.widget as Icon).icon == Icons.accessibility_new),
+        isEmpty,
+      );
+      expect(find.textContaining('待审课程'), findsNothing);
+      expect(danceCourseFor(false).id, chineseDanceCourse.id);
+      expect(danceCourseFor(true).parts.length, 3);
+    },
+  );
+
+  for (final size in [const Size(390, 844), const Size(800, 360)]) {
+    testWidgets(
+      'dance artwork matches melody and rhythm preparation dimensions $size',
+      (tester) async {
+        final c = setup(tester);
+        tester.view.physicalSize = size;
+        c.content.song = {
+          'content_id': 'test-song',
+          'localized_title': {'zh-Hans': '测试旋律', 'en': 'Test melody'},
+        };
+        Size? reference;
+        final pages = <String, Widget>{
+          'melody': InstructionPage(c: c, taskId: 'S1_GUIDED'),
+          'rhythm': InstructionPage(c: c, taskId: 'S2_RHYTHM'),
+          for (final course in danceCourses)
+            course.id: DancePreparationPage(c: c, course: course),
+        };
+        for (final entry in pages.entries) {
+          await tester.pumpWidget(
+            MaterialApp(
+              key: ValueKey(entry.key),
+              theme: qinTheme(highContrast: false),
+              home: entry.value,
+            ),
+          );
+          await tester.pumpAndSettle();
+          final actual = tester.getSize(find.byType(QinArtwork));
+          reference ??= actual;
+          expect(
+            actual.width,
+            closeTo(reference.width, .01),
+            reason: entry.key,
+          );
+          expect(
+            actual.height,
+            closeTo(reference.height, .01),
+            reason: entry.key,
+          );
+          expect(tester.takeException(), isNull);
+        }
+        await tester.pumpWidget(const SizedBox());
+      },
     );
-    expect(find.textContaining('待审课程'), findsNothing);
-    expect(danceCourseFor(false).id, chineseDanceCourse.id);
-    expect(danceCourseFor(true).parts.length, 3);
-  });
+  }
+
+  for (final locale in ['zh-Hans', 'en']) {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets('course setup and back navigation fit 320dp $locale $scale', (
+        tester,
+      ) async {
+        final c = setup(tester, locale: locale, scale: scale);
+        await tester.pumpWidget(app(DancePage(c: c)));
+        await tester.pumpAndSettle();
+        final selected = find.byKey(
+          ValueKey('dance-course-${brainAndBodyCourse.id}'),
+        );
+        await tester.scrollUntilVisible(selected, 100);
+        await tester.ensureVisible(selected);
+        await tester.pumpAndSettle();
+        await tester.tap(selected);
+        await tester.pumpAndSettle();
+        expect(find.byType(DancePreparationPage), findsOneWidget);
+        expect(
+          find.text(brainAndBodyCourse.localizedTitle(c.chinese)),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text(brainAndBodyCourse.localizedTitle(c.chinese)),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          tester
+              .widget<QinArtwork>(
+                find.byKey(const ValueKey('dance-preparation-artwork')),
+              )
+              .asset,
+          '43-dance-brain-body.png',
+        );
+        await tester.scrollUntilVisible(find.byType(SwitchListTile), 100);
+        await tester.pumpAndSettle();
+        expect(find.byType(SwitchListTile), findsOneWidget);
+        await tester.ensureVisible(find.byKey(const ValueKey('start-dance')));
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+        expect(platform.dataSources, isEmpty);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.byType(DancePreparationPage), findsNothing);
+        expect(
+          find.byKey(ValueKey('dance-course-${brainAndBodyCourse.id}')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const ValueKey('start-dance')), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      });
+    }
+  }
   testWidgets('new course result repeats its saved course', (tester) async {
     final c = setup(tester);
     await tester.pumpWidget(
@@ -522,6 +650,16 @@ void main() {
           await tester.pumpAndSettle();
           await tester.tap(selection);
           await tester.pumpAndSettle();
+          expect(
+            tester
+                .widget<QinArtwork>(
+                  find.byKey(const ValueKey('dance-preparation-artwork')),
+                )
+                .asset,
+            course.id == brainAndBodyCourse.id
+                ? '43-dance-brain-body.png'
+                : '44-dance-move-shout.png',
+          );
           expect(platform.dataSources, isEmpty);
           await tester.tap(find.byKey(const ValueKey('start-dance')));
           await advance(tester);

@@ -1403,15 +1403,7 @@ class _InstructionPageState extends State<InstructionPage> {
         ],
         children: [
           if (!context.qin.highContrast) ...[
-            LayoutBuilder(
-              builder: (context, constraints) => QinArtwork(
-                asset: artwork,
-                height: (constraints.maxWidth / 1.7).clamp(
-                  100.0,
-                  qinShortLandscape(context) ? 160.0 : 300.0,
-                ),
-              ),
-            ),
+            QinPreparationArtwork(asset: artwork),
             const SizedBox(height: 20),
           ],
           PracticeStepsPanel(c: c, steps: steps),
@@ -1937,7 +1929,11 @@ class _HistoryListState extends State<HistoryList> {
                               c.text('钢琴曲目', 'Piano piece')
                         : taskTitle(taskId, c.chinese);
                     final artwork = dance
-                        ? '36-practice-dance.png'
+                        ? qinDanceCourseImage(
+                                (item['content_id'] ?? summary?['content_id'])
+                                    as String?,
+                              ) ??
+                              '36-practice-dance.png'
                         : piece != null
                         ? qinPieceImage(piece.id) ?? qinPracticeImage(taskId)
                         : qinSongImage(

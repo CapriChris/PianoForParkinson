@@ -13,6 +13,7 @@ import '../domain/dance_training.dart';
 import '../domain/history.dart' show recordDateLabel;
 import '../ui/metric_visuals.dart' show MetricRingPainter;
 import '../ui/qin_components.dart';
+import '../ui/qin_music_art.dart';
 import '../ui/qin_theme.dart';
 import 'assistant_page.dart';
 import 'dance_player_page.dart';
@@ -265,10 +266,11 @@ class _DanceResultPageState extends State<DanceResultPage> {
           )
         : null;
     final artwork =
-        r['content_id'] == chineseDanceCourse.id ||
-            r['content_id'] == null && c.chinese
-        ? '37-balance-six-course.webp'
-        : '36-practice-dance.webp';
+        qinDanceCourseImage(r['content_id'] as String?)
+            ?.replaceAll('.png', '.webp') ??
+        (r['content_id'] == null && c.chinese
+            ? '37-balance-six-course.webp'
+            : '36-practice-dance.webp');
     final started = r['started_utc_ms'];
     final utc = started is int
         ? DateTime.fromMillisecondsSinceEpoch(started, isUtc: true)

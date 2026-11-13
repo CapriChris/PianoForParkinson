@@ -6,10 +6,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app/app_controller.dart';
+import '../app/page_title.dart';
+import '../app/piano_app.dart' show PracticeCard;
 import '../data/training_schedule_repository.dart';
 import '../domain/contracts.dart';
 import '../domain/dance_training.dart';
 import '../ui/qin_components.dart';
+import '../ui/qin_music_art.dart';
+import '../ui/qin_theme.dart';
 import 'dance_player_page.dart';
 export 'dance_player_page.dart' show DancePlayerPage;
 
@@ -30,14 +34,29 @@ class DancePage extends StatefulWidget {
 
 class _DancePageState extends State<DancePage> {
   AppController get c => widget.c;
-  DanceCourse selectedCourse = chineseDanceCourse;
-  final captureKey = GlobalKey<CapturePreparationState>();
+  bool openingCourse = false;
+
+  Future<void> chooseCourse(DanceCourse course) async {
+    if (openingCourse) return;
+    setState(() => openingCourse = true);
+    try {
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => DancePreparationPage(c: c, course: course),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => openingCourse = false);
+    }
+  }
+
   late Future<List<Json>> records = scheduleStore(c).dances();
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
       leading: Navigator.canPop(context) ? const QinBackButton() : null,
-      title: Text(
+      title: PageTitle(
         c.text(
           widget.history ? '舞蹈记录' : '舞蹈跟练',
           widget.history ? 'Dance history' : 'Dance practice',
@@ -162,63 +181,109 @@ class _DancePageState extends State<DancePage> {
               );
             },
           )
-        : QinActionPage(
-            actions: [
-              QinFilledButton.icon(
-                key: const ValueKey('start-dance'),
-                onPressed: () async {
-                  await c.stopAllPlayback();
-                  if (!context.mounted) return;
-                  await Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => DancePlayerPage(
-                        c: c,
-                        course: selectedCourse,
-                        capture: captureKey.currentState?.claim(),
-                      ),
-                    ),
-                  );
-                  if (mounted && widget.history) {
-                    setState(() => records = scheduleStore(c).dances());
-                  }
-                },
-                icon: const Icon(Icons.play_arrow),
-                label: Text(c.text('开始练习', 'Start practice')),
-              ),
-            ],
+        : QinPageList(
             children: [
-              CapturePreparation(key: captureKey, c: c),
-              Text(
-                c.text('选择课程', 'Choose a course'),
-                style: Theme.of(context).textTheme.titleLarge,
+              QinSectionTitle(
+                c.text('选一门喜欢的课程', 'Choose a course you like'),
+                subtitle: c.text(
+                  '跟随视频，按自己的节奏练习。',
+                  'Follow the video and practice at your own pace.',
+                ),
               ),
-              for (final course in danceCourses)
-                ListTile(
+              for (final course in danceCourses) ...[
+                PracticeCard(
                   key: ValueKey('dance-course-${course.id}'),
-                  selected: selectedCourse.id == course.id,
-                  leading: Icon(
-                    selectedCourse.id == course.id
-                        ? Icons.radio_button_checked
-                        : Icons.radio_button_off,
-                  ),
-                  title: Text(course.localizedTitle(c.chinese)),
-                  subtitle: Text(
-                    c.text(
-                      '${course.parts.length} 部分 · ${course.id == chineseDanceCourse.id ? "中文视频" : "英语视频"}',
-                      '${course.parts.length} parts · ${course.id == chineseDanceCourse.id ? "Chinese video" : "English video"}',
-                    ),
-                  ),
-                  onTap: () => setState(() => selectedCourse = course),
+                  icon: Icons.music_video_outlined,
+                  artwork: _danceCourseArtwork(course),
+                  title: course.localizedTitle(c.chinese),
+                  subtitle: _danceCourseLanguage(c, course),
+                  onTap: openingCourse ? null : () => chooseCourse(course),
                 ),
-              const SizedBox(height: 12),
-              QinStatus(
-                text: c.text(
-                  '请留出活动空间，按自己舒服的幅度练习。随时可以暂停，身体不适时停止。',
-                  'Keep space to move and practice at a comfortable pace. Pause anytime; stop if you feel discomfort.',
-                ),
-              ),
+                const SizedBox(height: 12),
+              ],
             ],
           ),
+  );
+}
+
+String _danceCourseArtwork(DanceCourse course) =>
+    qinDanceCourseImage(course.id) ?? '37-balance-six-course.png';
+
+String _danceCourseLanguage(AppController c, DanceCourse course) =>
+    course.id == chineseDanceCourse.id
+    ? c.text('中文', 'Chinese')
+    : c.text('英文', 'English');
+
+/// Capture consent belongs to the selected practice, after browsing the catalog.
+class DancePreparationPage extends StatefulWidget {
+  const DancePreparationPage({
+    super.key,
+    required this.c,
+    required this.course,
+  });
+  final AppController c;
+  final DanceCourse course;
+  @override
+  State<DancePreparationPage> createState() => _DancePreparationPageState();
+}
+
+class _DancePreparationPageState extends State<DancePreparationPage> {
+  final captureKey = GlobalKey<CapturePreparationState>();
+  bool starting = false;
+  AppController get c => widget.c;
+
+  Future<void> start() async {
+    if (starting || captureKey.currentState?.busy == true) return;
+    setState(() => starting = true);
+    try {
+      await c.stopAllPlayback();
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => DancePlayerPage(
+            c: c,
+            course: widget.course,
+            capture: captureKey.currentState?.claim(),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => starting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      leading: const QinBackButton(),
+      title: PageTitle(widget.course.localizedTitle(c.chinese)),
+    ),
+    body: QinActionPage(
+      actions: [
+        QinFilledButton.icon(
+          key: const ValueKey('start-dance'),
+          onPressed: starting ? null : start,
+          icon: const Icon(Icons.play_arrow),
+          label: Text(c.text('开始练习', 'Start practice')),
+        ),
+      ],
+      children: [
+        if (!context.qin.highContrast)
+          QinPreparationArtwork(
+            artworkKey: const ValueKey('dance-preparation-artwork'),
+            asset: _danceCourseArtwork(widget.course),
+            alignment: Alignment.topCenter,
+          ),
+        CapturePreparation(key: captureKey, c: c),
+        const SizedBox(height: 16),
+        QinStatus(
+          text: c.text(
+            '请留出活动空间，按自己舒服的幅度练习。随时可以暂停，身体不适时停止。',
+            'Keep space to move and practice at a comfortable pace. Pause anytime; stop if you feel discomfort.',
+          ),
+        ),
+      ],
+    ),
   );
 }
