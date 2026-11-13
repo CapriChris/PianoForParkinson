@@ -156,9 +156,8 @@ class _DanceResultPageState extends State<DanceResultPage> {
         Text(
           durationLabel(widget.record['active_ms'] as int),
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.titleLarge?.copyWith(color: context.qin.primary),
+          style: Theme.of(context).textTheme.titleLarge
+              ?.copyWith(color: context.qin.primary),
         ),
       ],
     );
@@ -340,6 +339,15 @@ class _DanceResultPageState extends State<DanceResultPage> {
                                     MaterialPageRoute<void>(
                                       builder: (_) => DancePlayerPage(
                                         c: c,
+                                        course:
+                                            danceCourses
+                                                .where(
+                                                  (course) =>
+                                                      course.id ==
+                                                      r['content_id'],
+                                                )
+                                                .firstOrNull ??
+                                            chineseDanceCourse,
                                         saveRecord: widget.saveRecord,
                                       ),
                                     ),

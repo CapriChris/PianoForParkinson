@@ -1,7 +1,46 @@
 {
   "schemaVersion": 1,
-  "resourceVersion": "v1",
+  "resourceVersion": "v2",
   "access": "public-read-only",
+  "courses": [
+    {
+      "courseId": "hkpdf-balance-six",
+      "titleZh": "新平衡舞步六式",
+      "titleEn": "New Balance Six",
+      "language": "zh",
+      "posterUrl": "https://ccqspace.site/pd-rehab/assets/dance/v2/poster-hkpdf-balance-six.jpg",
+      "partIds": [
+        "balance-six-1",
+        "balance-six-2",
+        "balance-six-3"
+      ]
+    },
+    {
+      "courseId": "brain-and-body",
+      "titleZh": "身心协调",
+      "titleEn": "Brain and Body",
+      "language": "en",
+      "posterUrl": "https://ccqspace.site/pd-rehab/assets/dance/v2/poster-brain-and-body.jpg",
+      "partIds": [
+        "brain-and-body-1",
+        "brain-and-body-2",
+        "brain-and-body-3",
+        "brain-and-body-4"
+      ]
+    },
+    {
+      "courseId": "move-and-shout",
+      "titleZh": "律动与发声",
+      "titleEn": "Move and Shout",
+      "language": "en",
+      "posterUrl": "https://ccqspace.site/pd-rehab/assets/dance/v2/poster-move-and-shout.jpg",
+      "partIds": [
+        "move-and-shout-1",
+        "move-and-shout-2",
+        "move-and-shout-3"
+      ]
+    }
+  ],
   "items": [
     {
       "courseId": "hkpdf-balance-six",
@@ -56,9 +95,139 @@
       "audioCodecs": [
         "aac"
       ]
+    },
+    {
+      "courseId": "brain-and-body",
+      "partId": "brain-and-body-1",
+      "resourceVersion": "v2",
+      "fileName": "brain-and-body-part-1.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/brain-and-body-part-1.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 94545559,
+      "sha256": "076bab101140f80ec7e985c29879ec9c731b9c7e159096dc3699b1b49517987d",
+      "durationSeconds": 568.029751,
+      "averageBitrateBps": 1331557,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 1
+    },
+    {
+      "courseId": "brain-and-body",
+      "partId": "brain-and-body-2",
+      "resourceVersion": "v2",
+      "fileName": "brain-and-body-part-2.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/brain-and-body-part-2.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 93660580,
+      "sha256": "1fb025322ff14e1f390b4b83e0a62fd191dae6012ad60a85eb5cc750f59bbe2d",
+      "durationSeconds": 570.026667,
+      "averageBitrateBps": 1314472,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 2
+    },
+    {
+      "courseId": "brain-and-body",
+      "partId": "brain-and-body-3",
+      "resourceVersion": "v2",
+      "fileName": "brain-and-body-part-3.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/brain-and-body-part-3.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 85343931,
+      "sha256": "747e05ffe31977234eb71d3fe8ac32fce71d607505316e0eb5a0d624b6b245b0",
+      "durationSeconds": 512.02322,
+      "averageBitrateBps": 1333438,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 3
+    },
+    {
+      "courseId": "brain-and-body",
+      "partId": "brain-and-body-4",
+      "resourceVersion": "v2",
+      "fileName": "brain-and-body-part-4.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/brain-and-body-part-4.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 70301188,
+      "sha256": "e5d5550963b7af5887b6dc400cd68b9a5f9c2bbe0f05b1b9a3d2e85293435515",
+      "durationSeconds": 424.90195,
+      "averageBitrateBps": 1323621,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 4
+    },
+    {
+      "courseId": "move-and-shout",
+      "partId": "move-and-shout-1",
+      "resourceVersion": "v2",
+      "fileName": "move-and-shout-part-1.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/move-and-shout-part-1.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 80788890,
+      "sha256": "2e47dcf784b3d674fa657410bc790b8e48da4a5ae191e92116f125f78c049fee",
+      "durationSeconds": 486.43483,
+      "averageBitrateBps": 1328669,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 1
+    },
+    {
+      "courseId": "move-and-shout",
+      "partId": "move-and-shout-2",
+      "resourceVersion": "v2",
+      "fileName": "move-and-shout-part-2.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/move-and-shout-part-2.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 66376831,
+      "sha256": "9f04596708867e5e0ed825bf21930eb776771e98ae021e36289a52d560594754",
+      "durationSeconds": 399.638639,
+      "averageBitrateBps": 1328737,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 2
+    },
+    {
+      "courseId": "move-and-shout",
+      "partId": "move-and-shout-3",
+      "resourceVersion": "v2",
+      "fileName": "move-and-shout-part-3.mp4",
+      "url": "https://ccqspace.site/pd-rehab/assets/dance/v2/move-and-shout-part-3.mp4",
+      "mimeType": "video/mp4",
+      "bytes": 137636551,
+      "sha256": "06b983492e7e0787748a418085709423571411f4bd5f18afafbb444b004e0682",
+      "durationSeconds": 828.232562,
+      "averageBitrateBps": 1329448,
+      "videoCodec": "hevc",
+      "width": 854,
+      "height": 480,
+      "audioCodecs": [
+        "aac"
+      ],
+      "partNumber": 3
     }
-  ],
-  "deferredPartIds": [
-    "fandango-4"
   ]
 }

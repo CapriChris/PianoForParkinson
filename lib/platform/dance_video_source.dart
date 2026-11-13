@@ -33,14 +33,16 @@ class DanceVideoSource {
 }
 
 Future<DanceVideoSource> resolveDanceVideoSource(DancePart part) async {
-  // Fandango stays local until that separate resource has been published.
-  if (!const {
-    'balance-six-1',
-    'balance-six-2',
-    'balance-six-3',
-  }.contains(part.id)) {
-    return DanceVideoSource._(part, null, null, false);
+  final courses = danceCourses.where(
+    (course) => course.parts.any(
+      (known) => known.id == part.id && known.asset == part.asset,
+    ),
+  );
+  if (courses.length != 1) {
+    throw const FormatException('Unknown dance resource');
   }
+  final course = courses.single;
+  final version = course.id == chineseDanceCourse.id ? 'v1' : 'v2';
   final manifest = jsonDecode(
     await rootBundle.loadString(danceRemoteManifestAsset),
   ) as Map<String, dynamic>;
@@ -60,12 +62,17 @@ Future<DanceVideoSource> resolveDanceVideoSource(DancePart part) async {
   if (uri.scheme != 'https' ||
       uri.host != 'ccqspace.site' ||
       uri.userInfo.isNotEmpty ||
-      uri.path != '/pd-rehab/assets/dance/v1/${item['fileName']}' ||
-      item['courseId'] != 'hkpdf-balance-six' ||
-      item['resourceVersion'] != 'v1' ||
+      uri.hasQuery ||
+      uri.hasFragment ||
+      uri.hasPort ||
+      uri.path != '/pd-rehab/assets/dance/$version/${item['fileName']}' ||
+      item['courseId'] != course.id ||
+      item['resourceVersion'] != version ||
       part.asset != 'assets/video/${item['fileName']}' ||
       bytes is! int ||
       bytes <= 0 ||
+      bytes > 1024 * 1024 * 1024 ||
+      item['mimeType'] != 'video/mp4' ||
       !RegExp(r'^[a-f0-9]{64}$').hasMatch('${item['sha256']}')) {
     throw const FormatException('Invalid dance resource identity');
   }

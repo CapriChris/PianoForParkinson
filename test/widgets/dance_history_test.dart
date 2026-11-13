@@ -309,6 +309,32 @@ void main() {
     },
   );
 
+  testWidgets(
+    'retired Fandango results remain readable without restoring the video',
+    (tester) async {
+      final c = AppController();
+      setup(tester, c, const Size(390, 844), 'en', 1);
+      final record = {
+        ...danceRecord(),
+        'content_id': 'neuromat-fandango-4',
+        'title': 'Fandango',
+        'title_en': 'Fandango',
+        'title_zh': 'Fandango · 舞蹈跟练',
+      };
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: qinTheme(highContrast: false),
+          home: DanceResultPage(c: c, record: record, alreadySaved: true),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Fandango'), findsOneWidget);
+      expect(find.text('2026-11-02 12:00'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
   for (final locale in ['zh-Hans', 'en']) {
     for (final scale in [1.0, 2.0]) {
       testWidgets(

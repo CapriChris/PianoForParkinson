@@ -11,20 +11,46 @@ void main() {
   setUp(() => rootBundle.evict(danceRemoteManifestAsset));
   tearDown(() => messenger.setMockMethodCallHandler(channel, null));
 
+  test('all ten catalogued parts are remote and resolve only their own cache status', () async {
+    final calls = <String>[];
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      calls.add((call.arguments as Map)['partId'] as String);
+      return null;
+    });
+    expect(danceCourses.map((c) => c.parts.length), [3, 4, 3]);
+    for (final course in danceCourses) {
+      for (final part in course.parts) {
+        final before = calls.length;
+        final source = await resolveDanceVideoSource(part);
+        expect(source.isRemote, true);
+        expect(
+          source.uri!.path,
+          '/pd-rehab/assets/dance/${course.id == chineseDanceCourse.id ? "v1" : "v2"}/${part.asset.split('/').last}',
+        );
+        expect(calls.skip(before).toList(), [part.id]);
+      }
+    }
+    expect(calls, hasLength(10));
+  });
   test(
-    'Fandango stays bundled and never queries native network cache',
+    'unknown and retired resources cannot fall back to a bundled video',
     () async {
-      var calls = 0;
-      messenger.setMockMethodCallHandler(channel, (_) async {
-        calls++;
-        return null;
-      });
-      final source = await resolveDanceVideoSource(
-        const DancePart('fandango-4', 'Fandango', danceAsset),
+      expect(
+        () => resolveDanceVideoSource(
+          const DancePart('fandango-4', 'Fandango', danceAsset),
+        ),
+        throwsFormatException,
       );
-      expect(source.isRemote, false);
-      expect(source.needsNetworkNotice, false);
-      expect(calls, 0);
+      expect(
+        () => resolveDanceVideoSource(
+          const DancePart(
+            'brain-and-body-1',
+            'Invalid',
+            'assets/video/wrong.mp4',
+          ),
+        ),
+        throwsFormatException,
+      );
     },
   );
 

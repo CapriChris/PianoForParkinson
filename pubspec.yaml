@@ -1,7 +1,7 @@
 name: piano_practice
 description: 琴伴 — internal Android prototype for piano practice.
 publish_to: none
-version: 0.1.67+68
+version: 0.1.68+69
 environment:
   sdk: '>=3.13.5 <4.0.0'
 dependencies:
@@ -40,4 +40,3 @@ flutter:
     - assets/ui_images/
     - assets/images/42-auth-shared-header.png
     - assets/video/remote_manifest.json
-    - assets/video/fandango-lesson-4.webm

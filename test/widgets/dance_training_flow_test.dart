@@ -241,15 +241,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('English dance keeps its bundled Fandango controller', (
-    tester,
-  ) async {
-    final c = setup(tester, locale: 'en');
-    await open(tester, c, <Json>[]);
-    expect(platform.dataSources.single.sourceType, DataSourceType.asset);
-    expect(platform.sources.single, danceAsset);
-    await tester.pumpWidget(const SizedBox());
-  });
+  testWidgets(
+    'English dance streams the same default course without locale selection',
+    (tester) async {
+      final c = setup(tester, locale: 'en');
+      await open(tester, c, <Json>[]);
+      expect(platform.dataSources.single.sourceType, DataSourceType.network);
+      expect(
+        platform.sources.single,
+        'https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-1.mp4',
+      );
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
 
   testWidgets('leaving disposes a network player still initializing', (
     tester,
@@ -446,13 +450,15 @@ void main() {
     });
   }
 
-  testWidgets('preparation is concise and course follows selected language', (
+  testWidgets('preparation is concise and shows three independent courses', (
     tester,
   ) async {
     final c = setup(tester);
     await tester.pumpWidget(app(DancePage(c: c)));
     await tester.pumpAndSettle();
     expect(find.text('新平衡舞步六式'), findsOneWidget);
+    expect(find.text('身心协调'), findsOneWidget);
+    expect(find.text('律动与发声'), findsOneWidget);
     expect(find.text('舞蹈记录'), findsNothing);
     expect(find.text('来源与许可'), findsNothing);
     expect(
@@ -463,9 +469,88 @@ void main() {
       isEmpty,
     );
     expect(find.textContaining('待审课程'), findsNothing);
-    expect(danceCourseFor(false).id, danceContentId);
+    expect(danceCourseFor(false).id, chineseDanceCourse.id);
     expect(danceCourseFor(true).parts.length, 3);
   });
+  testWidgets('new course result repeats its saved course', (tester) async {
+    final c = setup(tester);
+    await tester.pumpWidget(
+      app(
+        DanceResultPage(
+          c: c,
+          alreadySaved: true,
+          record: {
+            'session_id': 'brain-old',
+            'content_id': brainAndBodyCourse.id,
+            'title': brainAndBodyCourse.title,
+            'active_ms': 1000,
+            'parts': <Json>[],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('dance-practise-again')));
+    await advance(tester);
+    expect(
+      platform.dataSources.single.httpHeaders['X-PQ-Dance-Part'],
+      'brain-and-body-1',
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  for (final locale in ['zh-Hans', 'en']) {
+    for (final course in [brainAndBodyCourse, moveAndShoutCourse]) {
+      testWidgets(
+        'catalog selection streams only selected parts $locale ${course.id}',
+        (tester) async {
+          final c = setup(tester, locale: locale);
+          await tester.pumpWidget(app(DancePage(c: c)));
+          await tester.pumpAndSettle();
+          for (final item in danceCourses) {
+            final entry = find.byKey(ValueKey('dance-course-${item.id}'));
+            await tester.scrollUntilVisible(entry, 100);
+            await tester.ensureVisible(entry);
+            await tester.pumpAndSettle();
+            expect(find.text(item.localizedTitle(c.chinese)), findsOneWidget);
+          }
+          expect(find.textContaining('Fandango'), findsNothing);
+          expect(platform.dataSources, isEmpty);
+          final selection = find.byKey(ValueKey('dance-course-${course.id}'));
+          await tester.scrollUntilVisible(selection, -100);
+          await tester.ensureVisible(selection);
+          await tester.pumpAndSettle();
+          await tester.tap(selection);
+          await tester.pumpAndSettle();
+          expect(platform.dataSources, isEmpty);
+          await tester.tap(find.byKey(const ValueKey('start-dance')));
+          await advance(tester);
+          expect(platform.dataSources, hasLength(1));
+          expect(
+            platform.dataSources.single.httpHeaders['X-PQ-Dance-Part'],
+            course.parts.first.id,
+          );
+          expect(
+            platform.dataSources.single.sourceType,
+            DataSourceType.network,
+          );
+          final lastPart = find.byKey(
+            ValueKey('dance-part-${course.parts.length - 1}'),
+          );
+          await tester.ensureVisible(lastPart);
+          await tester.pumpAndSettle();
+          await tester.tap(lastPart);
+          await advance(tester);
+          expect(platform.dataSources, hasLength(2));
+          expect(
+            platform.dataSources.last.httpHeaders['X-PQ-Dance-Part'],
+            course.parts.last.id,
+          );
+          await tester.pumpWidget(const SizedBox());
+        },
+      );
+    }
+  }
   testWidgets('parts switch, resume position, and controls stay inside video', (
     tester,
   ) async {

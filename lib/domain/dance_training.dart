@@ -49,31 +49,93 @@ class DanceCourse {
   const DanceCourse({
     required this.id,
     required this.title,
+    required this.titleEn,
     required this.parts,
     required this.credits,
+    required this.creditsEn,
   });
-  final String id, title, credits;
+  final String id, title, titleEn, credits, creditsEn;
   final List<DancePart> parts;
+  String localizedTitle(bool chinese) => chinese ? title : titleEn;
+  String localizedCredits(bool chinese) => chinese ? credits : creditsEn;
+  String get posterUrl =>
+      'https://ccqspace.site/pd-rehab/assets/dance/v2/poster-$id.jpg';
 }
 
 const chineseDanceCourse = DanceCourse(
   id: 'hkpdf-balance-six',
   title: '新平衡舞步六式',
+  titleEn: 'New Balance Six',
   parts: [
     DancePart('balance-six-1', '第一部分', 'assets/video/balance-six-part-1.mp4'),
     DancePart('balance-six-2', '第二部分', 'assets/video/balance-six-part-2.mp4'),
     DancePart('balance-six-3', '第三部分', 'assets/video/balance-six-part-3.mp4'),
   ],
-  credits: '新平衡舞步六式 · 第一、第二、第三部分\n素材由项目团队提供；来源及再分发授权以原权利人许可为准。\n课程参考：香港柏金逊症基金\nhttps://www.hkpdf.org.hk/physiotherapy-video',
+  credits: '新平衡舞步六式 · 香港柏金逊症基金\n素材由项目团队提供；来源及再分发授权以原权利人许可为准。\nhttps://www.hkpdf.org.hk/physiotherapy-video',
+  creditsEn: 'New Balance Six · Hong Kong Parkinson’s Disease Foundation\nProvided by the project team; source and redistribution remain subject to the rights holder’s permission.\nhttps://www.hkpdf.org.hk/physiotherapy-video',
 );
-const englishDanceCourse = DanceCourse(
-  id: danceContentId,
-  title: 'Fandango · Dance practice',
-  parts: [DancePart('fandango-4', 'Fandango', danceAsset)],
-  credits: 'Bora Dançar com Parkinson: Módulo Fandango (aula 4)\nRIDC NeuroMat · CC BY-SA 4.0\nOriginal video unchanged\nhttps://commons.wikimedia.org/wiki/File:Bora_Dan%C3%A7ar_com_Parkinson-_M%C3%B3dulo_Fandango_(aula_4).webm\nhttps://creativecommons.org/licenses/by-sa/4.0/',
+const brainAndBodyCourse = DanceCourse(
+  id: 'brain-and-body',
+  title: '身心协调',
+  titleEn: 'Brain and Body',
+  parts: [
+    DancePart(
+      'brain-and-body-1',
+      '第一部分',
+      'assets/video/brain-and-body-part-1.mp4',
+    ),
+    DancePart(
+      'brain-and-body-2',
+      '第二部分',
+      'assets/video/brain-and-body-part-2.mp4',
+    ),
+    DancePart(
+      'brain-and-body-3',
+      '第三部分',
+      'assets/video/brain-and-body-part-3.mp4',
+    ),
+    DancePart(
+      'brain-and-body-4',
+      '第四部分',
+      'assets/video/brain-and-body-part-4.mp4',
+    ),
+  ],
+  credits: '身心协调 · 英语视频\n素材由项目团队提供；来源及再分发授权以原权利人许可为准。',
+  creditsEn: 'Brain and Body · English video\nProvided by the project team; source and redistribution remain subject to the rights holder’s permission.',
 );
-DanceCourse danceCourseFor(bool chinese) =>
-    chinese ? chineseDanceCourse : englishDanceCourse;
+const moveAndShoutCourse = DanceCourse(
+  id: 'move-and-shout',
+  title: '律动与发声',
+  titleEn: 'Move and Shout',
+  parts: [
+    DancePart(
+      'move-and-shout-1',
+      '第一部分',
+      'assets/video/move-and-shout-part-1.mp4',
+    ),
+    DancePart(
+      'move-and-shout-2',
+      '第二部分',
+      'assets/video/move-and-shout-part-2.mp4',
+    ),
+    DancePart(
+      'move-and-shout-3',
+      '第三部分',
+      'assets/video/move-and-shout-part-3.mp4',
+    ),
+  ],
+  credits: '律动与发声 · 英语视频\n素材由项目团队提供；来源及再分发授权以原权利人许可为准。',
+  creditsEn: 'Move and Shout · English video\nProvided by the project team; source and redistribution remain subject to the rights holder’s permission.',
+);
+const danceCourses = [
+  chineseDanceCourse,
+  brainAndBodyCourse,
+  moveAndShoutCourse,
+];
+// Default selection is stable when the interface language changes.
+DanceCourse danceCourseFor(bool chinese) => chineseDanceCourse;
+String dancePartTitle(DancePart part, bool chinese) =>
+    chinese ? part.title : 'Part ${part.id.split('-').last}';
 
 String localDay(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';

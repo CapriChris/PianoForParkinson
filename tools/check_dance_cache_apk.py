@@ -9,7 +9,6 @@ import zipfile
 def inspect(apk: Path):
     root = Path(__file__).resolve().parents[1]
     remote = json.loads((root / 'assets/video/remote_manifest.json').read_text(encoding='utf-8'))
-    originals = json.loads((root / 'assets/video/manifest.json').read_text(encoding='utf-8'))
     with zipfile.ZipFile(apk) as archive:
         names = archive.namelist()
         assert len(names) == len(set(names)), 'Duplicate archive entries'
@@ -17,16 +16,12 @@ def inspect(apk: Path):
         assert packaged == remote, 'Packaged metadata differs from source'
         for item in remote['items']:
             assert not any(Path(name).name == item['fileName'] for name in names), item['fileName']
-        local = next(item for item in originals['assets'] if item['name'] == 'fandango-lesson-4.webm')
-        member = 'assets/flutter_assets/assets/video/' + local['name']
-        assert archive.getinfo(member).file_size == local['bytes'], 'Fandango length changed'
-        with archive.open(member) as stream:
-            assert hashlib.file_digest(stream, 'sha256').hexdigest() == local['sha256'], 'Fandango bytes changed'
+        assert not any(name.endswith(('.mp4', '.webm')) for name in names), 'Teaching video remains bundled'
     with apk.open('rb') as stream:
         digest = hashlib.file_digest(stream, 'sha256').hexdigest()
     return {'apk': apk.name, 'bytes': apk.stat().st_size, 'sha256': digest,
             'remoteParts': len(remote['items']), 'remoteMp4Packaged': False,
-            'fandangoBytes': local['bytes'], 'fandangoShaVerified': True}
+            'teachingVideoPackaged': False}
 
 
 def main():

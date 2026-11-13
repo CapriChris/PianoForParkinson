@@ -3287,7 +3287,9 @@ class AboutPage extends StatelessWidget {
         const SizedBox(height: 16),
         QinSectionTitle(c.text('舞蹈素材', 'Dance materials')),
         SelectableText(
-          '${chineseDanceCourse.credits}\n\n${englishDanceCourse.credits}',
+          danceCourses
+              .map((course) => course.localizedCredits(c.chinese))
+              .join('\n\n'),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 16),

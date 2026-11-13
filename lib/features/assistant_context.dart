@@ -336,9 +336,16 @@ class AssistantContextReader {
         c.content.pieceFor(content)?.title(c.locale) ??
             c.text('钢琴曲目', 'Piano piece'),
       'DANCE' =>
-        content == chineseDanceCourse.id
-            ? c.text('新平衡舞步六式', 'Six balance steps')
-            : 'Fandango',
+        danceCourses
+                .where((course) => course.id == content)
+                .firstOrNull
+                ?.localizedTitle(c.chinese) ??
+            (result[c.chinese ? 'title_zh' : 'title_en'] ??
+                    result['title'] ??
+                    (content == danceContentId
+                        ? 'Fandango'
+                        : c.text('舞蹈跟练', 'Dance practice')))
+                as String,
       _ => taskTitle(kind, c.chinese),
     };
     final metrics = <String, num>{};

@@ -1,8 +1,8 @@
 # 琴伴 · Android 内部演示
 
-## 最新联调版本 0.1.67（构建 68）
+## 最新联调版本 0.1.68（构建 69）
 
-中文舞蹈三部分已接入服务器在线播放及 Android 播放缓存；Fandango 继续随包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/dance-stream-cache-20261112.md)。[下载 ARM64 联调 APK](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.67/PianoForParkinson-0.1.67-dance-cache-QA-arm64.apk) · [SHA-256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.67/SHA256SUMS.txt) · [部署记录](validation/deploy-0.1.67.md)。包名为独立的 `.validation`，不覆盖正式 App；目前尚未完成 Android 真机验收。本次未创建 GitHub Release。
+三门舞蹈课程共十部分均使用服务器在线播放及 Android 播放缓存，中文/英文界面都可以自主选课，视频不随 APK 打包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/media-courses-sms-20261113.md)。[下载 ARM64 联调 APK](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.68/PianoForParkinson-0.1.68-media-sms-QA-arm64.apk) · [SHA-256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.68/SHA256SUMS.txt) · [部署记录](validation/deploy-0.1.68.md)。包名为独立的 `.validation`，不覆盖正式 App；目前尚未完成 Android 真机验收。本次未创建 GitHub Release。
 
 ## 原正式包 0.1.66（构建 67）
 
@@ -51,7 +51,7 @@ Android 内测版通用 APK 约 635.6 MiB，支持 ARM64、ARMv7 和 x86_64，�
 
 ## 从仓库构建
 
-仓库根目录对应原项目的 `app` 目录。安装Flutter、Python 3.11+、Android SDK和JDK后，先按[视频资源说明](assets/video/README.md)从Release APK恢复仍需随包的Fandango视频，再在仓库根目录执行：
+仓库根目录对应原项目的 `app` 目录。安装Flutter、Python 3.11+、Android SDK和JDK后，参阅[视频资源说明](assets/video/README.md)，在仓库根目录执行（构建无需恢复视频文件）：
 
 ```powershell
 flutter pub get
@@ -488,7 +488,7 @@ Flutter、Dart、Gradle、AGP、依赖及构建情况记录在版本化文件与
 - CausalNet 目前仅完成桌面权重检查和合成输入推理，摄像头尚未接入应用。见 tools/model_validation/README.md。
 ## 2026-11-01 中文三部分舞蹈训练
 
-- 中文选择本地《新平衡舞步六式》的第一、第二、第三部分；英文仍使用原Fandango课程。
+- 中文和英文界面都可选择《新平衡舞步六式》/ New Balance Six（3部分）、身心协调 / Brain and Body（4部分）、律动与发声 / Move and Shout（3部分）。课程选择独立于界面语言，十段均远程播放。
 - 准备页精简为课程标题、温馨提示、开始练习、来源与许可。
 - 训练顶部三个选择卡片；视频内提供播放暂停、进度、音量、全屏和更多菜单（后退10秒、倍速）。切换保留本次各部分的播放位置和独立时长。
 - 单段结束提示下一部分；第三部分结束可直接选择结束保存。退出明确提示不保存，并丢弃本次未保存会话。

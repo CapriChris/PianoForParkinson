@@ -232,7 +232,7 @@ public class DanceMediaCacheTest {
     org.mockito.Mockito.when(context.getAssets()).thenReturn(assets);
     org.mockito.Mockito.when(context.getApplicationContext()).thenReturn(context);
     org.mockito.Mockito.when(context.getNoBackupFilesDir()).thenThrow(new IllegalStateException("storage unavailable"));
-    String url = "https://teaching.example/video.mp4";
+    String url = "https://ccqspace.site/pd-rehab/assets/dance/v1/balance-six-part-1.mp4";
     String json = "{\"schemaVersion\":1,\"items\":[{\"courseId\":\"hkpdf-balance-six\",\"partId\":\"balance-six-1\",\"resourceVersion\":\"v1\",\"url\":\"" + url + "\",\"bytes\":131072,\"sha256\":\"" + resource.sha256 + "\",\"mimeType\":\"video/mp4\"}]}";
     org.mockito.Mockito.when(assets.open("flutter_assets/assets/video/remote_manifest.json"))
         .thenReturn(new ByteArrayInputStream(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
@@ -241,6 +241,35 @@ public class DanceMediaCacheTest {
       assertFalse(DanceMediaCache.isKnown(context, url + "?token=bad", Collections.singletonMap(DanceMediaCache.HEADER, "balance-six-1")));
       org.mockito.Mockito.verify(context, org.mockito.Mockito.never()).getNoBackupFilesDir();
     } finally { catalogue.set(null, previous); }
+  }
+  private String catalogueItem(String course, String part, String version, String file) {
+    return "{\"schemaVersion\":1,\"items\":[{\"courseId\":\"" + course + "\",\"partId\":\"" + part + "\",\"resourceVersion\":\"" + version + "\",\"url\":\"https://ccqspace.site/pd-rehab/assets/dance/" + version + "/" + file + "\",\"bytes\":131072,\"sha256\":\"" + resource.sha256 + "\",\"mimeType\":\"video/mp4\"}]}";
+  }
+  @Test public void acceptsTenExplicitIdentitiesAndRejectsCrossVersionAndUnknown() throws Exception {
+    for (String course : new String[]{"hkpdf-balance-six", "brain-and-body", "move-and-shout"}) {
+      String prefix = course.equals("hkpdf-balance-six") ? "balance-six" : course;
+      String version = course.equals("hkpdf-balance-six") ? "v1" : "v2";
+      int count = course.equals("brain-and-body") ? 4 : 3;
+      for (int i = 1; i <= count; i++) {
+        String part = prefix + "-" + i, file = prefix + "-part-" + i + ".mp4";
+        assertEquals(1, DanceMediaCache.parseCatalogue(catalogueItem(course, part, version, file)).size());
+        assertThrows(IOException.class, () -> DanceMediaCache.parseCatalogue(catalogueItem(course, part, version.equals("v1") ? "v2" : "v1", file)));
+        assertThrows(IOException.class, () -> DanceMediaCache.parseCatalogue(catalogueItem(course, part, version, "other.mp4")));
+      }
+    }
+    assertThrows(IOException.class, () -> DanceMediaCache.parseCatalogue(catalogueItem("brain-and-body", "brain-and-body-5", "v2", "brain-and-body-part-5.mp4")));
+  }
+  @Test public void newEnglishIdentityCachesAndReopensOfflineWithVersionIsolation() throws Exception {
+    resource = new DanceMediaCache.Resource("brain-and-body", "brain-and-body-4", "v2", resource.url, media.length, resource.sha256);
+    assertArrayEquals(media, read(0, media.length));
+    assertEquals(true, subject.status(resource).get("complete"));
+    cache.release();
+    cache = new SimpleCache(directory, (evictor = new DanceCacheEvictor(1024 * 1024, () -> Long.MAX_VALUE)), database());
+    subject = new DanceMediaCache(cache, evictor);
+    server.stop(0); server = null;
+    assertArrayEquals(media, read(0, media.length));
+    DanceMediaCache.Resource old = new DanceMediaCache.Resource(resource.course, resource.part, "v1", resource.url, media.length, resource.sha256);
+    assertEquals(0L, subject.status(old).get("cachedBytes"));
   }
   @Test public void internalMarkerIsCaseInsensitiveAndNeverSentUpstream() {
     Map<String, String> headers = new HashMap<>(); headers.put("x-pq-dance-part", "part"); headers.put("Authorization", "test");

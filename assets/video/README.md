@@ -1,18 +1,9 @@
 # 舞蹈视频资源
 
-0.1.67 联调版中，中文《新平衡舞步六式》三部分使用 HTTPS 在线播放及 Android 播放缓存，不再随 APK 打包。资源地址、长度、版本及 SHA-256 随应用打包于 [remote_manifest.json](remote_manifest.json)。进入课程只读取当前片段，不下载其他片段；完整字节经过本地 SHA-256 验证后才可离线播放，部分缓存仍可能需要联网。
+0.1.68 起，中英文界面均提供三门课程：新平衡舞步六式 / New Balance Six（3部分，中文视频）、身心协调 / Brain and Body（4部分，英语视频）、律动与发声 / Move and Shout（3部分，英语视频）。选择课程不依赖界面语言。十段都使用 HTTPS 在线播放及 Android 播放缓存，构建无需下载或恢复任何视频二进制。
 
-英文 Fandango 尚未托管，继续使用随包的 `fandango-lesson-4.webm`。首次克隆后，从 [v0.1.56 Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.56) 下载通用 APK，在仓库根目录执行：
+[remote_manifest.json](remote_manifest.json) 为随包资源清单，schemaVersion=1、resourceVersion=v2。中文三段保持既有 courseId、partId、v1 URL、长度和 SHA-256；英文七段使用 v2 不可变路径。三张海报由对应视频取帧，地址也列于清单。素材由项目团队提供，来源和再分发权限以原权利人许可为准。
 
-```powershell
-python tools/prepare_dance_asset.py --from-apk C:/Downloads/qinban-0.1.56-android-universal.apk
-python tools/prepare_dance_asset.py --check
-flutter pub get
-```
+播放器仅按需读取当前选中分段；没有整段下载按钮、后台下载任务或其他分段预取。缓存位于 Android 私有 noBackup 目录，上限 1 GiB，保留 LRU、活动文件保护及可用空间预算。完整本地字节通过 SHA-256 校验后才报告可离线播放；部分缓存仍可能需要联网。网络和缓存失败可重试，未产生有效播放时不计入训练时长。
 
-默认只恢复和校验当前随包的视频。若需要归档原来的三段 MP4，可加 `--include-remote`；这不是构建要求。脚本不转码，不覆盖不匹配的已有文件。[manifest.json](manifest.json) 保留四个原始播放文件的校验信息，二进制不提交 Git。
-
-- 中文素材由项目团队提供，来源及再分发授权沿用原权利人说明。
-- 英文：RIDC NeuroMat，Bora Dançar com Parkinson: Módulo Fandango (aula 4)，原片未修改，[来源](https://commons.wikimedia.org/wiki/File:Bora_Dan%C3%A7ar_com_Parkinson-_M%C3%B3dulo_Fandango_(aula_4).webm)，[CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/)。
-
-课程及分段 ID、训练记录、计划和关于页的素材来源均保持原有含义。缓存保存在 App 私有、不参与备份的目录中，容量上限 1 GiB；内容可被空间压力或 LRU 淘汰，不能作为永久保存副本。
+[manifest.json](manifest.json) 及恢复脚本仅用于旧资源归档，不是当前构建依赖。旧课程历史、结果、已有计划与数据库均保留，不清理旧记录。目标 Android 手机仍须验证 HEVC 解码、弱网、跨进程离线缓存及中断恢复。

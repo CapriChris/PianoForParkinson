@@ -78,8 +78,14 @@ final class DanceMediaCache {
         Resource r = new Resource(item.getString("courseId"), item.getString("partId"),
             item.getString("resourceVersion"), item.getString("url"), item.getLong("bytes"), item.getString("sha256"));
         Uri uri = Uri.parse(r.url);
-        if (!r.course.equals("hkpdf-balance-six") || !r.part.matches("balance-six-[123]")
-            || !r.version.matches("[A-Za-z0-9._-]+") || r.bytes <= 0 || r.bytes > MAX_BYTES
+        boolean chinese = r.course.equals("hkpdf-balance-six") && r.part.matches("balance-six-[123]");
+        boolean english = (r.course.equals("brain-and-body") && r.part.matches("brain-and-body-[1234]"))
+            || (r.course.equals("move-and-shout") && r.part.matches("move-and-shout-[123]"));
+        if (!chinese && !english) throw new IOException("Unknown teaching resource");
+        String version = chinese ? "v1" : "v2";
+        String file = r.part.substring(0, r.part.lastIndexOf('-')) + "-part-" + r.part.substring(r.part.lastIndexOf('-') + 1) + ".mp4";
+        if ((!chinese && !english) || !r.version.equals(version)
+            || !r.url.equals("https://ccqspace.site/pd-rehab/assets/dance/" + version + "/" + file) || r.bytes <= 0 || r.bytes > MAX_BYTES
             || !r.sha256.matches("[0-9a-f]{64}") || !"https".equals(uri.getScheme())
             || uri.getHost() == null || uri.getQuery() != null || uri.getFragment() != null
             || !"video/mp4".equals(item.getString("mimeType")) || entries.put(r.part, r) != null) {

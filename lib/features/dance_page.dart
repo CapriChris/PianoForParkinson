@@ -10,8 +10,6 @@ import '../data/training_schedule_repository.dart';
 import '../domain/contracts.dart';
 import '../domain/dance_training.dart';
 import '../ui/qin_components.dart';
-import '../ui/qin_music_art.dart';
-import '../ui/qin_theme.dart';
 import 'dance_player_page.dart';
 export 'dance_player_page.dart' show DancePlayerPage;
 
@@ -32,6 +30,7 @@ class DancePage extends StatefulWidget {
 
 class _DancePageState extends State<DancePage> {
   AppController get c => widget.c;
+  DanceCourse selectedCourse = chineseDanceCourse;
   final captureKey = GlobalKey<CapturePreparationState>();
   late Future<List<Json>> records = scheduleStore(c).dances();
   @override
@@ -175,6 +174,7 @@ class _DancePageState extends State<DancePage> {
                     MaterialPageRoute<void>(
                       builder: (_) => DancePlayerPage(
                         c: c,
+                        course: selectedCourse,
                         capture: captureKey.currentState?.claim(),
                       ),
                     ),
@@ -188,26 +188,29 @@ class _DancePageState extends State<DancePage> {
               ),
             ],
             children: [
-              if (!context.qin.highContrast) ...[
-                LayoutBuilder(
-                  builder: (context, constraints) => QinArtwork(
-                    asset: c.chinese
-                        ? '37-balance-six-course.png'
-                        : '36-practice-dance.png',
-                    height: (constraints.maxWidth / (c.chinese ? 1.5 : 1))
-                        .clamp(
-                          100.0,
-                          qinShortLandscape(context) ? 160.0 : 300.0,
-                        ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-              ],
               CapturePreparation(key: captureKey, c: c),
               Text(
-                danceCourseFor(c.chinese).title,
+                c.text('选择课程', 'Choose a course'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
+              for (final course in danceCourses)
+                ListTile(
+                  key: ValueKey('dance-course-${course.id}'),
+                  selected: selectedCourse.id == course.id,
+                  leading: Icon(
+                    selectedCourse.id == course.id
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_off,
+                  ),
+                  title: Text(course.localizedTitle(c.chinese)),
+                  subtitle: Text(
+                    c.text(
+                      '${course.parts.length} 部分 · ${course.id == chineseDanceCourse.id ? "中文视频" : "英语视频"}',
+                      '${course.parts.length} parts · ${course.id == chineseDanceCourse.id ? "Chinese video" : "English video"}',
+                    ),
+                  ),
+                  onTap: () => setState(() => selectedCourse = course),
+                ),
               const SizedBox(height: 12),
               QinStatus(
                 text: c.text(

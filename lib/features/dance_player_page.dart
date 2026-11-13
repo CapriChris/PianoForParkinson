@@ -23,10 +23,12 @@ class DancePlayerPage extends StatefulWidget {
     super.key,
     required this.c,
     this.saveRecord,
+    this.course = chineseDanceCourse,
     this.capture,
     this.nowMilliseconds,
   });
   final AppController c;
+  final DanceCourse course;
   final TrainingCapture? capture;
   final Future<void> Function(Json)? saveRecord;
   final int Function()? nowMilliseconds;
@@ -36,7 +38,7 @@ class DancePlayerPage extends StatefulWidget {
 
 class _DancePlayerPageState extends State<DancePlayerPage>
     with WidgetsBindingObserver {
-  late final course = danceCourseFor(widget.c.chinese);
+  late final course = widget.course;
   late final ledgers = [for (final _ in course.parts) PlaybackLedger()];
   late final positions = List<Duration>.filled(
     course.parts.length,
@@ -522,11 +524,9 @@ class _DancePlayerPageState extends State<DancePlayerPage>
       'version': 2,
       'content_id': course.id,
       'content_version': 1,
-      'title': course.title,
-      'title_zh': course.id == chineseDanceCourse.id ? '新平衡舞步六式' : danceTitle,
-      'title_en': course.id == chineseDanceCourse.id
-          ? 'Six balance dance steps'
-          : englishDanceCourse.title,
+      'title': course.localizedTitle(c.chinese),
+      'title_zh': course.title,
+      'title_en': course.titleEn,
       'locale': c.locale,
       'started_utc_ms': started.toUtc().millisecondsSinceEpoch,
       'ended_utc_ms': DateTime.now().toUtc().millisecondsSinceEpoch,
@@ -542,7 +542,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
         for (var i = 0; i < course.parts.length; i++)
           {
             'part_id': course.parts[i].id,
-            'title': course.parts[i].title,
+            'title': dancePartTitle(course.parts[i], c.chinese),
             'active_ms': ledgers[i].activeMs,
             'covered_ms': ledgers[i].coveredMs,
             'position_ms': positions[i].inMilliseconds,
@@ -682,7 +682,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
                               ),
                               onPressed: busy ? null : () => selectPart(i),
                               child: Text(
-                                course.parts[i].title,
+                                dancePartTitle(course.parts[i], c.chinese),
                                 textAlign: TextAlign.center,
                               ),
                             ),

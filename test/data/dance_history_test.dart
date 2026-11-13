@@ -36,8 +36,18 @@ void main() {
     for (var i = 0; i < 35; i++) {
       final record = <String, dynamic>{
         'session_id': 'dance-${i.toString().padLeft(2, '0')}',
-        'title': '新平衡舞步六式',
-        'content_id': 'hkpdf-balance-six',
+        'title': [
+          '新平衡舞步六式',
+          'Fandango',
+          'Brain and Body',
+          'Move and Shout',
+        ][i % 4],
+        'content_id': [
+          'hkpdf-balance-six',
+          'neuromat-fandango-4',
+          'brain-and-body',
+          'move-and-shout',
+        ][i % 4],
         'started_utc_ms': base + i ~/ 2 * 1000,
         'utc_offset_minutes': 480,
         'active_ms': 2000,
@@ -79,6 +89,19 @@ void main() {
       [...first.records, ...second.records].map((r) => r['session_id']),
       expected.map((r) => r['session_id']),
     );
+    for (var i = 0; i < 4; i++) {
+      final detail = (await repository.detail('dance-0$i'))!;
+      expect(
+        detail['content_id'],
+        [
+          'hkpdf-balance-six',
+          'neuromat-fandango-4',
+          'brain-and-body',
+          'move-and-shout',
+        ][i],
+      );
+      expect(detail['record_unavailable'], isNull);
+    }
     final dance = (await repository.detail('dance-00'))!;
     expect(dance['task_id'], 'DANCE');
     expect(
