@@ -12,4 +12,4 @@
 
 Flutter836通过、2项原有opt-in联网测试跳过；短信界面26通过；原生106通过、无失败/跳过；静态检查无问题。具体测试见[功能验证](media-courses-sms-20261113.md)。所有真实素材均HEVC，目标Android的实际解码、弱网/中断及跨进程缓存仍待真机验收，本机未连接设备。
 
-短信提供方和Web部署验收由协调流程记录，完成后补充结果。不得把本机替身测试、providers开启或APK构建视为真实短信核验通过。AccessKey、手机号、验证码、Token和恢复码不得加入公开文档或Git。
+短信及Web部署已经完成真实验收：两次实际PNVS发码和正确验证码登录，首次/重复为同一用户与患者，挑战重放401、工作人员接口403、本人bootstrap200；只重启PD后端，旧24张业务表在迁移时完整保留。详细证据见 [Web交付记录](https://github.com/WuChangqing1/PD-Rehab-Web/blob/main/docs/media-sms-20261113/交付与验收.md)。不得把本机替身测试、providers开启或APK构建视为真实短信核验通过。AccessKey、手机号、验证码、Token和恢复码不得加入公开文档或Git。
