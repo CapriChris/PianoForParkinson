@@ -27,6 +27,9 @@ class TaskEngine {
        rng = Lcg(seed ?? Random.secure().nextInt(0xfffffffe) + 1),
        base = clock.now {
     policy = AdaptivePolicy(config, taskId);
+    if (config.json['automatic_upgrade_enabled'] == false) {
+      policy.upgradeAllowed = false;
+    }
     planned = config.blocks * trialCount;
     emit('SESSION_CREATED', {'task_id': taskId});
     _block();
@@ -430,6 +433,11 @@ class TaskEngine {
     return {
       'task': task,
       'mode': mode,
+      if (config.json['pace'] != null) ...{
+        'pace': config.json['pace'],
+        'trial_gap_ms': config.timing['trial_gap_ms'],
+        'automatic_upgrade_enabled': config.json['automatic_upgrade_enabled'],
+      },
       'level': atLevel,
       'sequence_length': memory
           ? task['sequence_length_by_level'][atLevel - 1]

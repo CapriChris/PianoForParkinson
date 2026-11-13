@@ -21,6 +21,7 @@ import 'keyboard.dart';
 import 'key_duration_guide.dart';
 import 'rhythm_timeline.dart';
 import 'response_countdown.dart';
+import 'hand_cue.dart';
 
 class TrainingPage extends StatefulWidget {
   const TrainingPage({
@@ -531,6 +532,15 @@ class _TrainingPageState extends State<TrainingPage> {
       return Column(
         children: [
           RhythmTimeline(task: task, chinese: c.chinese),
+          if (task.alternate && task.soundingNoteIndex != null)
+            HandCue(
+              hand: handForKey(
+                task.taskId,
+                task.song[task.soundingNoteIndex!],
+              )!,
+              chinese: c.chinese,
+              keyNumber: task.song[task.soundingNoteIndex!] + 1,
+            ),
           const SizedBox(height: 10),
           Wrap(
             alignment: WrapAlignment.center,
@@ -556,6 +566,19 @@ class _TrainingPageState extends State<TrainingPage> {
     if (task.dual) {
       return Column(
         children: [
+          if (task.phase == 'cue' || task.phase == 'response')
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 20,
+              children: [
+                for (final key in task.expected)
+                  HandCue(
+                    hand: handForKey(task.taskId, key)!,
+                    chinese: c.chinese,
+                    keyNumber: key + 1,
+                  ),
+              ],
+            ),
           Text(
             switch (task.phase) {
               'waiting' => c.text('即将开始', 'Starting soon'),
@@ -920,6 +943,7 @@ class _TrainingPageState extends State<TrainingPage> {
                                 child: PianoKeyboard(
                                   key: ValueKey(ready),
                                   count: count,
+                                  handTaskId: widget.taskId,
                                   active: isDualTask(widget.taskId)
                                       ? const {0, 1, 2, 3, 4, 5}
                                       : alternate

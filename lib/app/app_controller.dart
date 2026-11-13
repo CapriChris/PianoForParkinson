@@ -14,6 +14,7 @@ import '../domain/contracts.dart';
 import '../domain/cognitive_tasks.dart';
 import '../domain/intro_lessons.dart';
 import '../domain/task_engine.dart';
+import '../domain/practice_pace.dart';
 import '../platform/platform_service.dart';
 import '../platform/training_interruption.dart';
 import 'speech_navigation_observer.dart';
@@ -146,6 +147,8 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   String text(String zh, String en) => chinese ? zh : en;
   String get mode => repository.profile['mode'] as String;
   Json get settings => repository.settings;
+  String get practicePaceId =>
+      settings['practice_pace'] == 'STANDARD' ? 'STANDARD' : 'COMFORT';
   int get assistantConsentRevision => _assistantConsentRevision;
   String get assistantMemoryConsent =>
       '${assistant.consentVersion}#${settings['assistant_memory_epoch'] ?? ''}';
@@ -567,13 +570,18 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
               reader)) {
         throw StateError('E_CAPABILITY_TOUCH2');
       }
+      final effectiveConfig = practicePace(content.config, practicePaceId);
       final task = TaskEngine(
         clockEpochId: clockEpoch,
-        config: content.config,
+        config: effectiveConfig,
         clock: clock,
         taskId: taskId,
         mode: mode,
-        level: await repository.level(taskId, content.config),
+        level: await repository.level(
+          taskId,
+          effectiveConfig,
+          fallback: content.config,
+        ),
         song: content.notes,
         layoutSnapshot: keyboardLayout,
       );

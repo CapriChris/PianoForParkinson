@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../domain/task_engine.dart';
 import '../ui/qin_theme.dart';
 import 'metronome_pendulum.dart';
+import 'hand_cue.dart';
 
 class RhythmTimeline extends StatelessWidget {
   const RhythmTimeline({super.key, required this.task, required this.chinese});
@@ -123,7 +124,8 @@ class RhythmTimeline extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(vertical: 5),
                     decoration: BoxDecoration(
                       color: (active || phase == 'demo') && i == current
-                          ? context.qin.primary
+                          ? handForKey(task.taskId, task.song[i])?.color ??
+                                context.qin.primary
                           : context.qin.surface,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
@@ -140,7 +142,8 @@ class RhythmTimeline extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                           color: (active || phase == 'demo') && i == current
                               ? context.qin.onPrimary
-                              : context.qin.primary,
+                              : handForKey(task.taskId, task.song[i])?.color ??
+                                    context.qin.primary,
                         ),
                       ),
                     ),

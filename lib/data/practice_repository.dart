@@ -316,7 +316,11 @@ class PracticeRepository {
     await reload();
   }
 
-  Future<int> level(String taskId, PracticeConfig config) async {
+  Future<int> level(
+    String taskId,
+    PracticeConfig config, {
+    PracticeConfig? fallback,
+  }) async {
     final rows = await db.query(
       'profile_task_state',
       where: 'profile_id=? AND task_id=? AND mode=? AND parameter_profile_version=?',
@@ -327,6 +331,11 @@ class PracticeRepository {
         config.json['version'],
       ],
     );
+    if (rows.isEmpty &&
+        fallback != null &&
+        fallback.json['version'] != config.json['version']) {
+      return level(taskId, fallback);
+    }
     return rows.isEmpty
         ? config.initial(taskId, profile['mode'] as String)
         : rows.single['level'] as int;

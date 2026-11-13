@@ -1,6 +1,12 @@
 # 琴伴 · Android 内部演示
 
-## 最新联调版本 0.1.68（构建 69）
+## 最新联调版本 0.1.69（构建 70）
+
+根据患者试用反馈，默认开启“设置 → 舒缓节奏”：拉长演示及题间间隔，降低节拍，不自动升速；关闭后恢复标准。M1/M2显示左手蓝色、右手橙色及真实键号。原始事件时钟、400ms按住要求和评分公式保持不变，舒缓记录单独比较。[修改及测试说明](validation/patient-experience-0.1.69.md)。
+
+[下载 ARM64 联调 APK](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.69/PianoForParkinson-0.1.69-patient-pace-QA-arm64.apk) · [SHA-256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.69/SHA256SUMS.txt)。独立包名 `.validation`，三门课程10段视频在线播放及缓存，视频不随包打包。852项Flutter测试通过、2项跳过，analyze无问题；本版尚未进行真机患者验收。APK约113.50MiB，不创建GitHub Release。
+
+## 上一联调版本 0.1.68（构建 69）
 
 三门舞蹈课程共十部分均使用服务器在线播放及 Android 播放缓存，中文/英文界面都可以自主选课，视频不随 APK 打包。无整段下载按钮或后台下载任务。完整缓存须通过本地 SHA-256 校验，未缓存片段需要联网。[资源与构建说明](assets/video/README.md) · [联调验收记录](validation/media-courses-sms-20261113.md)。[下载 ARM64 联调 APK](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.68/PianoForParkinson-0.1.68-media-sms-QA-arm64.apk) · [SHA-256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.68/SHA256SUMS.txt) · [部署记录](validation/deploy-0.1.68.md)。包名为独立的 `.validation`，不覆盖正式 App；目前尚未完成 Android 真机验收。本次未创建 GitHub Release。
 

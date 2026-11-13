@@ -44,6 +44,9 @@ List<String> auditRows(Json request) {
             RecordContract.result(
               jsonDecode(row['result_json'] as String) as Json,
               row['task_id'] as String,
+              parameters: row['audit_parameters_json'] == null
+                  ? null
+                  : jsonDecode(row['audit_parameters_json'] as String) as Json,
             );
           }
         case 'events':
@@ -151,7 +154,7 @@ class RecordAudit {
               throw StateError('E_AUDIT_CANCELLED');
             }
             final query = switch (table) {
-              'attempts' => 'SELECT a.rowid AS audit_rowid,a.*,s.task_id FROM attempts a JOIN sessions s ON a.session_id=s.session_id WHERE a.rowid>? ORDER BY a.rowid LIMIT 200',
+              'attempts' => 'SELECT a.rowid AS audit_rowid,a.*,s.task_id,b.parameters_json AS audit_parameters_json FROM attempts a JOIN sessions s ON a.session_id=s.session_id JOIN blocks b ON a.block_id=b.block_id WHERE a.rowid>? ORDER BY a.rowid LIMIT 200',
               'events' => 'SELECT e.rowid AS audit_rowid,e.*,p.payload_json AS audit_source_json,p.kind AS audit_source_kind,p.attempt_id AS audit_source_attempt FROM events e LEFT JOIN events p ON e.session_id=p.session_id AND e.source_event_seq=p.seq WHERE e.rowid>? ORDER BY e.rowid LIMIT 200',
               _ =>
                 'SELECT rowid AS audit_rowid,* FROM $table WHERE rowid>? ORDER BY rowid LIMIT 200',

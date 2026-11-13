@@ -6,8 +6,8 @@ import 'package:unorm_dart/unorm_dart.dart' as unicode;
 
 typedef Json = Map<String, dynamic>;
 const appName = '琴伴';
-const appVersion = '0.1.66';
-const appBuild = '67';
+const appVersion = '0.1.69';
+const appBuild = '70';
 
 /// New input is normalized separately; legacy canonical hashes stay unchanged.
 Object? normalizeRecordText(Object? value) {
@@ -110,7 +110,10 @@ class PracticeConfig {
         alternate['note_duration_ms'] != null &&
         (canonical(alternate['pool']) != '[0,1]' ||
             alternate['planned_trial_count_per_block'] != 12 ||
-            canonical(alternate['bpm_by_level']) != '[40,45,50,55]' ||
+            canonical(alternate['bpm_by_level']) !=
+                (json['pace'] == 'COMFORT'
+                    ? '[30,35,40,45]'
+                    : '[40,45,50,55]') ||
             alternate['maximum_level'] != 4 ||
             alternate['note_duration_ms'] != 400 ||
             alternate['window_before_target_ms'] != 400 ||

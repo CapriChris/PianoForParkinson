@@ -8,6 +8,7 @@ import '../ui/qin_theme.dart';
 import '../ui/text_scale.dart';
 import '../ui/note_colors.dart';
 import 'key_press_feedback.dart';
+import 'hand_cue.dart';
 
 double practiceKeyHeight(double bodyHeight) =>
     (bodyHeight * .38).clamp(96.0, 144.0);
@@ -36,6 +37,7 @@ class PianoKeyboard extends StatefulWidget {
     this.showKeyMarks = true,
     this.demonstratingKeys = const {},
     this.demonstrationPulse,
+    this.handTaskId,
   });
   final int count, textScale;
   final List<String>? labels;
@@ -46,6 +48,7 @@ class PianoKeyboard extends StatefulWidget {
   final List<int>? noteDegrees;
   final Set<int> demonstratingKeys;
   final Object? demonstrationPulse;
+  final String? handTaskId;
   final Listenable? interruptions;
   final VoidCallback? onInterrupted;
   final Set<int> active;
@@ -117,14 +120,15 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
       bindings.values.contains(i);
   bool visibleTarget(int i) =>
       lit(i) && (!widget.locked || widget.highlightWhileLocked);
+  PracticeHand? hand(int i) => handForKey(widget.handTaskId, i);
   Color keySurface(BuildContext context, int i) => pressed(i)
       ? widget.noteDegrees == null
-            ? context.qin.primary
+            ? hand(i)?.color ?? context.qin.primary
             : NoteColors.degree(widget.noteDegrees![i]).pressed
       : widget.noteDegrees != null
       ? context.qin.surface
       : visibleTarget(i)
-      ? context.qin.soft
+      ? hand(i)?.color.withValues(alpha: .12) ?? context.qin.soft
       : widget.locked || !widget.active.contains(i)
       ? context.qin.disabled
       : context.qin.surface;
@@ -271,7 +275,7 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
                       enabled: !widget.locked && widget.active.contains(i),
                       selected: visibleTarget(i),
                       label:
-                          '${Localizations.localeOf(context).languageCode == 'zh' ? '琴键' : 'Key'} ${widget.labels?[i] ?? '${i + 1}'}',
+                          '${hand(i)?.label(Localizations.localeOf(context).languageCode == 'zh') ?? ''} ${Localizations.localeOf(context).languageCode == 'zh' ? '琴键' : 'Key'} ${widget.labels?[i] ?? '${i + 1}'}',
                       onTap: !widget.locked && widget.active.contains(i)
                           ? () {
                               final p = semanticPointer--;
@@ -299,7 +303,7 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
                         pressed:
                             pressed(i) || widget.demonstratingKeys.contains(i),
                         color: widget.noteDegrees == null
-                            ? context.qin.primary
+                            ? hand(i)?.color ?? context.qin.primary
                             : NoteColors.degree(widget.noteDegrees![i]).fill,
                         child: Container(
                           decoration: BoxDecoration(
@@ -313,8 +317,8 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
                                             widget.noteDegrees![i],
                                           ).fill
                                   : visibleTarget(i)
-                                  ? context.qin.primary
-                                  : context.qin.edge,
+                                  ? hand(i)?.color ?? context.qin.primary
+                                  : hand(i)?.color ?? context.qin.edge,
                               width: visibleTarget(i)
                                   ? 3
                                   : context.qin.highContrast ||
@@ -324,35 +328,56 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
                             ),
                           ),
                           child: Center(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  child: NoteLabel(
-                                    widget.labels?[i] ?? '${i + 1}',
-                                    style: TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.w700,
-                                      color: keyInk(context, i),
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    child: NoteLabel(
+                                      widget.labels?[i] ?? '${i + 1}',
+                                      style: TextStyle(
+                                        fontSize: 24,
+                                        fontWeight: FontWeight.w700,
+                                        color: keyInk(context, i),
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (widget.showKeyMarks &&
-                                    widget.showShapes &&
-                                    i < 3)
-                                  ShapeMark(
-                                    shape: i,
-                                    size: 24,
-                                    color: keyInk(context, i),
-                                  )
-                                else if (widget.showKeyMarks &&
-                                    widget.textScale <= 1500)
-                                  KeyMark(
-                                    shape: widget.markShapes?[i] ?? i,
-                                    color: keyInk(context, i),
-                                  ),
-                              ],
+                                  if (hand(i) != null)
+                                    FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Text(
+                                        hand(i)!.label(
+                                          Localizations.localeOf(context)
+                                                  .languageCode ==
+                                              'zh',
+                                        ),
+                                        style: TextStyle(
+                                          fontSize: 20,
+                                          fontWeight: FontWeight.w700,
+                                          color: pressed(i)
+                                              ? Colors.white
+                                              : hand(i)!.color,
+                                        ),
+                                      ),
+                                    )
+                                  else if (widget.showKeyMarks &&
+                                      widget.showShapes &&
+                                      i < 3)
+                                    ShapeMark(
+                                      shape: i,
+                                      size: 24,
+                                      color: keyInk(context, i),
+                                    )
+                                  else if (widget.showKeyMarks &&
+                                      widget.textScale <= 1500)
+                                    KeyMark(
+                                      shape: widget.markShapes?[i] ?? i,
+                                      color: keyInk(context, i),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
                         ),

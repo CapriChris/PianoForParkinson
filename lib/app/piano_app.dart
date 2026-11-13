@@ -1485,6 +1485,11 @@ class PreviewSheet extends StatelessWidget {
 
   Widget keys({required int count, required Set<int> active}) => PianoKeyboard(
     interruptions: c.previewInterruptions,
+    handTaskId: alternate
+        ? 'M1_ALTERNATE'
+        : layout == PreviewLayout.dualZone
+        ? 'M2_DUAL_ZONE'
+        : null,
     count: count,
     active: active,
     onDown: (p, k, d, xy) {
@@ -3220,6 +3225,21 @@ class ModePicker extends StatelessWidget {
             subtitle: descriptions
                 ? Text(c.text('稍长的序列，逐步挑战', 'Longer sequences, at your pace'))
                 : null,
+          ),
+          const Divider(),
+          SwitchListTile(
+            key: const ValueKey('comfort-pace'),
+            value: c.practicePaceId == 'COMFORT',
+            onChanged: (value) => c.updateSettings(
+              values: {'practice_pace': value ? 'COMFORT' : 'STANDARD'},
+            ),
+            title: Text(c.text('舒缓节奏', 'Comfortable pace')),
+            subtitle: Text(
+              c.text(
+                '默认开启：提示间留更多时间，不自动加速。关闭恢复标准节奏。',
+                'More time between cues, without automatic speed increases. Turn off for standard pace.',
+              ),
+            ),
           ),
         ],
       ),

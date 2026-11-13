@@ -46,7 +46,7 @@ class RecordContract {
     }
   }
 
-  static void result(Json result, String taskId) {
+  static void result(Json result, String taskId, {Json? parameters}) {
     version(result);
     for (final key in [
       'response_action_count',
@@ -173,7 +173,8 @@ class RecordContract {
       if (result.containsKey('hold_policy') ||
           result['left_target'] > 2 ||
           result['right_target'] != result['left_target'] + 3 ||
-          result['active_duration_us'] != 3000000 ||
+          result['active_duration_us'] !=
+              (parameters?['pace'] == 'COMFORT' ? 5000000 : 3000000) ||
           consumed.any((k) => k > 5) ||
           actions != consumed.length + invalid ||
           result['overlap_count'] != 0 ||
@@ -381,13 +382,17 @@ class RecordContract {
       final targets = b['targets'] as Json;
       if (isDualTask(taskId) &&
           (b['planned_trial_count'] != 12 ||
-              b['parameters']['response_window_ms'] != 3000 ||
+              b['parameters']['response_window_ms'] !=
+                  (b['parameters']['pace'] == 'COMFORT' ? 5000 : 3000) ||
               b['parameters']['gap_tolerance_us'] !=
                   [1000000, 800000, 600000, 400000][b['level'] - 1])) {
         fail('dual parameters');
       }
       if (isBeatTask(taskId) &&
-          (b['parameters']['bpm'] != [40, 45, 50, 55][b['level'] - 1] ||
+          (b['parameters']['bpm'] !=
+                  (b['parameters']['pace'] == 'COMFORT'
+                      ? [30, 35, 40, 45]
+                      : [40, 45, 50, 55])[b['level'] - 1] ||
               b['parameters']['target_time_reference'] !=
                   'BLOCK_ACTIVE_BEAT_TIMELINE_V1')) {
         fail('rhythm parameters');
@@ -608,7 +613,11 @@ class RecordContract {
         integer(a, 'cue_anchor_us');
         integer(a, 'response_end_us');
         integer(a, 'ended_offset_us');
-        result(a['result'] as Json, taskId);
+        result(
+          a['result'] as Json,
+          taskId,
+          parameters: blocks[t['block_id']]!['parameters'] as Json,
+        );
         if (!isDualTask(taskId) &&
             {'metrics-2.0.0', 'metrics-2.1.0'}.contains(metricVersion) &&
             a['result']['hold_policy'] != 'HOLD_400_V1') {
