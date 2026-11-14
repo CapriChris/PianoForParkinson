@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import '../ui/qin_press.dart';
 
 import 'dart:async';
@@ -550,7 +551,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
 
   Future<void> optionHelp(String title, String description) => showDialog<void>(
     context: context,
-    builder: (context) => AlertDialog(
+    builder: (context) => QinDialog(
       title: Text(title),
       content: Text(description),
       actions: [

@@ -1,6 +1,16 @@
 # 琴伴 · Android 内部演示
 
-## 最新安装包 0.1.70（构建 71）
+## 最新公开安装包 0.1.72（构建 73）
+
+修复计划提醒权限读取失败，统一通知/准时提醒申请和按品牌跳转；自启动与后台活动分别“去开启”，提示卡支持“不再提醒”和“本次关闭”。关闭、语音等图标按钮改为紧凑圆形，确认弹窗统一为双按钮等宽横排、有边框，支持小屏和大字体滚动。[更新说明](docs/2026-11-14-0.1.72-更新说明.md) · [构建与验证](validation/release-0.1.72.md)。
+
+[下载通用APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.72/qinban-0.1.72-android-universal.apk) · [GitHub Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.72)。本机副本为项目上层 `releases/qinban-0.1.72-android-universal.apk`。相同包名、相同签名旧版可覆盖安装；本版尚未完成跨品牌真机验收。
+
+## 上一本机安装包 0.1.71（构建 72）
+
+修复 release 通知图标被资源压缩移除的问题，新增通用 Android“提醒设置”：自动申请通知、准时提醒，自启动与后台活动分别点击“去开启”，返回后复查。计划提示卡可选择“不再提醒”或“本次关闭”，设置中保留“通知与提醒”入口。本次覆盖同版本本机 `releases/qinban-0.1.71-android-universal.apk`，未发布 GitHub。[更新说明](docs/2026-11-14-0.1.71-更新说明.md) · [构建与验证](validation/release-0.1.71.md)。
+
+## 上一公开安装包 0.1.70（构建 71）
 
 舞蹈跟练改为插画课程卡片，点击后进入独立准备页；三门课程在列表、准备页、完成页和记录卡片中使用对应插画。舞蹈、短旋律及节奏准备页共用插画尺寸规则。包含 0.1.69 的舒缓节奏和左右手提示，以及三门课程在线播放缓存、手机号登录等已有功能。[更新说明](docs/2026-11-13-0.1.70-更新说明.md) · [构建与验证](validation/release-0.1.70.md)。
 

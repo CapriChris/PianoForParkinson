@@ -1,3 +1,5 @@
+import '../ui/qin_dialog.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -20,7 +22,7 @@ Future<bool?> _askRecordConsent(
   AppController c,
 ) => showDialog<bool>(
   context: context,
-  builder: (context) => AlertDialog(
+  builder: (context) => QinDialog(
     title: Text(c.text('结合训练记录？', 'Use practice records?')),
     content: Text(
       c.assistant.available
@@ -402,7 +404,7 @@ class _AssistantPageState extends State<AssistantPage> {
   Future<void> _deleteConversation(Json row) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('删除这段对话？', 'Delete this conversation?')),
         content: Text(
           c.text(
@@ -449,7 +451,7 @@ class _AssistantPageState extends State<AssistantPage> {
     final input = TextEditingController(text: row['title'] as String);
     final title = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('重命名对话', 'Rename conversation')),
         content: TextField(controller: input, maxLength: 80, autofocus: true),
         actions: [

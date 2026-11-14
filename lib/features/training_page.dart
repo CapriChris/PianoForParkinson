@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import '../integration/training_capture.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
@@ -253,7 +254,7 @@ class _TrainingPageState extends State<TrainingPage> {
       if (c.engine!.phase != 'paused') c.pause('USER');
       final save = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => QinDialog(
           title: Text(c.text('退出本次训练', 'Exit this training')),
           content: Text(
             c.text(

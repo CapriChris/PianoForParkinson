@@ -221,9 +221,11 @@ ThemeData qinTheme({required bool highContrast}) {
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        minimumSize: const Size(60, 60),
+        minimumSize: Size.zero,
+        padding: const EdgeInsets.all(6),
+        tapTargetSize: MaterialTapTargetSize.padded,
         foregroundColor: p.primary,
-        shape: shape,
+        shape: const CircleBorder(),
       ),
     ),
     cardTheme: CardThemeData(

@@ -132,6 +132,7 @@ class MainActivity : FlutterActivity() {
     @Volatile private var pianoOutputDevice = 0
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        ReminderSettingsBridge(this).register(flutterEngine.dartExecutor.binaryMessenger)
         WechatLoginBridge.register(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)
         AccountSessionVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)

@@ -26,6 +26,20 @@ class PlanReminders {
       ),
       onDidReceiveNotificationResponse: (_) => onOpen?.call(),
     );
+    await plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            channelId,
+            '训练计划提醒',
+            description: 'Scheduled training plan reminders',
+            importance: Importance.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+        );
     initialized = true;
     final launch = await plugin.getNotificationAppLaunchDetails();
     if (launch?.didNotificationLaunchApp == true) onOpen?.call();

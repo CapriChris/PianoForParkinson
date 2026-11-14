@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import '../integration/training_capture.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
@@ -307,7 +308,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     final last = index == course.parts.length - 1;
     final action = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('${course.parts[index].title}已播放结束', 'Video ended')),
         content: Text(
           c.text(
@@ -446,7 +447,7 @@ class _DancePlayerPageState extends State<DancePlayerPage>
     if (!mounted) return;
     final exit = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('退出本次练习？', 'Exit this practice?')),
         content: Text(
           c.text(
@@ -456,48 +457,15 @@ class _DancePlayerPageState extends State<DancePlayerPage>
         ),
         insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         actions: [
-          SizedBox(
-            width: double.infinity,
-            child: IntrinsicHeight(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Expanded(
-                    child: QinOutlinedButton(
-                      key: const ValueKey('continue-dance'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 14,
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(context, false),
-                      child: Text(
-                        c.text('继续练习', 'Continue practice'),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: QinFilledButton(
-                      key: const ValueKey('confirm-exit-dance'),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 14,
-                        ),
-                      ),
-                      onPressed: () => Navigator.pop(context, true),
-                      child: Text(
-                        c.text('退出', 'Exit'),
-                        textAlign: TextAlign.center,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          QinOutlinedButton(
+            key: const ValueKey('continue-dance'),
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(c.text('继续练习', 'Continue practice')),
+          ),
+          QinFilledButton(
+            key: const ValueKey('confirm-exit-dance'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(c.text('退出', 'Exit')),
           ),
         ],
       ),

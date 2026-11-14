@@ -1,3 +1,5 @@
+import '../ui/qin_dialog.dart';
+
 import 'dart:async';
 
 import 'package:camera/camera.dart';
@@ -56,7 +58,7 @@ class CapturePreparationState extends State<CapturePreparation> {
     }
     final agreed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('开启本次面部采集？', 'Record this practice?')),
         content: Text(
           c.text(
@@ -180,7 +182,7 @@ class CaptureIndicator extends StatelessWidget {
             : () async {
                 final stop = await showDialog<bool>(
                   context: context,
-                  builder: (context) => AlertDialog(
+                  builder: (context) => QinDialog(
                     title: Text(text('停止采集？', 'Stop recording?')),
                     content: Text(
                       text(
@@ -382,7 +384,7 @@ class _CaptureResultCardState extends State<CaptureResultCard> {
                                 mobile =
                                     await showDialog<bool>(
                                       context: context,
-                                      builder: (context) => AlertDialog(
+                                      builder: (context) => QinDialog(
                                         title: Text(
                                           c.text(
                                             '使用移动网络上传？',
@@ -427,7 +429,7 @@ class _CaptureResultCardState extends State<CaptureResultCard> {
                           : () => run(() async {
                               final yes = await showDialog<bool>(
                                 context: context,
-                                builder: (context) => AlertDialog(
+                                builder: (context) => QinDialog(
                                   title: Text(
                                     c.text(
                                       '删除本次视频与面部分析？',

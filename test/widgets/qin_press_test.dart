@@ -5,6 +5,41 @@ import 'package:piano_practice/ui/qin_theme.dart';
 import 'package:piano_practice/ui/qin_components.dart';
 
 void main() {
+  for (final iconSize in [18.0, 24.0]) {
+    testWidgets(
+      'icon surface is a compact circle with a padded tap target $iconSize',
+      (tester) async {
+        var calls = 0;
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: qinTheme(highContrast: false),
+            home: Scaffold(
+              body: Center(
+                child: QinIconButton(
+                  key: const ValueKey('compact-icon'),
+                  tooltip: 'Close',
+                  style: IconButton.styleFrom(backgroundColor: Colors.green),
+                  onPressed: () => calls++,
+                  icon: Icon(Icons.close, size: iconSize),
+                ),
+              ),
+            ),
+          ),
+        );
+        final button = find.byKey(const ValueKey('compact-icon'));
+        final surface = find.descendant(
+          of: button,
+          matching: find.byType(Material),
+        );
+        expect(tester.widget<Material>(surface).shape, isA<CircleBorder>());
+        expect(tester.getSize(surface), Size.square(iconSize + 12));
+        expect(tester.getSize(button), const Size.square(48));
+        await tester.tapAt(tester.getTopLeft(button) + const Offset(2, 24));
+        await tester.pumpAndSettle();
+        expect(calls, 1);
+      },
+    );
+  }
   testWidgets('entry card border scales together with content', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

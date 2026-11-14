@@ -2,6 +2,8 @@
 /// local-first audio engines remain untouched.
 library;
 
+import '../ui/qin_dialog.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -462,7 +464,7 @@ class _CloudIntegrationPageState extends State<CloudIntegrationPage>
                           : () async {
                               final confirmed = await showDialog<bool>(
                                 context: context,
-                                builder: (ctx) => AlertDialog(
+                                builder: (ctx) => QinDialog(
                                   title: const Text('确认既有计划的归属'),
                                   content: Text(
                                     '请确认这 ${coordinator.unconfirmedPlanCount} 份本机旧计划都属于当前患者。只同步这些计划和绑定后的进度，绑定前的训练成绩不会补传。',

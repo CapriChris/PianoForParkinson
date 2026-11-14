@@ -174,7 +174,10 @@ void main() {
               await tester.pumpAndSettle();
               expect(find.byType(AlertDialog), findsOneWidget);
               expect(tester.takeException(), isNull);
-              await tester.tap(find.text(locale == 'en' ? 'Got it' : '知道了'));
+              final closeHelp = find.text(locale == 'en' ? 'Got it' : '知道了');
+              await tester.ensureVisible(closeHelp);
+              await tester.pumpAndSettle();
+              await tester.tap(closeHelp);
               await tester.pumpAndSettle();
               // Reading help must not change the associated replay setting.
               expect(tester.widget<Switch>(toggle).value, before);

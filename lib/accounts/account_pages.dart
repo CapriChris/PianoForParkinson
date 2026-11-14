@@ -1,3 +1,5 @@
+import '../ui/qin_dialog.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -60,7 +62,7 @@ Future<void> showRecoveryCode(BuildContext context, String code) =>
       barrierDismissible: false,
       builder: (context) => PopScope(
         canPop: false,
-        child: AlertDialog(
+        child: QinDialog(
           title: const Text('保存账号恢复码'),
           content: SingleChildScrollView(
             child: Column(
@@ -601,7 +603,7 @@ class _AccountPageState extends State<AccountPage> {
     final form = GlobalKey<FormState>();
     final accepted = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: const Text('修改密码'),
         content: SingleChildScrollView(
           child: Form(
@@ -744,7 +746,7 @@ class _AccountPageState extends State<AccountPage> {
                   : () async {
                       final yes = await showDialog<bool>(
                         context: context,
-                        builder: (context) => AlertDialog(
+                        builder: (context) => QinDialog(
                           title: const Text('退出账号？'),
                           content: const Text('本机记录会保留在此账号中。退出后需要登录才能使用训练和计划。'),
                           actions: [

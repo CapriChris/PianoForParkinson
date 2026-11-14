@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
@@ -105,7 +106,7 @@ class _DancePageState extends State<DancePage> {
                                 onPressed: () async {
                                   final confirm = await showDialog<bool>(
                                     context: context,
-                                    builder: (context) => AlertDialog(
+                                    builder: (context) => QinDialog(
                                       title: Text(
                                         c.text(
                                           '删除这条舞蹈记录？',

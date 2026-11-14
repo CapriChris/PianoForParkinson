@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import '../features/capture_widgets.dart';
 import '../ui/qin_press.dart';
 
@@ -30,6 +31,7 @@ import '../features/dance_result_page.dart';
 import '../domain/dance_training.dart';
 import '../features/plans_page.dart';
 import '../platform/plan_reminders.dart';
+import '../features/reminder_setup_page.dart';
 import '../features/record_health_page.dart';
 import '../features/piece_result_page.dart';
 import '../domain/cognitive_tasks.dart';
@@ -2669,7 +2671,7 @@ Future<bool> confirm(
 }) async =>
     await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(title),
         content: Text(body),
         actions: [
@@ -3018,6 +3020,32 @@ class SettingsPage extends StatelessWidget {
                                           ),
                                         ),
                                         const SizedBox(height: 8),
+                                        QinOutlinedButton.icon(
+                                          onPressed: () async {
+                                            await Navigator.push<void>(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (_) =>
+                                                    ReminderSetupPage(
+                                                      chinese: c.chinese,
+                                                    ),
+                                              ),
+                                            );
+                                            if (context.mounted) {
+                                              c.syncPlanReminders();
+                                            }
+                                          },
+                                          icon: const Icon(
+                                            Icons.notifications_active_outlined,
+                                          ),
+                                          label: Text(
+                                            c.text(
+                                              '通知与提醒',
+                                              'Notifications and reminders',
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 12),
                                         AssistantPrivacyTile(c: c),
                                         const SizedBox(height: 12),
                                         if (c.accountApi != null) ...[

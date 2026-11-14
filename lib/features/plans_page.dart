@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import '../ui/qin_press.dart';
 
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import '../ui/qin_components.dart';
 import '../ui/qin_music_art.dart';
 import '../platform/plan_reminders.dart';
 import 'dance_page.dart';
+import 'reminder_setup_page.dart';
 
 // Visual tuning: logical pixels and opacity values from 0 (clear) to 1 (solid).
 const double planHeaderBaseHeight = 144;
@@ -140,7 +142,7 @@ class _PlansPageState extends State<PlansPage> with WidgetsBindingObserver {
     if (ids.isEmpty || busy) return;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(
           c.text('删除这 ${ids.length} 项计划？', 'Delete ${ids.length} plans?'),
         ),
@@ -671,7 +673,7 @@ class _PlansPageState extends State<PlansPage> with WidgetsBindingObserver {
                                       v['plan']['reminder'] == true &&
                                       v['plan']['paused'] != true,
                                 ))
-                              _PlanReminderSetup(c: c),
+                              PlanReminderSetupHint(c: c),
                             if (loading)
                               const Center(child: CircularProgressIndicator()),
                             for (final item in items) planCard(item),
@@ -820,7 +822,7 @@ class _PlanEditorState extends State<PlanEditor> {
     leaveDialog = true;
     final choice = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (context) => QinDialog(
         title: Text(c.text('是否保存更改？', 'Save changes?')),
         actions: [
           QinTextButton(
@@ -1412,7 +1414,7 @@ class _PlanEditorState extends State<PlanEditor> {
                 value: reminder,
                 onChanged: (value) => setState(() => reminder = value),
               ),
-              if (reminder) ...[timePicker, _PlanReminderSetup(c: c)],
+              if (reminder) ...[timePicker, PlanReminderSetupHint(c: c)],
             ]),
           ],
         ),
@@ -1421,30 +1423,52 @@ class _PlanEditorState extends State<PlanEditor> {
   );
 }
 
-class _PlanReminderSetup extends StatefulWidget {
-  const _PlanReminderSetup({required this.c});
+class PlanReminderSetupHint extends StatefulWidget {
+  const PlanReminderSetupHint({super.key, required this.c, this.reminders});
+  static const hiddenPreferenceKey = 'reminder_setup_hint_hidden_v1';
   final AppController c;
+  final PlanReminders? reminders;
   @override
-  State<_PlanReminderSetup> createState() => _PlanReminderSetupState();
+  State<PlanReminderSetupHint> createState() => _PlanReminderSetupHintState();
 }
 
-class _PlanReminderSetupState extends State<_PlanReminderSetup>
+class _PlanReminderSetupHintState extends State<PlanReminderSetupHint>
     with WidgetsBindingObserver {
   PlanReminderAccess? access;
   bool busy = false;
+  bool hiddenThisTime = false;
   String? error;
   AppController get c => widget.c;
+  PlanReminders get reminders => widget.reminders ?? PlanReminders.instance;
+  bool get permanentlyHidden =>
+      c.settings[PlanReminderSetupHint.hiddenPreferenceKey] == true;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    refresh();
+    c.addListener(preferencesChanged);
+    if (!permanentlyHidden) refresh();
+  }
+
+  void preferencesChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void didUpdateWidget(covariant PlanReminderSetupHint oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.c != c) {
+      oldWidget.c.removeListener(preferencesChanged);
+      c.addListener(preferencesChanged);
+      hiddenThisTime = false;
+    }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    c.removeListener(preferencesChanged);
     super.dispose();
   }
 
@@ -1455,7 +1479,7 @@ class _PlanReminderSetupState extends State<_PlanReminderSetup>
 
   Future<void> refresh() async {
     try {
-      final result = await PlanReminders.instance.access();
+      final result = await reminders.access();
       if (mounted) {
         setState(() {
           access = result;
@@ -1478,8 +1502,14 @@ class _PlanReminderSetupState extends State<_PlanReminderSetup>
     if (busy) return;
     setState(() => busy = true);
     try {
-      if (error == null) await PlanReminders.instance.configure();
-      await PlanReminders.instance.sync(scheduleStore(c), chinese: c.chinese);
+      await Navigator.push<void>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ReminderSetupPage(chinese: c.chinese),
+        ),
+      );
+      if (!mounted) return;
+      await reminders.sync(scheduleStore(c), chinese: c.chinese);
       await refresh();
     } catch (_) {
       if (mounted) {
@@ -1497,8 +1527,8 @@ class _PlanReminderSetupState extends State<_PlanReminderSetup>
 
   @override
   Widget build(BuildContext context) {
-    if (error == null &&
-        (access == null || access == PlanReminderAccess.ready)) {
+    if (hiddenThisTime || permanentlyHidden) return const SizedBox.shrink();
+    if (error == null && access == null) {
       return const SizedBox.shrink();
     }
     final message =
@@ -1513,28 +1543,110 @@ class _PlanReminderSetupState extends State<_PlanReminderSetup>
             'Notifications are off. Enable them to receive training reminders.',
           ),
           PlanReminderAccess.channelQuiet => c.text(
-            '训练提醒的横幅未开启，请在通知设置中开启。',
-            'Training reminder banners are off. Enable them in notification settings.',
+            '训练提醒可能以静默方式显示，可在设置引导中检查通知显示。',
+            'Training reminders may be quiet. Check notification display in the setup guide.',
           ),
-          PlanReminderAccess.ready => '',
+          PlanReminderAccess.ready => c.text(
+            '通知与准时提醒已开启。请进入提醒设置，检查自启动和后台活动。',
+            'Notifications and accurate reminders are enabled. Open Reminder setup to check auto-start and background activity.',
+          ),
         };
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: QinStatus(
-        tone: QinTone.warning,
-        text: message,
-        child: QinOutlinedButton(
-          onPressed: busy ? null : configure,
-          child: Text(
-            error != null
-                ? c.text('重试', 'Retry')
-                : access == PlanReminderAccess.inexact
-                ? c.text('开启准时提醒', 'Enable accurate reminders')
-                : c.text('开启通知', 'Enable notifications'),
-          ),
+      child: QinPanel(
+        soft: error == null && access == PlanReminderAccess.ready,
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 12),
+                  child: Icon(Icons.info_outline),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: Text(message),
+                  ),
+                ),
+                QinIconButton(
+                  key: const ValueKey('reminder-hint-close'),
+                  tooltip: c.text('关闭提醒设置提示', 'Dismiss reminder setup tip'),
+                  onPressed: busy ? null : dismissHint,
+                  icon: const Icon(Icons.close, size: 18),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            QinOutlinedButton(
+              onPressed: busy ? null : configure,
+              child: Text(c.text('提醒设置', 'Reminder setup')),
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Future<void> dismissHint() async {
+    if (busy) return;
+    setState(() => busy = true);
+    try {
+      final permanent = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => QinDialog(
+          content: Text(
+            c.text(
+              '请确保已开启所需权限后再选择“不再提醒”',
+              'Make sure the required permissions are enabled before choosing Don’t show again.',
+            ),
+          ),
+          actions: [
+            QinOutlinedButton(
+              key: const ValueKey('reminder-hint-never'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xffb3261e),
+                side: const BorderSide(color: Color(0xffb3261e)),
+              ),
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: Text(c.text('不再提醒', 'Don’t show again')),
+            ),
+            QinOutlinedButton(
+              key: const ValueKey('reminder-hint-once'),
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: Text(c.text('本次关闭', 'Dismiss this time')),
+            ),
+          ],
+        ),
+      );
+      if (permanent == null || !mounted) return;
+      if (permanent) {
+        await c.updateSettings(
+          values: {PlanReminderSetupHint.hiddenPreferenceKey: true},
+        );
+      } else {
+        setState(() => hiddenThisTime = true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              c.text(
+                '未能保存提示设置，请重试。',
+                'Could not save this preference. Please retry.',
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
   }
 }
 

@@ -6,8 +6,8 @@ import 'package:unorm_dart/unorm_dart.dart' as unicode;
 
 typedef Json = Map<String, dynamic>;
 const appName = '琴伴';
-const appVersion = '0.1.69';
-const appBuild = '70';
+const appVersion = '0.1.72';
+const appBuild = '73';
 
 /// New input is normalized separately; legacy canonical hashes stay unchanged.
 Object? normalizeRecordText(Object? value) {

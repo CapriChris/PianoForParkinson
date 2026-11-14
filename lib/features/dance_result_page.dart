@@ -1,3 +1,4 @@
+import '../ui/qin_dialog.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
@@ -77,7 +78,7 @@ class _DanceResultPageState extends State<DanceResultPage> {
     if (!saved) {
       final exit = await showDialog<bool>(
         context: context,
-        builder: (context) => AlertDialog(
+        builder: (context) => QinDialog(
           title: Text(c.text('记录尚未保存', 'Record not saved')),
           content: Text(
             c.text('离开会丢失本次未保存的记录。', 'Leaving will lose this unsaved record.'),

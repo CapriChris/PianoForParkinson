@@ -72,7 +72,7 @@ class _SpokenTextState extends State<SpokenText> with WidgetsBindingObserver {
             foregroundColor: playing
                 ? context.qin.onPrimary
                 : context.qin.primary,
-            shape: widget.circularAligned ? const CircleBorder() : null,
+            shape: const CircleBorder(),
           ),
           tooltip: playing
               ? c.text('停止语音说明', 'Stop spoken guidance')
@@ -111,7 +111,7 @@ class _SpokenTextState extends State<SpokenText> with WidgetsBindingObserver {
         textDirection: Directionality.of(context),
         textScaler: MediaQuery.textScalerOf(context),
       );
-      topPadding = ((60 - painter.preferredLineHeight) / 2).clamp(0.0, 30.0);
+      topPadding = ((48 - painter.preferredLineHeight) / 2).clamp(0.0, 24.0);
       painter.dispose();
     }
     return Row(
