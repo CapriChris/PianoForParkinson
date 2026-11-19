@@ -132,6 +132,8 @@ class MainActivity : FlutterActivity() {
     @Volatile private var pianoOutputDevice = 0
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        com.pianoforparkinson.piano_practice.updates.ApkUpdateBridge(this)
+            .register(flutterEngine.dartExecutor.binaryMessenger)
         ReminderSettingsBridge(this).register(flutterEngine.dartExecutor.binaryMessenger)
         WechatLoginBridge.register(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
         CaptureVault(applicationContext).register(flutterEngine.dartExecutor.binaryMessenger)

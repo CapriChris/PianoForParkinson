@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import '../app/app_controller.dart';
 import '../app/piano_app.dart';
 import '../integration/remote_api.dart';
+import '../features/apk_update_page.dart';
 import '../ui/qin_theme.dart';
 import '../ui/qin_press.dart';
 import 'account_controller.dart';
@@ -50,7 +51,7 @@ class AccountApplication extends StatelessWidget {
         localizationsDelegates: GlobalMaterialLocalizations.delegates,
         home: accounts.loading
             ? const Scaffold(body: Center(child: CircularProgressIndicator()))
-            : LoginPage(accounts: accounts),
+            : ApkUpdatePrompt(child: LoginPage(accounts: accounts)),
       );
     },
   );

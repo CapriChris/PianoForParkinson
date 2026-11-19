@@ -15,6 +15,7 @@ import '../features/keyboard.dart';
 import '../features/language_picker.dart';
 import '../features/audio_volume_control.dart';
 import '../features/assistant_page.dart';
+import '../features/apk_update_page.dart';
 import '../integration/remote_pages.dart';
 import '../accounts/account_pages.dart';
 import '../features/text_size_control.dart';
@@ -114,7 +115,7 @@ class PianoApp extends StatelessWidget {
             ? const Scaffold(body: Center(child: CircularProgressIndicator()))
             : controller.repository.profile['onboarding_completed'] == 0
             ? Onboarding(c: controller)
-            : HomePage(c: controller),
+            : ApkUpdatePrompt(child: HomePage(c: controller)),
       );
     },
   );
@@ -3307,6 +3308,7 @@ class AboutPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        const ApkUpdateCheckButton(),
         QinSectionTitle(c.text('关于练习', 'About the practice')),
         Text(
           c.text(

@@ -6,6 +6,7 @@
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.RECORD_AUDIO" tools:node="remove"/>
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES"/>
     <uses-feature android:name="android.hardware.camera.front" android:required="false"/>
     <uses-feature android:name="android.hardware.camera" android:required="false"/>
     <application
@@ -16,6 +17,14 @@
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher">
+        <provider
+            android:name=".updates.ApkUpdateFileProvider"
+            android:authorities="${applicationId}.apk_updates"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/apk_update_paths" />
+        </provider>
         <activity android:name=".accounts.WechatCallbackActivity"
             android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar"
             android:launchMode="singleTop" />
