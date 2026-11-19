@@ -17,6 +17,7 @@ class AutoSync {
     this.trainingUpdates,
     this.canRun, {
     this.authorizationLost,
+    this.beforeSync,
   }) {
     trainingUpdates.addListener(trigger);
   }
@@ -24,6 +25,7 @@ class AutoSync {
   final ValueListenable<int> trainingUpdates;
   final bool Function() canRun;
   final void Function()? authorizationLost;
+  final Future<void> Function()? beforeSync;
   final message = ValueNotifier<String>('');
   final cloud = ValueNotifier<List<Map<String, dynamic>>>(const []);
   Future<void>? _purge;
@@ -310,6 +312,8 @@ class AutoSync {
         patient == id &&
         repository.profile['profile_id'] == local;
     try {
+      await beforeSync?.call();
+      if (!current()) throw StateError('登录状态已变化。');
       final sidecar = await store();
       if (current()) message.value = '同步中…';
       final result = await CrossClientSync(

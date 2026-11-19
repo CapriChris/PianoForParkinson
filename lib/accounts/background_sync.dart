@@ -40,7 +40,12 @@ Future<bool> syncRememberedAccount(
     final remote = api ?? AccountApi(vault: credentials);
     remote.session = saved;
     await remote.drainRevocations();
-    sync = AutoSync(store, updates, () => true);
+    sync = AutoSync(
+      store,
+      updates,
+      () => true,
+      beforeSync: remote.refreshProfile,
+    );
     await sync.enrollAccount(
       remote,
       saved.userId,

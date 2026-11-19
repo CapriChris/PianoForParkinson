@@ -375,18 +375,23 @@ class _LoginPageState extends State<LoginPage> {
                               controller: username,
                               enabled: !busy,
                               decoration: InputDecoration(
-                                labelText: '用户名',
+                                labelText:
+                                    Localizations.localeOf(context)
+                                            .languageCode ==
+                                        'en'
+                                    ? 'Login account'
+                                    : '登录账号',
                                 helperText: register ? '3–32 位字母、数字或下划线' : null,
                               ),
                               autofillHints: const [AutofillHints.username],
                               autocorrect: false,
                               validator: (value) =>
                                   value == null || value.trim().isEmpty
-                                  ? '请输入用户名'
+                                  ? '请输入登录账号'
                                   : RegExp(r'^[A-Za-z0-9_]{3,32}$')
                                         .hasMatch(value.trim())
                                   ? null
-                                  : '用户名须为3-32位字母、数字或下划线',
+                                  : '登录账号须为3-32位字母、数字或下划线',
                             ),
                             if (register) ...[
                               const SizedBox(height: 14),
@@ -404,7 +409,7 @@ class _LoginPageState extends State<LoginPage> {
                                     maxLength,
                                   }) => null,
                                   decoration: InputDecoration(
-                                    labelText: '昵称',
+                                    labelText: '姓名',
                                     suffixIcon: Align(
                                       alignment: Alignment.centerRight,
                                       widthFactor: 1,
@@ -427,7 +432,7 @@ class _LoginPageState extends State<LoginPage> {
                                   ),
                                   validator: (v) =>
                                       v == null || v.trim().isEmpty
-                                      ? '请填写昵称'
+                                      ? '请填写姓名'
                                       : null,
                                 ),
                               ),
@@ -596,6 +601,61 @@ class AccountPage extends StatefulWidget {
 class _AccountPageState extends State<AccountPage> {
   bool busy = false;
   String? message;
+  @override
+  void initState() {
+    super.initState();
+    widget.c.addListener(profileChanged);
+    refreshName();
+  }
+
+  void profileChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    widget.c.removeListener(profileChanged);
+    super.dispose();
+  }
+
+  Future<void> refreshName() async {
+    try {
+      await widget.c.accountApi!.refreshProfile();
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => message = widget.c.text(
+            '暂时无法刷新姓名，请检查网络后重试。',
+            'Unable to refresh your name. Check your connection and retry.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> editName() async {
+    setState(() {
+      busy = true;
+      message = null;
+    });
+    try {
+      await widget.c.accountApi!.refreshProfile();
+      if (!mounted) return;
+      final saved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => _PatientNameDialog(c: widget.c),
+      );
+      if (saved == true && mounted) {
+        setState(() => message = widget.c.text('姓名已保存', 'Name saved'));
+      }
+    } catch (e) {
+      if (mounted) setState(() => message = accountError(e));
+    } finally {
+      if (mounted) setState(() => busy = false);
+    }
+  }
+
   Future<void> changePassword() async {
     final old = TextEditingController(),
         next = TextEditingController(),
@@ -673,7 +733,7 @@ class _AccountPageState extends State<AccountPage> {
     final c = widget.c, session = widget.c.accountApi!.session;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('我的账号'),
+        title: Text(c.text('我的账号', 'My account')),
         leading: ModalRoute.of(context)?.canPop == true
             ? QinIconButton(
                 tooltip: MaterialLocalizations.of(context).backButtonTooltip,
@@ -687,10 +747,14 @@ class _AccountPageState extends State<AccountPage> {
           padding: const EdgeInsets.all(24),
           children: [
             Text(
-              '${session?.user['display_name'] ?? ''}',
+              c.text('姓名：', 'Name: ') + (session?.name ?? ''),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
-            Text('用户名：${session?.user['username'] ?? ''}'),
+            QinOutlinedButton(
+              key: const ValueKey('edit-patient-name'),
+              onPressed: busy ? null : editName,
+              child: Text(c.text('修改姓名', 'Edit name')),
+            ),
             Text('档案编号：${session?.patient['hospital_number'] ?? ''}'),
             const SizedBox(height: 24),
             const ListTile(
@@ -767,6 +831,148 @@ class _AccountPageState extends State<AccountPage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _PatientNameDialog extends StatefulWidget {
+  const _PatientNameDialog({required this.c});
+  final AppController c;
+  @override
+  State<_PatientNameDialog> createState() => _PatientNameDialogState();
+}
+
+class _PatientNameDialogState extends State<_PatientNameDialog> {
+  late final TextEditingController input;
+  late String expectedName;
+  late final String ownerUserId, ownerPatientId;
+
+  @override
+  void initState() {
+    super.initState();
+    final session = widget.c.accountApi!.session!;
+    ownerUserId = session.userId;
+    ownerPatientId = session.patientId;
+    expectedName = session.name;
+    input = TextEditingController(text: expectedName);
+  }
+
+  final form = GlobalKey<FormState>();
+  bool saving = false, conflict = false;
+  String? error;
+  @override
+  void dispose() {
+    input.dispose();
+    super.dispose();
+  }
+
+  Future<void> save() async {
+    if (saving || !form.currentState!.validate()) return;
+    setState(() {
+      saving = true;
+      error = null;
+    });
+    final c = widget.c;
+    try {
+      final session = c.accountApi!.session;
+      if (session?.userId != ownerUserId ||
+          session?.patientId != ownerPatientId) {
+        throw const RemoteApiException(401, '登录状态已变化，请取消后重试。');
+      }
+      await c.accountApi!.updateName(input.text, expectedName);
+      if (mounted) Navigator.pop(context, true);
+    } on RemoteApiException catch (e) {
+      if (e.status == 409) {
+        try {
+          await c.accountApi!.refreshProfile();
+          if (!mounted) return;
+          setState(() {
+            expectedName = c.patientName;
+            conflict = true;
+            error = c.text(
+              '医护端已将姓名改为“$expectedName”。请核对后再次确认保存，或取消。',
+              'Your name is now “$expectedName”. Review it, then confirm saving your change or cancel.',
+            );
+          });
+        } catch (_) {
+          if (mounted) {
+            setState(
+              () => error = c.text(
+                '姓名已在其他设备修改，暂时无法刷新。请取消后联网重试。',
+                'Your name changed elsewhere. Unable to refresh; cancel and retry online.',
+              ),
+            );
+          }
+        }
+      } else if (mounted) {
+        setState(
+          () => error = c.chinese
+              ? accountError(e)
+              : 'Unable to save your name. Check your connection and retry.',
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => error = c.text(
+            '姓名尚未确认保存，请联网重试。',
+            'Your name has not been confirmed saved. Please retry online.',
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = widget.c;
+    return PopScope(
+      canPop: !saving,
+      child: QinDialog(
+        title: Text(c.text('修改姓名', 'Edit name')),
+        content: SingleChildScrollView(
+          child: Form(
+            key: form,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                TextFormField(
+                  key: const ValueKey('patient-name-input'),
+                  controller: input,
+                  enabled: !saving,
+                  maxLength: 64,
+                  decoration: InputDecoration(labelText: c.text('姓名', 'Name')),
+                  validator: (v) => (v ?? '').trim().isEmpty
+                      ? c.text('请填写姓名', 'Enter your name')
+                      : null,
+                ),
+                if (error != null)
+                  Text(error!, key: const ValueKey('patient-name-error')),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          QinTextButton(
+            onPressed: saving ? null : () => Navigator.pop(context, false),
+            child: Text(c.text('取消', 'Cancel')),
+          ),
+          QinFilledButton(
+            key: const ValueKey('save-patient-name'),
+            onPressed: saving ? null : save,
+            child: Text(
+              saving
+                  ? c.text('正在保存…', 'Saving…')
+                  : conflict
+                  ? c.text('确认保存姓名', 'Confirm name change')
+                  : c.text('保存', 'Save'),
+            ),
+          ),
+        ],
       ),
     );
   }

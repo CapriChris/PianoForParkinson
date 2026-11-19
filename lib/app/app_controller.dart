@@ -49,6 +49,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         initialized &&
         _syncTrainingViews == 0 &&
         (engine == null || engine!.ended),
+    beforeSync: accountApi?.refreshProfile,
     authorizationLost: () {
       _captures?.disconnect();
       onAccountInvalidated?.call();
@@ -117,6 +118,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
         !RegExp(r'^[a-zA-Z0-9-]+$').hasMatch(databaseSubdirectory!)) {
       throw ArgumentError('Invalid isolated database directory');
     }
+    accountApi?.profileUpdates.addListener(_profileChanged);
     WidgetsBinding.instance.addObserver(this);
     _platformEvents = PlatformService.events.receiveBroadcastStream().listen(
       (event) {
@@ -141,6 +143,12 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       },
     );
   }
+  void _profileChanged() {
+    if (!_disposed) notifyListeners();
+  }
+
+  String get patientName => accountApi?.session?.name ?? '';
+
   String get locale =>
       initialized ? repository.profile['locale'] as String : 'zh-Hans';
   bool get chinese => locale == 'zh-Hans';
@@ -241,6 +249,12 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     final session = api?.session;
     if (_disposed || !initialized || api == null || session == null) return;
     try {
+      await api.refreshProfile();
+      if (_disposed ||
+          api.session?.userId != session.userId ||
+          api.session?.patientId != session.patientId) {
+        return;
+      }
       await cloudSync.enrollAccount(
         api,
         session.userId,
@@ -1035,6 +1049,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
   @override
   void dispose() {
     _disposed = true;
+    accountApi?.profileUpdates.removeListener(_profileChanged);
     _accountReconnect?.cancel();
     _captures?.dispose();
     unawaited(assistantConversations.close().catchError((_) {}));

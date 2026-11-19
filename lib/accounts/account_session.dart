@@ -22,6 +22,8 @@ class AccountSession {
   final Json user, patient;
   final String refreshToken, deviceId, base;
   final DateTime refreshExpiresAt;
+  // Patient name is canonical; login identifiers are never presentation names.
+  String get name => (patient['name'] as String? ?? '').trim();
   String get userId => user['id'] as String;
   String get patientId => patient['id'] as String;
   String get directory =>

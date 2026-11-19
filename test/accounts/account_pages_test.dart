@@ -222,7 +222,7 @@ void main() {
     await tester.ensureVisible(find.text('注册并登录'));
     await tester.tap(find.text('注册并登录'));
     await tester.pumpAndSettle();
-    expect(find.text('请输入用户名'), findsOneWidget);
+    expect(find.text('请输入登录账号'), findsOneWidget);
     expect(accounts.app, isNull);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());
@@ -339,7 +339,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('3–32 位字母、数字或下划线'), findsOneWidget);
       expect(find.text('姓名或昵称'), findsNothing);
-      expect(find.text('昵称'), findsOneWidget);
+      expect(find.text('姓名'), findsOneWidget);
       expect(find.textContaining('同意将训练记录'), findsNothing);
       final nickname = find.byKey(const ValueKey('account-nickname'));
       await tester.enterText(nickname, '琴🎹');

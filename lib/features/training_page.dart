@@ -796,6 +796,23 @@ class _TrainingPageState extends State<TrainingPage> {
             60.0,
             MediaQuery.textScalerOf(context).scale(24) * 1.3 + 12,
           ),
+          bottom: c.patientName.isEmpty
+              ? null
+              : PreferredSize(
+                  preferredSize: Size.fromHeight(
+                    MediaQuery.textScalerOf(context).scale(16) * 2.6 + 8,
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                    child: Text(
+                      c.text('姓名：', 'Name: ') + c.patientName,
+                      key: const ValueKey('training-patient-name'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                  ),
+                ),
           automaticallyImplyLeading: false,
           leading: QinIconButton(
             onPressed: back,

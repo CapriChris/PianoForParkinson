@@ -1,6 +1,12 @@
 # 琴伴 · Android 内部演示
 
-## 最新公开安装包 0.1.72（构建 73）
+## 姓名编辑联调版 0.1.73（构建74）
+
+账号、首页与训练页统一显示患者姓名，支持“我的账号 → 修改姓名”，与Web患者资料双向刷新；不更改用户/患者ID及历史归属，离线或冲突不会假报成功。[修改与测试](validation/patient-name-0.1.73.md)。
+
+[下载独立ARM64 QA包](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/PianoForParkinson-0.1.73-patient-name-QA-arm64.apk) · [SHA256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/SHA256SUMS.txt)。版本0.1.73+74，独立包名.validation，不覆盖正式App。908项Flutter测试通过，2项既有HTTPS测试跳过，analyze无问题；未进行真机验收。本轮不创建GitHub Release。
+
+## 最新公开正式安装包 0.1.72（构建 73）
 
 修复计划提醒权限读取失败，统一通知/准时提醒申请和按品牌跳转；自启动与后台活动分别“去开启”，提示卡支持“不再提醒”和“本次关闭”。关闭、语音等图标按钮改为紧凑圆形，确认弹窗统一为双按钮等宽横排、有边框，支持小屏和大字体滚动。[更新说明](docs/2026-11-14-0.1.72-更新说明.md) · [构建与验证](validation/release-0.1.72.md)。
 

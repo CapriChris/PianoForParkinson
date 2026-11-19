@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart';
 
 import '../domain/contracts.dart';
 import '../integration/remote_api.dart';
@@ -32,6 +33,9 @@ class AccountApi extends RemoteApi {
   Future<void>? _refreshing;
   Future<void> _vaultWrites = Future.value();
   int _epoch = 0;
+  int _profileRevision = 0;
+  int _nameWriteRevision = 0;
+  final profileUpdates = ValueNotifier<int>(0);
   Future<void> _clearCredential() => _vaultWrites = _vaultWrites
       .catchError((Object _) {})
       .then((_) => vault.clear());
@@ -39,8 +43,13 @@ class AccountApi extends RemoteApi {
   @override
   bool get signedIn => session != null && !session!.expired;
 
-  Future<void> _accept(Json body, String deviceId, int epoch) async {
-    final next = AccountSession.parse({
+  Future<void> _accept(
+    Json body,
+    String deviceId,
+    int epoch, {
+    int? profileRevision,
+  }) async {
+    var next = AccountSession.parse({
       ...body,
       'base': base.toString(),
       'device_id': deviceId,
@@ -57,6 +66,15 @@ class AccountApi extends RemoteApi {
     }
     final write = _vaultWrites.catchError((Object _) {}).then((_) async {
       if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
+      if (profileRevision != null &&
+          profileRevision != _profileRevision &&
+          session != null) {
+        next = AccountSession.parse({
+          ...next.toJson(),
+          'user': session!.user,
+          'patient': session!.patient,
+        });
+      }
       await vault.write(next);
       if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
     });
@@ -83,6 +101,7 @@ class AccountApi extends RemoteApi {
       Duration(seconds: (body['expires_in'] as int) - 30),
     );
     changed?.call(next);
+    profileUpdates.value++;
     unawaited(drainRevocations());
   }
 
@@ -169,6 +188,7 @@ class AccountApi extends RemoteApi {
     if (_refreshing != null) return _refreshing!;
     final epoch = _epoch;
     final current = session!;
+    final profileRevision = _profileRevision;
     final next = () async {
       try {
         final body = await _send(
@@ -176,7 +196,12 @@ class AccountApi extends RemoteApi {
           '/mobile/auth/refresh',
           data: {'refresh_token': current.refreshToken},
         );
-        await _accept(body, current.deviceId, epoch);
+        await _accept(
+          body,
+          current.deviceId,
+          epoch,
+          profileRevision: profileRevision,
+        );
       } on RemoteApiException catch (error) {
         if (error.status == 401 && _epoch == epoch) {
           signOut();
@@ -204,15 +229,98 @@ class AccountApi extends RemoteApi {
     Object? data,
     Map<String, String>? query,
   }) async {
+    final epoch = _epoch;
     await ensureAccess();
+    if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
+    final profileRequest =
+        (method == 'GET' && path == '/mobile/auth/me') ||
+        (method == 'PATCH' && path == '/mobile/auth/profile');
+    final revision = profileRequest ? ++_profileRevision : _profileRevision;
+    final writingName = method == 'PATCH' && path == '/mobile/auth/profile';
+    final nameRevision = writingName
+        ? ++_nameWriteRevision
+        : _nameWriteRevision;
+    Json body;
     try {
-      return await _send(method, path, data: data, query: query);
+      body = await _send(method, path, data: data, query: query);
     } on RemoteApiException catch (error) {
-      if (error.status != 401) rethrow;
+      if (error.status != 401 || _epoch != epoch) rethrow;
       // A server can revoke a session before the local access expiry.
       await ensureAccess(force: true);
-      return _send(method, path, data: data, query: query);
+      if (_epoch != epoch) throw const RemoteApiException(401, '登录状态已变化。');
+      body = await _send(method, path, data: data, query: query);
     }
+    if (profileRequest) {
+      await _saveProfile(body, epoch, revision, writingName, nameRevision);
+    }
+    return body;
+  }
+
+  Future<void> refreshProfile() async {
+    await request('GET', '/mobile/auth/me');
+  }
+
+  Future<void> updateName(String name, String expectedName) async {
+    final value = name.trim();
+    if (value.isEmpty || value.runes.length > 64) {
+      throw const FormatException('姓名须为1至64个字符');
+    }
+    await request(
+      'PATCH',
+      '/mobile/auth/profile',
+      data: {'display_name': value, 'expected_name': expectedName},
+    );
+  }
+
+  Future<void> _saveProfile(
+    Json body,
+    int epoch,
+    int revision,
+    bool writingName,
+    int nameRevision,
+  ) async {
+    void checkIdentity() {
+      if (_epoch != epoch || session == null) {
+        throw const RemoteApiException(401, '登录状态已变化。');
+      }
+      final user = body['user'] as Map;
+      final patient = body['patient'] as Map;
+      if (user['id'] != session!.userId ||
+          patient['id'] != session!.patientId ||
+          user['role'] != 'PATIENT' ||
+          user['username'] != session!.user['username'] ||
+          patient['name'] is! String ||
+          (patient['name'] as String).trim().isEmpty) {
+        throw const FormatException('Account identity changed');
+      }
+    }
+
+    checkIdentity();
+    final write = _vaultWrites.catchError((Object _) {}).then((_) async {
+      checkIdentity();
+      if (nameRevision != _nameWriteRevision ||
+          (!writingName && revision != _profileRevision)) {
+        return;
+      }
+      // Merge into the latest credentials; never change record partition keys.
+      final next = AccountSession.parse({
+        ...session!.toJson(),
+        'user': body['user'],
+        'patient': body['patient'],
+      });
+      await vault.write(next);
+      checkIdentity();
+      if (nameRevision != _nameWriteRevision ||
+          (!writingName && revision != _profileRevision)) {
+        return;
+      }
+      session = next;
+      if (writingName) _profileRevision++;
+      changed?.call(next);
+      profileUpdates.value++;
+    });
+    _vaultWrites = write;
+    await write;
   }
 
   @override

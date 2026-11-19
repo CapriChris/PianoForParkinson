@@ -747,6 +747,14 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 72),
+                      if (c.patientName.isNotEmpty) ...[
+                        Text(
+                          c.text('姓名：', 'Name: ') + c.patientName,
+                          key: const ValueKey('home-patient-name'),
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 12),
+                      ],
                       Text(
                         c.text('今天，\n弹一小段旋律', 'A little melody\nfor today'),
                         style: Theme.of(context).textTheme.headlineMedium
