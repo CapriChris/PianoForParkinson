@@ -1,10 +1,14 @@
 # 琴伴 · Android 内部演示
 
-## 姓名编辑联调版 0.1.73（构建74）
+## Android 预发布 0.1.73（构建 74）
 
-账号、首页与训练页统一显示患者姓名，支持“我的账号 → 修改姓名”，与Web患者资料双向刷新；不更改用户/患者ID及历史归属，离线或冲突不会假报成功。[修改与测试](validation/patient-name-0.1.73.md)。
+新增应用内完整 APK 更新，支持检查版本、下载、校验和调用 Android 安装器。移除首页的姓名显示，可在「我的账号」修改姓名并与 Web 同步。[更新与构建说明](validation/release-0.1.73.md) · [GitHub Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.73) · [下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.73/qinban-0.1.73-android-universal.apk)
 
-[下载独立ARM64 QA包](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/PianoForParkinson-0.1.73-patient-name-QA-arm64.apk) · [SHA256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/SHA256SUMS.txt)。版本0.1.73+74，独立包名.validation，不覆盖正式App。908项Flutter测试通过，2项既有HTTPS测试跳过，analyze无问题；未进行真机验收。本轮不创建GitHub Release。
+## 此前的姓名编辑联调包 0.1.73（构建 74）
+
+此前的联调包增加了「我的账号 → 修改姓名」及 Web 患者资料双向刷新。[修改与测试](validation/patient-name-0.1.73.md)。
+
+[下载独立ARM64 QA包](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/PianoForParkinson-0.1.73-patient-name-QA-arm64.apk) · [SHA256](https://ccqspace.site/pd-rehab/assets/app-releases/0.1.73/SHA256SUMS.txt)。版本0.1.73+74，使用独立包名 `.validation`。该联调包通过908项Flutter测试，2项HTTPS测试跳过，静态分析通过。
 
 ## 最新公开正式安装包 0.1.72（构建 73）
 
