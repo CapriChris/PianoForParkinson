@@ -2,7 +2,7 @@
 
 ## Android 预发布 0.1.73（构建 74）
 
-新增应用内完整 APK 更新，支持检查版本、下载、校验和调用 Android 安装器。移除首页的姓名显示，可在「我的账号」修改姓名并与 Web 同步。[更新与构建说明](validation/release-0.1.73.md) · [GitHub Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.73) · [下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.73/qinban-0.1.73-android-universal.apk)
+新增应用内完整 APK 更新，支持检查版本、下载、校验和调用 Android 安装器。移除首页和正式练习页的姓名显示，可在「我的账号」修改姓名并与 Web 同步。[更新与构建说明](validation/release-0.1.73.md) · [GitHub Release](https://github.com/CapriChris/PianoForParkinson/releases/tag/v0.1.73) · [下载通用 APK](https://github.com/CapriChris/PianoForParkinson/releases/download/v0.1.73/qinban-0.1.73-android-universal.apk)
 
 ## 此前的姓名编辑联调包 0.1.73（构建 74）
 
