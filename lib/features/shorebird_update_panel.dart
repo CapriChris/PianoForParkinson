@@ -68,7 +68,10 @@ class _ShorebirdUpdatePanelState extends State<ShorebirdUpdatePanel> {
                   '暂时无法检查热更新，请稍后重试。',
                   'Update check unavailable. Please retry later.',
                 )
-              : text('当前已是最新可用版本。', 'You have the latest available version.'),
+              : text(
+                  '当前没有待下载的更新，可继续使用当前版本。',
+                  'No new patch was found at this check. You can keep using this version.',
+                ),
         );
       }
     } catch (_) {

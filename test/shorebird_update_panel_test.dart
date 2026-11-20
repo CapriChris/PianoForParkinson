@@ -121,7 +121,7 @@ void main() {
     );
     await tester.tap(find.text('检查热更新'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('最新可用版本'), findsOneWidget);
+    expect(find.textContaining('当前没有待下载的更新'), findsOneWidget);
     expect(updater.downloads, 0);
   });
   testWidgets('queued patch reports a cold start in English', (tester) async {
