@@ -26,9 +26,10 @@
 
 ## 发布和回滚边界
 
-本轮只执行 shorebird release android --artifact apk --flutter-version 3.47.7 --dry-run 构建校验。dry-run不等于已上传基础Release，候选APK也不等于已发布或已验收。没有向stable发布补丁，没有替换生产服务器下载，没有合并main。
+本轮先执行 Shorebird dry-run完整构建校验，通过后，为用户已连接的Pad联调登记了基础Release 0.1.74+75（源码2f793d0），并仅向staging通道发布Patch1（源码5e5984b）。补丁只是把无更新时的提示改为客观的“当前没有待下载的更新”，便于验证真实Dart补丁生效，不修改训练或数据逻辑。没有向stable发布补丁，没有更新Web生产下载清单，没有合并main。
 
-正式发布前：维护者协调合并并固定源码SHA；用同一签名、同一工具链创建实际Release；登记原始APK SHA256；先用staging/preview验证小幅Dart界面变更的下载与下次冷启动生效、离线/重试、会话/本机记录/同步保持、训练期间不强制重启，再批准stable。补丁针对明确基础版本，不能混用其他引擎、签名或构建产物。
+
+正式发布前：维护者协调合并并固定源码SHA；复核已登记基础Release及补丁与合并源码一致；原生或资源变化时创建新基础版本，不能覆盖重用旧基线；登记原始APK SHA256；先用staging/preview验证小幅Dart界面变更的下载与下次冷启动生效、离线/重试、会话/本机记录/同步保持、训练期间不强制重启，再批准stable。补丁针对明确基础版本，不能混用其他引擎、签名或构建产物。
 
 回退补丁需在Shorebird撤回目标补丁，设备联网检查后按官方机制在后续启动使用上一补丁/基础代码。对已写入本机数据的格式变更必须保证向后兼容；原生或内置资源升级仍走新APK。没有通过卸载、清库或生产回滚冒充验收。
 
@@ -40,7 +41,7 @@ Shorebird dry-run完整AAB/APK构建校验通过，实际APK包名与构建号�
 
 首轮问题已定位：开发命令需沿用昨日已登录的本机代理；Gradle JVM也需单独携带代理。旧generated plugin registrant曾混入integration_test，改用完整release依赖生成流程解决。隔离SDK命令行工具采用非标准嵌套目录，增加latest目录指向既有工具后，apkanalyzer校验通过；未绕过或删除构建校验。
 
-Pad OPD2506已连接；原正式包名此前未安装，既有.validation测试包保留。正在通过旧正式APK创建升级对照，安装授权需由设备持有人在Pad自行完成。随后才可登记用于设备联调的基础Release及staging补丁，不能将当前源码/构建通过等同于真机补丁已生效。
+Pad OPD2506已连接；原正式包名此前未安装，既有.validation测试包保留。正在通过旧正式APK创建升级对照，安装授权需由设备持有人在Pad自行完成。基础Release及staging补丁已登记完成；设备持有人授权后继续覆盖安装和数据对照，不能将当前源码/构建通过等同于真机补丁已生效。
 
 ## 官方依据
 
@@ -51,3 +52,11 @@ Pad OPD2506已连接；原正式包名此前未安装，既有.validation测试�
 [创建基础版本](https://docs.shorebird.dev/code-push/release/)
 
 [能力限制](https://docs.shorebird.dev/code-push/faq/)
+
+## 当前联调产物与边界
+
+实际Shorebird基础APK为109408720字节，SHA256为f615ddaf189105d43102e4db5a13fdad9b9528f74c4cdcb1c8afb930a4c20b38。原证书SHA256为69d255082293ffe1f72f35cea68e57ea4a0edf3917fe07b97de88b0f40a102ca；已同时核对队友0.1.73实包和新基础包证书相同。
+
+staging预览APK仅按官方preview原理调整基础AAB中的channel并用原证书重签；SHA256为52c5b802aa63d1cad5ddc2ac505f83435ef229c480c16c5b9620b8ab5ac05536，不作为正式分发包。没有用本机构建机默认debug证书替代原证书。
+
+Patch1针对同一基础版本，arm32/arm64/x86_64补丁各约23KB。源码只改提示文字；正式stable仍没有补丁。完整测试与部件测试是自动化证据，真实Pad覆盖安装、原记录保持及冷启动补丁生效仍需持有人完成系统安装密码确认后继续，不得提前宣布通过。
