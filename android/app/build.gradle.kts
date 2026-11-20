@@ -1,4 +1,5 @@
 import java.util.Base64
+import java.util.Properties
 
 plugins {
     id("com.android.application")
@@ -24,6 +25,23 @@ val arm64OnlyPackage = (project.findProperty("dart-defines") as? String)
     .orEmpty().split(",").filter { it.isNotEmpty() }.any {
         String(Base64.getDecoder().decode(it)) == "ARM64_ONLY=true"
     }
+
+// Keep the existing release identity. Never generate a replacement key or silently
+// fall back to Android Debug for a distributable release.
+val releaseKeyFile = rootProject.file(
+    providers.gradleProperty("pdReleaseKeyProperties").orElse("key.properties").get()
+)
+val releaseKeys = Properties().apply {
+    if (releaseKeyFile.isFile) releaseKeyFile.inputStream().use { load(it) }
+}
+val releaseKeyNames = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
+val hasReleaseKey = releaseKeyNames.all { !releaseKeys.getProperty(it).isNullOrBlank() }
+// Check resolved tasks too: aggregate assemble/build also schedule release tasks.
+gradle.taskGraph.whenReady {
+    if (allTasks.any { it.project == project && it.name.contains("release", ignoreCase = true) } && !hasReleaseKey) {
+        throw GradleException("Formal release signing is not configured. Supply the EXISTING approved key via android/key.properties; debug fallback is forbidden.")
+    }
+}
 
 android {
     namespace = "com.pianoforparkinson.piano_practice"
@@ -61,11 +79,19 @@ android {
         externalNativeBuild { cmake { arguments += "-DANDROID_STL=c++_shared" } }
     }
 
+    signingConfigs {
+        if (hasReleaseKey) {
+            create("approvedRelease") {
+                storeFile = rootProject.file(releaseKeys.getProperty("storeFile"))
+                storePassword = releaseKeys.getProperty("storePassword")
+                keyAlias = releaseKeys.getProperty("keyAlias")
+                keyPassword = releaseKeys.getProperty("keyPassword")
+            }
+        }
+    }
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKey) signingConfigs.getByName("approvedRelease") else null
         }
     }
 }

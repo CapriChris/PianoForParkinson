@@ -16,6 +16,7 @@ import '../features/language_picker.dart';
 import '../features/audio_volume_control.dart';
 import '../features/assistant_page.dart';
 import '../features/apk_update_page.dart';
+import '../features/shorebird_update_panel.dart';
 import '../integration/remote_pages.dart';
 import '../accounts/account_pages.dart';
 import '../features/text_size_control.dart';
@@ -3300,6 +3301,8 @@ class AboutPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 24),
+        ShorebirdUpdatePanel(chinese: c.chinese),
+        const SizedBox(height: 12),
         const ApkUpdateCheckButton(),
         QinSectionTitle(c.text('关于练习', 'About the practice')),
         Text(
