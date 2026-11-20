@@ -22,3 +22,10 @@ Web 修改在独立 Web 分支中，读取同一 latest-android.json，并使用
 - `test/accounts/live_account_integration_test.dart`：1 通过、0 跳过、0 失败。实际移动账号注册/登录、不同账号患者与目录隔离、越权绑定/员工患者列表 403、两条训练的计划进度、无重复上传、刷新恢复身份与绑定、退出撤销访问令牌、恢复码轮换/旧码拒绝、改密等断言通过。
 
 本地真实执行日志：`validation/codex-followup-live-sync.log`、`validation/codex-followup-live-account.log`。这两项是原全套默认跳过的 opt-in 测试，本次显式启用，不能将结果叠加成新的全套统计。使用合成记录及桌面 SQLite FFI，账号存储 fixture 为 MemoryVault；它们验证真实 HTTPS API 与同步/账号逻辑，不证明 Android Keystore、实际 APK 安装、真机训练/视频或生产验收。原全套结果仍为 911 通过、2 默认跳过；两项独立 opt-in 均通过。
+
+
+## 2026-11-20 推送前复核
+
+队友的远程feature/android-apk-updates现为98a122f，比本轮6f4c8cc基线新增5cbf055和98a122f。实际差异为README、练习页移除姓名和0.1.73预发布验证说明，没有修改接口、清单协议或签名。按协作要求不自动合入，本轮分支仍仅含审计文档；上述911项和两个HTTPS实测对应本轮基线，不能说已全量复测98a122f。
+
+GitHub v0.1.73现有候选APK，是明确标注的预发布（isPrerelease=true），大小102920214字节，公布SHA256为457eff09c8852865d4a719d2039d41b4369c0c1679128c4cdf227a34ca7a9d5c。队友记录真机覆盖安装仍待验证；没有把它替换成正式服务器下载，也没有更换签名。此更新纠正前面“初次核查仅见v0.1.72”的时间快照，不代表生产已发布。
