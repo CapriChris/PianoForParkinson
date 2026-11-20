@@ -29,3 +29,7 @@ Web 修改在独立 Web 分支中，读取同一 latest-android.json，并使用
 队友的远程feature/android-apk-updates现为98a122f，比本轮6f4c8cc基线新增5cbf055和98a122f。实际差异为README、练习页移除姓名和0.1.73预发布验证说明，没有修改接口、清单协议或签名。按协作要求不自动合入，本轮分支仍仅含审计文档；上述911项和两个HTTPS实测对应本轮基线，不能说已全量复测98a122f。
 
 GitHub v0.1.73现有候选APK，是明确标注的预发布（isPrerelease=true），大小102920214字节，公布SHA256为457eff09c8852865d4a719d2039d41b4369c0c1679128c4cdf227a34ca7a9d5c。队友记录真机覆盖安装仍待验证；没有把它替换成正式服务器下载，也没有更换签名。此更新纠正前面“初次核查仅见v0.1.72”的时间快照，不代表生产已发布。
+
+## 分支交付结果
+
+独立分支已推送，草稿 PR：https://github.com/CapriChris/PianoForParkinson/pull/1 ，目标分支为队友的 feature/android-apk-updates。Web 草稿 PR：https://github.com/WuChangqing1/PD-Rehab-Web/pull/2 。没有合并 main，没有部署生产；APK 下载地址与热更新按用户最新要求暂缓后续操作。
