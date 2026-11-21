@@ -1,4 +1,0 @@
-# Public project identifier; credentials stay outside the repository.
-app_id: c48c2f0d-2b04-41b4-b46d-12613bd92b13
-# Download patches at launch; apply only on the next process start.
-auto_update: true
