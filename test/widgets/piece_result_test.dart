@@ -9,11 +9,13 @@ import 'package:piano_practice/features/piano_performance_page.dart';
 import 'package:piano_practice/features/piano_pieces_page.dart';
 import 'package:piano_practice/features/piece_result_page.dart';
 import 'package:piano_practice/features/keyboard.dart';
+import 'package:piano_practice/features/waterfall_score.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
 
 import '../domain/piece_performance_test.dart' show completedRecord;
 import 'cognitive_pages_test.dart' show mocks;
-import 'piano_pieces_page_test.dart' show frames, remove;
+import 'piano_pieces_page_test.dart'
+    show frames, remove, confirmPerformanceStart;
 import 'rhythm_pages_test.dart' show MemoryPreferences;
 
 class PieceMemory extends MemoryPreferences {
@@ -55,6 +57,38 @@ Future<void> scrollTo(WidgetTester tester, Finder target, double delta) async {
 }
 
 void main() {
+  testWidgets(
+    'interruption at the final score boundary still saves completion',
+    (tester) async {
+      final repo = PieceMemory();
+      final clock = ManualClock();
+      final c = AppController(clock: clock, repository: repo);
+      addTearDown(c.dispose);
+      mocks(tester, const Size(800, 360), 'zh-Hans', 1, c);
+      await tester.runAsync(c.content.load);
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: qinTheme(highContrast: false),
+          home: PianoPerformancePage(
+            c: c,
+            piece: c.content.pieces.first,
+            tempo: 60,
+          ),
+        ),
+      );
+      await confirmPerformanceStart(tester);
+      final player = tester
+          .widget<WaterfallScore>(find.byType(WaterfallScore))
+          .player;
+      clock.now = 4000000 + player.totalUs + 1;
+      c.previewInterruptions.value++;
+      await frames(tester);
+      await tester.pumpAndSettle();
+      expect(find.byType(PieceResultPage), findsOneWidget);
+      expect(repo.saves, 1);
+      await remove(tester);
+    },
+  );
   testWidgets('performance automatically opens completion and saves once', (
     tester,
   ) async {
@@ -74,16 +108,26 @@ void main() {
         ),
       ),
     );
-    await frames(tester);
+    await confirmPerformanceStart(tester);
+    final player = tester
+        .widget<WaterfallScore>(find.byType(WaterfallScore))
+        .player;
     clock.now = 4000000;
     await tester.pump(const Duration(milliseconds: 16));
-    final key = tester.getRect(find.byType(PianoKeyboard)).center;
-    await tester.tapAt(key);
-    clock.now =
-        4000000 +
-        c.content.pieces.first.ticks *
-            1000000 ~/
-            c.content.pieces.first.ticksPerBeat;
+    final keyboard = tester.getRect(find.byType(PianoKeyboard));
+    final keyWidth =
+        (keyboard.width - (player.piece.keyCount - 1) * 8) /
+        player.piece.keyCount;
+    final key = player.piece.notes.first.key;
+    final gesture = await tester.startGesture(
+      Offset(
+        keyboard.left + key * (keyWidth + 8) + keyWidth / 2,
+        keyboard.center.dy,
+      ),
+    );
+    clock.now = 4000000 + player.noteEndUs(0);
+    await gesture.up();
+    clock.now = 4000000 + player.totalUs + 1;
     await frames(tester);
     await tester.pumpAndSettle();
     expect(find.byType(PieceResultPage), findsOneWidget);
@@ -155,14 +199,19 @@ void main() {
       expect(find.textContaining('先选速度'), findsNothing);
       expect(find.text('选择速度'), findsNothing);
       expect(find.textContaining('8 小节'), findsNothing);
-      await tester.tap(find.text('欢乐颂'));
-      await tester.pumpAndSettle();
-      final label = tester.getRect(
+
+      await scrollTo(
+        tester,
         find.byKey(const ValueKey('piece-tempo-label')),
+        120,
       );
-      final slider = tester.getRect(find.byKey(const ValueKey('piece-tempo')));
-      expect(label.right, lessThan(slider.left));
-      expect(label.center.dy, closeTo(slider.center.dy, 1));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('piece-tempo-label')), findsOneWidget);
+      await scrollTo(tester, find.byKey(const ValueKey('piece-tempo')), 120);
+      expect(
+        tester.widget<Slider>(find.byKey(const ValueKey('piece-tempo'))).value,
+        60,
+      );
       await remove(tester);
     },
   );

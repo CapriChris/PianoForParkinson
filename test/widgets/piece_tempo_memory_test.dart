@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piano_practice/app/app_controller.dart';
 import 'package:piano_practice/domain/contracts.dart';
+import 'package:piano_practice/domain/imported_piece.dart';
 import 'package:piano_practice/features/piano_pieces_page.dart';
 import 'package:piano_practice/features/piece_sheet_preview.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
@@ -22,6 +23,43 @@ class _FailingPreferences extends MemoryPreferences {
 }
 
 void main() {
+  testWidgets(
+    'import saves preserve unreadable entries and concurrent settings',
+    (tester) async {
+      final repository = MemoryPreferences();
+      final c = AppController(repository: repository);
+      mocks(tester, const Size(360, 800), 'zh-Hans', 1, c);
+      repository.profile['settings_json'] = canonical({
+        ...c.settings,
+        'imported_pieces': ['unreadable legacy entry'],
+      });
+      final hash = 'a' * 64;
+      final piece = ImportedPieceDraft({
+        'title': 'Saved melody',
+        'path': 'imports/$hash.mp3',
+        'sha256': hash,
+        'duration_ms': 1000,
+        'notes': [
+          {'midi': 60, 'start_ms': 0, 'end_ms': 900},
+        ],
+      }).build();
+      await Future.wait([
+        c.saveImportedPiece(piece),
+        c.savePieceTempo(piece.id, 30),
+      ]);
+      final saved = c.settings['imported_pieces'] as List;
+      expect(saved.first, 'unreadable legacy entry');
+      expect((saved.last as Map)['content_id'], piece.id);
+      expect(c.content.pieces.single.id, piece.id);
+      expect(c.pieceTempo(piece.id, 60), 30);
+      // Retrying a successful save replaces the same score instead of duplicating it.
+      await c.saveImportedPiece(piece);
+      expect((c.settings['imported_pieces'] as List).length, 2);
+      c.dispose();
+      await tester.pump();
+    },
+  );
+
   testWidgets('each piano piece remembers its selected tempo after reopening', (
     tester,
   ) async {
@@ -59,7 +97,7 @@ void main() {
       tester.widget<Slider>(find.byKey(const ValueKey('piece-tempo'))).value,
       first.tempo,
     );
-    await choose(80);
+    await choose(50);
     await showPiece(1);
     expect(
       tester.widget<Slider>(find.byKey(const ValueKey('piece-tempo'))).value,
@@ -69,12 +107,12 @@ void main() {
     await showPiece(0);
     expect(
       tester.widget<Slider>(find.byKey(const ValueKey('piece-tempo'))).value,
-      80,
+      50,
     );
-    expect((c.settings['piece_tempos'] as Map)[first.id], 80);
+    expect((c.settings['piece_tempos'] as Map)[first.id], 50);
     expect((c.settings['piece_tempos'] as Map)[second.id], 40);
     final reopened = AppController(repository: repository)..initialized = true;
-    expect(reopened.pieceTempo(first.id, first.tempo), 80);
+    expect(reopened.pieceTempo(first.id, first.tempo), 50);
     expect(reopened.pieceTempo(second.id, second.tempo), 40);
     expect(tester.takeException(), isNull);
     await tester.pumpWidget(const SizedBox());

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import '../app/app_controller.dart';
 import '../app/piano_app.dart';
 import '../domain/contracts.dart';
+import '../domain/piece_timing.dart';
 import '../domain/history.dart';
 import '../ui/qin_components.dart';
 import '../ui/qin_music_art.dart';
@@ -16,6 +17,7 @@ import '../ui/metric_visuals.dart';
 import 'assistant_page.dart';
 import 'piano_performance_page.dart';
 import 'piece_review_page.dart';
+import 'piece_press_details.dart';
 
 class PieceResultPage extends StatefulWidget {
   const PieceResultPage({
@@ -168,6 +170,9 @@ class _PieceResultPageState extends State<PieceResultPage> {
                               builder: (_) => PianoPerformancePage(
                                 c: c,
                                 piece: piece,
+                                practiceMode: r['practice_mode'] == 'beginner'
+                                    ? PiecePracticeMode.beginner
+                                    : PiecePracticeMode.continuous,
                                 tempo: r['tempo_bpm'] as int,
                               ),
                             ),
@@ -222,6 +227,14 @@ class _PieceResultPageState extends State<PieceResultPage> {
                 ),
                 const SizedBox(height: 16),
                 PieceResultMetrics(record: r, chinese: c.chinese),
+                if (r['judgement_version'] == 2) ...[
+                  const SizedBox(height: 12),
+                  PiecePressDetails(
+                    record: r,
+                    chinese: c.chinese,
+                    piece: piece ?? reviewScore(c, r),
+                  ),
+                ],
                 if (saved &&
                     widget.showAssistant &&
                     r['session_id'] is String) ...[
@@ -326,7 +339,9 @@ class PieceResultMetrics extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          chinese ? '匹配音符' : 'Matched notes',
+          record['judgement_version'] == 2
+              ? (chinese ? '完整成功音符' : 'Successful notes')
+              : (chinese ? '匹配音符' : 'Matched notes'),
           style: Theme.of(context).textTheme.titleSmall,
           textAlign: TextAlign.center,
         ),
@@ -341,7 +356,9 @@ class PieceResultMetrics extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          chinese ? '错键次数' : 'Wrong key presses',
+          record['judgement_version'] == 2
+              ? (chinese ? '未成功按键次数' : 'Failed key presses')
+              : (chinese ? '错键次数' : 'Wrong key presses'),
           style: Theme.of(context).textTheme.titleSmall,
           textAlign: TextAlign.center,
         ),

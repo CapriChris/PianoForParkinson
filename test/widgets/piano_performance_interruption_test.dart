@@ -4,7 +4,7 @@ import 'package:piano_practice/app/app_controller.dart';
 import 'package:piano_practice/domain/contracts.dart';
 import 'package:piano_practice/domain/scrolling_piece.dart';
 import 'package:piano_practice/features/piano_performance_page.dart';
-import 'package:piano_practice/features/scrolling_score.dart';
+import 'package:piano_practice/features/waterfall_score.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
 
 import '../domain/scrolling_piece_test.dart' show score;
@@ -26,8 +26,15 @@ void main() {
       for (var i = 0; i < 10; i++) {
         await tester.pump(const Duration(milliseconds: 50));
       }
+      await tester.tap(find.byKey(const ValueKey('confirm-performance-start')));
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+      }
+      for (var i = 0; i < 3; i++) {
+        await tester.pump(const Duration(seconds: 1));
+      }
       final player = tester
-          .widget<ScrollingScore>(find.byType(ScrollingScore))
+          .widget<WaterfallScore>(find.byType(WaterfallScore))
           .player;
       expect(player.mode, ScrollPieceMode.running);
       clock.now = 5000000;

@@ -17,6 +17,7 @@ class PieceReplayAudio {
     required int tempo,
     required List<Json> segments,
     required bool backing,
+    bool streamOriginal = false,
     List<int> releaseCuts = const [],
   }) async {
     final revision = ++_revision;
@@ -29,13 +30,20 @@ class PieceReplayAudio {
     final owner = uuid();
     _owner = owner;
     final track = piece.accompanimentFor(tempo);
+    final useTrack =
+        backing &&
+        track != null &&
+        (track['kind'] != 'local_mp3' || streamOriginal);
     await c.platform.call('preparePieceBacking', {
       'owner': owner,
       'tempo_bpm': tempo,
+      'source_tempo_bpm': track?['source_tempo_bpm'] ?? track?['tempo_bpm'],
+      'score_duration_us':
+          piece.ticks * 60000000 ~/ (tempo * piece.ticksPerBeat),
       'gain_permille': c.settings['gain_permille'],
       'replay_duration_us': durationUs,
-      'solo': !backing || track == null,
-      if (backing && track != null) ...{
+      'solo': !useTrack,
+      if (useTrack) ...{
         'path': track['path'],
         'sha256': track['sha256'],
         'sample_frames': track['sample_frames'],

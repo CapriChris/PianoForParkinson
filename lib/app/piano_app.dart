@@ -492,14 +492,18 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   int tab = 0;
-  String practiceCategory = 'all';
   bool openingRecommendation = false;
   AppController get c => widget.c;
   void showHome() => selectTab(0);
+  void refreshHome() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
     c.homeNavigationRequests.addListener(showHome);
+    c.addListener(refreshHome);
     WidgetsBinding.instance.addObserver(this);
     PlanReminders.instance.onOpen = () {
       if (mounted) selectTab(2);
@@ -525,6 +529,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.c != c) {
       oldWidget.c.homeNavigationRequests.removeListener(showHome);
+      oldWidget.c.removeListener(refreshHome);
+      c.addListener(refreshHome);
       c.homeNavigationRequests.addListener(showHome);
     }
   }
@@ -532,6 +538,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     c.homeNavigationRequests.removeListener(showHome);
+    c.removeListener(refreshHome);
     WidgetsBinding.instance.removeObserver(this);
     PlanReminders.instance.onOpen = null;
     super.dispose();
@@ -661,7 +668,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget danceEntry() => PracticeCard(
     icon: Icons.accessibility_new,
     artwork: '36-practice-dance.png',
-    title: c.text('舞蹈跟练', 'Dance practice'),
+    title: c.text('舞蹈教学', 'Dance lessons'),
     subtitle: c.text('跟随视频，按自己的节奏活动', 'Move with a video at your own pace'),
     onTap: () => Navigator.push(
       context,
@@ -671,7 +678,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Widget piecesEntry() => PracticeCard(
     icon: Icons.piano_outlined,
-    title: c.text('钢琴曲目', 'Piano pieces'),
+    title: c.text('弹奏训练', 'Piano training'),
     artwork: '13-open-score.png',
     subtitle: c.text('选择喜欢的乐曲弹奏', 'Choose a piece and start playing'),
     onTap: () => Navigator.push(
@@ -782,24 +789,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 24),
-                      recommendationCard(),
-                      const SizedBox(height: 12),
-                      QinOutlinedButton.icon(
-                        key: const ValueKey('home-other-practices'),
-                        onPressed: () => selectTab(1),
-                        icon: const Icon(Icons.tune),
-                        label: Text(c.text('其他训练', 'Other practices')),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: contrast
-                              ? context.qin.surface
-                              : const Color(0xfff2e5d3).withValues(alpha: .88),
-                          minimumSize: const Size.fromHeight(68),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       PracticeCard(
                         key: const ValueKey('home-assistant'),
                         icon: Icons.auto_awesome_outlined,
@@ -816,6 +805,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      recommendationCard(),
+                      const SizedBox(height: 16),
+                      QinOutlinedButton.icon(
+                        key: const ValueKey('home-other-practices'),
+                        onPressed: () => selectTab(1),
+                        icon: const Icon(Icons.tune),
+                        label: Text(c.text('更多训练', 'More training')),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: contrast
+                              ? context.qin.surface
+                              : const Color(0xfff2e5d3).withValues(alpha: .88),
+                          minimumSize: const Size.fromHeight(68),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ],
@@ -827,15 +835,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     },
   );
 
-  Widget practiceCategories() => QinCategoryBar(
-    keyPrefix: 'practice-category',
-    selected: practiceCategory,
-    onSelected: (value) => setState(() => practiceCategory = value),
-    entries: [
-      ('all', c.text('全部', 'All'), c.text('全部', 'All')),
-      ('piano', c.text('钢琴训练', 'Piano training'), c.text('钢琴', 'Piano')),
-      ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
-    ],
+  Widget specialEntry() => PracticeCard(
+    key: const ValueKey('special-practices'),
+    icon: Icons.auto_awesome_outlined,
+    title: c.text('特色练习', 'Special exercises'),
+    subtitle: c.text('探索旋律、节奏与双手协作', 'Explore melody, rhythm and coordination'),
+    artwork: '21-practice-intro.png',
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text(c.text('特色练习', 'Special exercises'))),
+          body: QinPageList(maxWidth: 1120, children: [directory()]),
+        ),
+      ),
+    ),
   );
 
   Widget directory() {
@@ -882,7 +896,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final width = (size.maxWidth - (columns - 1) * 16) / columns;
         return Wrap(
           spacing: 16,
-          runSpacing: 12,
+          runSpacing: 16,
           children: [
             for (final entry in entries)
               SizedBox(
@@ -1029,27 +1043,15 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                                         saveNotice(),
                                         const SizedBox(height: 16),
                                       ],
-                                      practiceCategories(),
+                                      if (!c.allIntroLessonsCompleted) ...[
+                                        lessonsEntry(),
+                                        const SizedBox(height: 16),
+                                      ],
+                                      piecesEntry(),
                                       const SizedBox(height: 16),
-                                      if (practiceCategory != 'dance') ...[
-                                        if (!c.allIntroLessonsCompleted) ...[
-                                          lessonsEntry(),
-                                          const SizedBox(height: 12),
-                                        ],
-                                        piecesEntry(),
-                                        const SizedBox(height: 12),
-                                      ],
-                                      if (practiceCategory != 'piano') ...[
-                                        danceEntry(),
-                                        const SizedBox(height: 12),
-                                      ],
-                                      if (practiceCategory != 'dance') ...[
-                                        directory(),
-                                        if (c.allIntroLessonsCompleted) ...[
-                                          const SizedBox(height: 12),
-                                          lessonsEntry(),
-                                        ],
-                                      ],
+                                      danceEntry(),
+                                      const SizedBox(height: 16),
+                                      specialEntry(),
                                     ],
                                   ),
                                 ),
@@ -1675,7 +1677,7 @@ class _HistoryListState extends State<HistoryList> {
     entries: [
       ('recent', c.text('全部', 'All'), c.text('全部', 'All')),
       ('exercises', c.text('钢琴练习', 'Piano exercises'), c.text('练习', 'Piano')),
-      ('pieces', c.text('钢琴曲目', 'Piano pieces'), c.text('曲目', 'Pieces')),
+      ('pieces', c.text('弹奏训练', 'Piano training'), c.text('曲目', 'Pieces')),
       ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
     ],
   );
@@ -2792,6 +2794,27 @@ class SettingsPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  if (c.allIntroLessonsCompleted) ...[
+                                    QinEntryCard(
+                                      icon: Icons.school_outlined,
+                                      title: c.text(
+                                        '入门教学',
+                                        'Introductory lessons',
+                                      ),
+                                      subtitle: c.text(
+                                        '回顾按键、音高和节拍',
+                                        'Review keys, pitch and beat',
+                                      ),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute<void>(
+                                          builder: (_) =>
+                                              IntroLessonsPage(c: c),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
                                   QinSectionTitle(
                                     c.text('语言与练习', 'Language and practice'),
                                   ),

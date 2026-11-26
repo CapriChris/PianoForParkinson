@@ -14,6 +14,9 @@ import '../ui/qin_theme.dart';
 import 'piece_playback_keys.dart';
 import 'piece_replay_audio.dart';
 import 'piece_continuous_score.dart';
+import 'waterfall_score.dart';
+import 'keyboard.dart';
+import '../domain/scrolling_piece.dart';
 
 /// A scrollable score with one native audio timeline for audition and seeking.
 class PieceSheetPreview extends StatefulWidget {
@@ -22,17 +25,19 @@ class PieceSheetPreview extends StatefulWidget {
     required this.c,
     required this.piece,
     required this.tempo,
+    this.waterfall = false,
   });
   final AppController c;
   final PianoPiece piece;
   final int tempo;
+  final bool waterfall;
   @override
   State<PieceSheetPreview> createState() => PieceSheetPreviewState();
 }
 
 class PieceSheetPreviewState extends State<PieceSheetPreview>
     with SingleTickerProviderStateMixin {
-  late final audio = PieceReplayAudio(widget.c, widget.piece);
+  late var audio = PieceReplayAudio(widget.c, widget.piece);
   late final Ticker ticker;
   final position = ValueNotifier<int>(0), selection = ValueNotifier<int>(-1);
   late final ValueNotifier<int> timeline;
@@ -113,6 +118,10 @@ class PieceSheetPreviewState extends State<PieceSheetPreview>
   void didUpdateWidget(covariant PieceSheetPreview oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.tempo != widget.tempo || oldWidget.piece != widget.piece) {
+      if (oldWidget.piece != widget.piece) {
+        audio.close();
+        audio = PieceReplayAudio(widget.c, widget.piece);
+      }
       interrupted();
       position.value = 0;
       selection.value = -1;
@@ -186,6 +195,7 @@ class PieceSheetPreviewState extends State<PieceSheetPreview>
           tempo: widget.tempo,
           segments: d.segments(false),
           backing: true,
+          streamOriginal: true,
         );
         if (!mounted || token != epoch) return;
         prepared = true;
@@ -340,64 +350,161 @@ class PieceSheetPreviewState extends State<PieceSheetPreview>
       padding: const EdgeInsets.all(12),
       child: Column(
         children: [
-          LayoutBuilder(
-            builder: (context, constraints) => SizedBox(
-              height: ContinuousScoreLayout(piece, constraints.maxWidth).height,
-              child: Stack(
-                children: [
-                  NotificationListener<ScrollNotification>(
-                    onNotification: onScoreNotification,
-                    child: SingleChildScrollView(
-                      key: const ValueKey('audition-score-scroll'),
-                      controller: scroll,
-                      scrollDirection: Axis.horizontal,
-                      child: SizedBox(
-                        width: ContinuousScoreLayout(
-                          piece,
-                          constraints.maxWidth,
-                        ).width,
-                        child: PieceContinuousScore(
-                          data: d,
-                          selection: selection,
-                          onNote: tapNote,
+          if (widget.waterfall)
+            ValueListenableBuilder<int>(
+              valueListenable: timeline,
+              builder: (context, at, _) {
+                final player =
+                    ScrollingPiecePlayer(
+                        piece,
+                        widget.c.clock,
+                        tempo: widget.tempo,
+                        training: true,
+                      )
+                      ..elapsedUs = at
+                      ..mode = playing
+                          ? ScrollPieceMode.running
+                          : ScrollPieceMode.paused;
+                final active = <int>{};
+                final demonstrated = <int>{};
+                for (var i = 0; i < piece.notes.length; i++) {
+                  if (playing &&
+                      !piece.notes[i].isRest &&
+                      at >= player.atTick(piece.notes[i].startTick) &&
+                      at < player.noteEndUs(i)) {
+                    active.add(piece.notes[i].key);
+                    demonstrated.add(i);
+                  }
+                }
+                return SizedBox(
+                  height: 176,
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        height: 76,
+                        child: WaterfallKeyBases(
+                          count: piece.keyCount,
+                          player: player,
+                          frames: timeline,
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        top: 0,
+                        height: 138,
+                        child: WaterfallScore(
+                          player: player,
+                          demonstratingNotes: demonstrated,
+                          frames: timeline,
                           chinese: widget.c.chinese,
-                          viewportWidth: constraints.maxWidth,
+                          keyOverlap: 38,
+                        ),
+                      ),
+                      Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: SizedBox(
+                          height: 76,
+                          child: IgnorePointer(
+                            child: PianoKeyboard(
+                              count: piece.keyCount,
+                              splitZones: false,
+                              externalKeyBases: true,
+                              active: const {},
+                              locked: true,
+                              demonstratingKeys: active,
+                              demonstrationPulse: demonstrated.isEmpty
+                                  ? null
+                                  : demonstrated.first,
+                              labels: [
+                                for (var i = 0; i < piece.keyCount; i++)
+                                  piece.keyLabel(i),
+                              ],
+                              noteDegrees: [
+                                for (var i = 0; i < piece.keyCount; i++)
+                                  piece.keyStep(i),
+                              ],
+                              showKeyMarks: false,
+                              feedbackParticles: false,
+                              onDown: (_, _, _, _) {},
+                              onUp: (_, _, _, _) {},
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            )
+          else
+            LayoutBuilder(
+              builder: (context, constraints) => SizedBox(
+                height: ContinuousScoreLayout(
+                  piece,
+                  constraints.maxWidth,
+                ).height,
+                child: Stack(
+                  children: [
+                    NotificationListener<ScrollNotification>(
+                      onNotification: onScoreNotification,
+                      child: SingleChildScrollView(
+                        key: const ValueKey('audition-score-scroll'),
+                        controller: scroll,
+                        scrollDirection: Axis.horizontal,
+                        child: SizedBox(
+                          width: ContinuousScoreLayout(
+                            piece,
+                            constraints.maxWidth,
+                          ).width,
+                          child: PieceContinuousScore(
+                            data: d,
+                            selection: selection,
+                            onNote: tapNote,
+                            chinese: widget.c.chinese,
+                            viewportWidth: constraints.maxWidth,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  Positioned.fill(
-                    child: FixedScoreGuide(
-                      piece: piece,
-                      tempo: widget.tempo,
-                      timeline: timeline,
-                      counting: playing || pausedLead < 0,
+                    Positioned.fill(
+                      child: FixedScoreGuide(
+                        piece: piece,
+                        tempo: widget.tempo,
+                        timeline: timeline,
+                        counting: playing || pausedLead < 0,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 8),
-          ValueListenableBuilder<int>(
-            valueListenable: position,
-            builder: (context, pos, _) {
-              final active = <int, Object>{};
-              if (solo && previewKey != null) {
-                active[previewKey!] = ('preview', pulse);
-              }
-              if (playing) {
-                for (final n in d.demoNotes()) {
-                  if (pos >= n['start_us'] &&
-                      pos < n['start_us'] + n['duration_us'] &&
-                      widget.c.clock.now >= anchor) {
-                    active[n['key'] as int] = ('note', n['start_us']);
+          if (!widget.waterfall)
+            ValueListenableBuilder<int>(
+              valueListenable: position,
+              builder: (context, pos, _) {
+                final active = <int, Object>{};
+                if (solo && previewKey != null) {
+                  active[previewKey!] = ('preview', pulse);
+                }
+                if (playing) {
+                  for (final n in d.demoNotes()) {
+                    if (pos >= n['start_us'] &&
+                        pos < n['start_us'] + n['duration_us'] &&
+                        widget.c.clock.now >= anchor) {
+                      active[n['key'] as int] = ('note', n['start_us']);
+                    }
                   }
                 }
-              }
-              return PiecePlaybackKeys(piece: piece, active: active);
-            },
-          ),
+                return PiecePlaybackKeys(piece: piece, active: active);
+              },
+            ),
           Padding(
             padding: const EdgeInsets.only(left: 60),
             child: ValueListenableBuilder<int>(

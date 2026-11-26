@@ -12,13 +12,15 @@ import '../app/app_controller.dart';
 import '../domain/piano_piece.dart';
 import '../domain/piece_performance.dart';
 import '../domain/scrolling_piece.dart';
+import '../domain/piece_timing.dart';
 import '../ui/text_scale.dart';
 import '../ui/qin_theme.dart';
 import 'keyboard.dart';
 import 'piece_audio.dart';
 import 'piece_backing_audio.dart';
 import 'piece_result_page.dart';
-import 'scrolling_score.dart';
+import 'waterfall_score.dart';
+import '../ui/qin_dialog.dart';
 
 class PianoPerformancePage extends StatefulWidget {
   const PianoPerformancePage({
@@ -27,11 +29,13 @@ class PianoPerformancePage extends StatefulWidget {
     required this.piece,
     required this.tempo,
     this.capture,
+    this.practiceMode = PiecePracticeMode.continuous,
   });
   final AppController c;
   final PianoPiece piece;
   final int tempo;
   final TrainingCapture? capture;
+  final PiecePracticeMode practiceMode;
   @override
   State<PianoPerformancePage> createState() => _PianoPerformancePageState();
 }
@@ -39,10 +43,21 @@ class PianoPerformancePage extends StatefulWidget {
 class _PianoPerformancePageState extends State<PianoPerformancePage>
     with SingleTickerProviderStateMixin {
   AppController get c => widget.c;
+  int get tempo => widget.tempo.clamp(30, widget.piece.tempo);
+  int? get highlightedKey {
+    final index = player.currentIndex;
+    if (index == null || player.elapsedUs >= player.noteEndUs(index)) {
+      return null;
+    }
+    return player.targetKey;
+  }
+
   late final player = ScrollingPiecePlayer(
     widget.piece,
     c.clock,
-    tempo: widget.tempo,
+    tempo: tempo,
+    training: true,
+    practiceMode: widget.practiceMode,
   );
   late final PieceAudio audio = PieceAudio(
     c,
@@ -60,7 +75,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
   DateTime? started;
   Animation<double>? routeAnimation;
   int epoch = 0;
-  int resumeBeatsRemaining = 0;
+  int resumeSecondsRemaining = 0;
   String? error;
   @override
   void initState() {
@@ -123,7 +138,41 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
         ModalRoute.of(context)?.animation?.status == AnimationStatus.forward) {
       return;
     }
-    unawaited(start());
+    autoStartAttempted = true;
+    unawaited(confirmStart());
+  }
+
+  Future<void> confirmStart() async {
+    final begin = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => QinDialog(
+        title: Text(c.text('准备好开始弹奏了吗？', 'Ready to play?')),
+        content: Text(
+          c.text(
+            '点击开始后倒数 3、2、1。长条落到琴键时按下，长条消失时松开。',
+            'Start with a 3, 2, 1 count-in. Press as a bar reaches its key and release when its tail disappears.',
+          ),
+        ),
+        actions: [
+          QinTextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(c.text('返回', 'Back')),
+          ),
+          QinFilledButton(
+            key: const ValueKey('confirm-performance-start'),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(c.text('开始', 'Start')),
+          ),
+        ],
+      ),
+    );
+    if (!mounted) return;
+    if (begin == true) {
+      await start();
+    } else {
+      Navigator.of(context).pop();
+    }
   }
 
   Future<void> start() async {
@@ -134,11 +183,18 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
     try {
       await audio.stop();
       if (!mounted || token != epoch) return;
-      await backing.prepare(widget.tempo);
+      await backing.prepare(tempo);
       if (!mounted || token != epoch) return;
       keyboardInterruptions.value++;
       autoStopped.clear();
-      player.start();
+      player.elapsedUs = -player.atTick(4 * widget.piece.ticksPerBeat);
+      for (var count = 3; count > 0; count--) {
+        setState(() => resumeSecondsRemaining = count);
+        await Future<void>.delayed(const Duration(seconds: 1));
+        if (!mounted || token != epoch) return;
+      }
+      resumeSecondsRemaining = 0;
+      player.start(leadBeats: 4);
       unawaited(widget.capture?.setRunning(true));
       await backing.start(player);
       if (!mounted || token != epoch) return;
@@ -157,13 +213,22 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
   void frame() {
     if (!mounted) return;
     final before = player.currentIndex, mode = player.mode;
+    final beforeHighlight = highlightedKey;
+    final beforeUs = player.elapsedUs;
+    final previousPointers = Map.of(player.pointers);
+    final wasWaiting = player.waitingForKey;
     player.tick();
+    for (final entry in previousPointers.entries) {
+      if (!player.pointers.containsKey(entry.key)) {
+        audio.note(entry.value.key, false, entry.key);
+      }
+    }
+    if (!wasWaiting && player.waitingForKey) keyboardInterruptions.value++;
     backing.sync(player);
     for (final p in player.pointers.entries) {
       final index = p.value.noteIndex;
       if (index != null &&
-          player.elapsedUs >=
-              player.atTick(widget.piece.notes[index].endTick) &&
+          player.elapsedUs >= player.noteEndUs(index) &&
           autoStopped.add(p.key)) {
         player.soundOff(p.key);
         audio.note(p.value.key, false, p.key);
@@ -173,9 +238,18 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       ticker.stop();
       keyboardInterruptions.value++;
       unawaited(finish());
+    } else if (player.waitingForKey && ticker.isActive) {
+      ticker.stop();
     }
     frames.value++;
-    if (before != player.currentIndex || mode != player.mode) setState(() {});
+    if (before != player.currentIndex ||
+        beforeHighlight != highlightedKey ||
+        mode != player.mode ||
+        wasWaiting != player.waitingForKey ||
+        (beforeUs < -PieceTiming.onsetToleranceUs &&
+            player.elapsedUs >= -PieceTiming.onsetToleranceUs)) {
+      setState(() {});
+    }
   }
 
   Future<void> finish() async {
@@ -203,10 +277,11 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
 
   void pause() {
     ++epoch;
-    resumeBeatsRemaining = 0;
+    resumeSecondsRemaining = 0;
+    if (player.mode == ScrollPieceMode.ready && !starting) return;
     if (player.mode == ScrollPieceMode.ready) {
       autoStartAttempted = true;
-      player.start();
+      player.start(leadBeats: 4);
     }
     player.pause();
     unawaited(widget.capture?.setRunning(false));
@@ -215,6 +290,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
     unawaited(audio.stop().catchError((_) {}));
     unawaited(backing.stop().catchError((_) {}));
     if (mounted && !disposed) setState(() {});
+    if (player.mode == ScrollPieceMode.complete) unawaited(finish());
   }
 
   Future<void> resume() async {
@@ -224,17 +300,15 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
     try {
       await audio.stop();
       if (!mounted || token != epoch) return;
-      await backing.prepare(widget.tempo);
+      await backing.prepare(tempo);
       if (!mounted || token != epoch) return;
       // Keep the score frozen while the user prepares to play again.
       for (var beat = 3; beat > 0; beat--) {
-        setState(() => resumeBeatsRemaining = beat);
-        await Future<void>.delayed(
-          Duration(microseconds: 60000000 ~/ widget.tempo),
-        );
+        setState(() => resumeSecondsRemaining = beat);
+        await Future<void>.delayed(const Duration(seconds: 1));
         if (!mounted || token != epoch) return;
       }
-      resumeBeatsRemaining = 0;
+      resumeSecondsRemaining = 0;
       player.resume();
       unawaited(widget.capture?.setRunning(true));
       await backing.start(player);
@@ -289,8 +363,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
     WidgetsBinding.instance.addPostFrameCallback((_) => maybeStart());
     final playing =
         player.mode == ScrollPieceMode.running &&
-        !player.leadingIn &&
-        player.targetKey != null &&
+        player.elapsedUs >= -PieceTiming.onsetToleranceUs &&
         !starting;
     return Scaffold(
       body: SafeArea(
@@ -340,27 +413,79 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(0, 8, 12, 12),
-                    child: Column(
+                    child: Stack(
                       children: [
-                        Expanded(
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
+                          height: keyboardHeight,
+                          child: WaterfallKeyBases(
+                            count: widget.piece.keyCount,
+                            player: player,
+                            frames: frames,
+                            showCues: resumeSecondsRemaining == 0,
+                          ),
+                        ),
+                        Positioned.fill(
+                          bottom: keyboardHeight / 2,
                           child: Stack(
                             children: [
                               Positioned.fill(
-                                child: ScrollingScore(
+                                child: WaterfallScore(
                                   player: player,
                                   frames: frames,
                                   chinese: c.chinese,
+                                  keyOverlap: keyboardHeight / 2,
+                                  showCues: resumeSecondsRemaining == 0,
                                 ),
                               ),
-                              if (resumeBeatsRemaining > 0)
+                              Positioned.fill(
+                                child: IgnorePointer(
+                                  child: ValueListenableBuilder<int>(
+                                    valueListenable: frames,
+                                    builder: (context, _, _) {
+                                      final text = player.waitingForKey
+                                          ? c.text(
+                                              '请按下亮起的琴键',
+                                              'Press the highlighted key',
+                                            )
+                                          : player.elapsedUs >=
+                                                    player.totalUs &&
+                                                player.pointers.isNotEmpty
+                                          ? c.text(
+                                              '请松开琴键以完成训练',
+                                              'Release the keys to finish',
+                                            )
+                                          : '';
+                                      if (text.isEmpty) {
+                                        return const SizedBox.shrink();
+                                      }
+                                      return Align(
+                                        alignment: Alignment.topCenter,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(8),
+                                          child: Text(
+                                            text,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .headlineMedium,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                              if (resumeSecondsRemaining > 0)
                                 Positioned.fill(
                                   child: Center(
                                     child: Semantics(
                                       liveRegion: true,
                                       child: Text(
                                         c.text(
-                                          '准备继续 · $resumeBeatsRemaining',
-                                          'Get ready · $resumeBeatsRemaining',
+                                          '准备继续 · $resumeSecondsRemaining',
+                                          'Get ready · $resumeSecondsRemaining',
                                         ),
                                         style: Theme.of(context)
                                             .textTheme
@@ -387,14 +512,18 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                             ],
                           ),
                         ),
-                        const SizedBox(height: 8),
-                        SizedBox(
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 0,
                           height: keyboardHeight,
                           child: PianoKeyboard(
                             count: widget.piece.keyCount,
                             splitZones: false,
+                            externalKeyBases: true,
                             labels: widget.piece.keyLabels,
                             showKeyMarks: false,
+                            feedbackParticles: false,
                             noteDegrees: [
                               for (var i = 0; i < widget.piece.keyCount; i++)
                                 widget.piece.keyStep(i) % 7,
@@ -402,7 +531,7 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                             active: {
                               for (var i = 0; i < widget.piece.keyCount; i++) i,
                             },
-                            highlighted: player.targetKey,
+                            highlighted: highlightedKey,
                             highlightWhileLocked: true,
                             locked: !playing,
                             textScale:
@@ -414,6 +543,10 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
                               if (!player.down(pointer, key)) return;
                               autoStopped.remove(pointer);
                               audio.note(key, true, pointer);
+                              backing.sync(player);
+                              if (!player.waitingForKey && !ticker.isActive) {
+                                ticker.start();
+                              }
                               frames.value++;
                               setState(() {});
                             },

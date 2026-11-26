@@ -23,20 +23,38 @@ class PieceBackingAudio {
   bool _ready = false, _closed = false, _started = false;
   bool _clockPolling = false;
   int _lastPoll = -1000000;
+  bool _waiting = false;
+  int _gateEpoch = 0;
+  Future<void> _gateTransition = Future.value();
 
   Future<void> prepare(int tempo) async {
     final revision = ++_revision;
-    _ready = _started = false;
+    _ready = _started = _waiting = false;
     final backing = piece.accompanimentFor(tempo);
-    if (_closed || !c.soundEnabled || !c.audioReady || backing == null) return;
+    if (_closed ||
+        !c.soundEnabled ||
+        !c.audioReady ||
+        (backing == null && !audition)) {
+      return;
+    }
     final owner = uuid();
     _owner = owner;
     await c.platform.call('preparePieceBacking', {
       'owner': owner,
-      'path': backing['path'],
-      'sha256': backing['sha256'],
-      'sample_frames': backing['sample_frames'],
+      if (backing != null) ...{
+        'path': backing['path'],
+        'sha256': backing['sha256'],
+        'sample_frames': backing['sample_frames'],
+        'source_tempo_bpm': backing['source_tempo_bpm'] ?? backing['tempo_bpm'],
+      },
       'tempo_bpm': tempo,
+      'score_duration_us':
+          piece.ticks * 60000000 ~/ (tempo * piece.ticksPerBeat),
+      if (backing == null) ...{
+        'solo': true,
+        'replay_duration_us':
+            piece.ticks * 60000000 ~/ (tempo * piece.ticksPerBeat),
+      },
       'gain_permille': c.settings['gain_permille'],
       if (audition)
         'melody': [
@@ -61,6 +79,10 @@ class PieceBackingAudio {
 
   Future<void> start(ScrollingPiecePlayer player) async {
     if (!_ready || _closed) return;
+    if (player.waitingForKey) {
+      _waiting = true;
+      return;
+    }
     final revision = _revision;
     final result = await c.platform.call('syncPieceBacking', {
       'owner': _owner,
@@ -76,19 +98,46 @@ class PieceBackingAudio {
   void sync(ScrollingPiecePlayer player) {
     if (_ready &&
         !_closed &&
+        player.mode == ScrollPieceMode.running &&
+        _waiting != player.waitingForKey) {
+      _waiting = player.waitingForKey;
+      ++_gateEpoch;
+      final waiting = _waiting;
+      final revision = _revision;
+      _started = false;
+      _gateTransition = _gateTransition
+          .catchError((Object _) {})
+          .then((_) async {
+            if (_closed || revision != _revision) return;
+            if (waiting) {
+              await c.platform.call('pausePieceBacking', {'owner': _owner});
+            } else {
+              await start(player);
+            }
+          })
+          .catchError((Object _) {
+            if (!_closed && revision == _revision) onError();
+          });
+    }
+    if (_ready &&
+        !_closed &&
         _started &&
         player.mode == ScrollPieceMode.running &&
+        !player.waitingForKey &&
         !_clockPolling &&
         c.clock.now - _lastPoll >= 80000) {
       _clockPolling = true;
       _lastPoll = c.clock.now;
       final revision = _revision;
       final sentAt = c.clock.now;
+      final gateEpoch = _gateEpoch;
       unawaited(
         c.platform
             .call('getPieceClock', {'owner': _owner})
             .then((data) {
-              if (revision != _revision || _closed) return;
+              if (revision != _revision || _closed || gateEpoch != _gateEpoch) {
+                return;
+              }
               if (data['accepted'] == false) {
                 throw StateError('Stale audio clock');
               }
