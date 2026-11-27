@@ -26,11 +26,13 @@ class PieceSheetPreview extends StatefulWidget {
     required this.piece,
     required this.tempo,
     this.waterfall = false,
+    this.guidePlayKey,
   });
   final AppController c;
   final PianoPiece piece;
   final int tempo;
   final bool waterfall;
+  final GlobalKey? guidePlayKey;
   @override
   State<PieceSheetPreview> createState() => PieceSheetPreviewState();
 }
@@ -533,31 +535,34 @@ class PieceSheetPreviewState extends State<PieceSheetPreview>
           ),
           Row(
             children: [
-              QinIconButton(
-                key: const ValueKey('piece-audition'),
-                tooltip: widget.c.text(
-                  playing ? '暂停试听' : '播放试听',
-                  playing ? 'Pause preview' : 'Play preview',
-                ),
-                onPressed: preparing ? null : play,
-                style: IconButton.styleFrom(
-                  shape: const CircleBorder(),
-                  backgroundColor: Colors.transparent,
-                ),
-                icon: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: context.qin.highContrast
-                        ? context.qin.primary
-                        : context.qin.soft,
+              KeyedSubtree(
+                key: widget.guidePlayKey,
+                child: QinIconButton(
+                  key: const ValueKey('piece-audition'),
+                  tooltip: widget.c.text(
+                    playing ? '暂停试听' : '播放试听',
+                    playing ? 'Pause preview' : 'Play preview',
                   ),
-                  child: Icon(
-                    playing ? Icons.pause : Icons.play_arrow,
-                    color: context.qin.highContrast
-                        ? context.qin.onPrimary
-                        : context.qin.primary,
+                  onPressed: preparing ? null : play,
+                  style: IconButton.styleFrom(
+                    shape: const CircleBorder(),
+                    backgroundColor: Colors.transparent,
+                  ),
+                  icon: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: context.qin.highContrast
+                          ? context.qin.primary
+                          : context.qin.soft,
+                    ),
+                    child: Icon(
+                      playing ? Icons.pause : Icons.play_arrow,
+                      color: context.qin.highContrast
+                          ? context.qin.onPrimary
+                          : context.qin.primary,
+                    ),
                   ),
                 ),
               ),

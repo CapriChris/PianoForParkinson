@@ -635,7 +635,9 @@ class QinNavigationBar extends StatelessWidget {
     required this.selected,
     required this.labels,
     required this.onSelected,
+    this.itemKeys,
   });
+  final List<GlobalKey>? itemKeys;
   final int selected;
   final List<String> labels;
   final ValueChanged<int> onSelected;
@@ -654,6 +656,7 @@ class QinNavigationBar extends StatelessWidget {
                 if (i > 0) const SizedBox(width: 8),
                 Expanded(
                   child: Semantics(
+                    key: itemKeys?[i],
                     role: SemanticsRole.tab,
                     onTap: () => onSelected(i),
                     selected: i == selected,

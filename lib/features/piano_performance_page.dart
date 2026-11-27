@@ -1,3 +1,4 @@
+import '../ui/spotlight_tour.dart';
 import '../integration/training_capture.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
@@ -42,6 +43,37 @@ class PianoPerformancePage extends StatefulWidget {
 
 class _PianoPerformancePageState extends State<PianoPerformancePage>
     with SingleTickerProviderStateMixin {
+  final guideFall = GlobalKey(), guideKeys = GlobalKey();
+  bool showGuide = false;
+  List<SpotlightStep> get guideSteps => [
+    SpotlightStep(
+      shape: SpotlightShape.none,
+      title: c.text('看提示符下落', 'Watch the falling cues'),
+      message: c.text(
+        '训练开始后，长条会从上方落向对应琴键。长条越长，需要按住的时间越久。',
+        'After training starts, bars fall towards their keys. Longer bars mean longer holds.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideKeys,
+      title: c.text('按下、按住、松开', 'Press, hold, release'),
+      message: c.text(
+        '长条到达琴键上边缘时按下对应琴键，保持按住，直到长条尾端到达时松开。正确按住会出现深色粒子。',
+        'Press the matching key as the bar reaches its top edge. Keep holding, then release as the tail arrives. Dark particles show a correct hold.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideKeys,
+      title: c.text('跟随自己的节奏', 'Practise at your own pace'),
+      message: c.text(
+        '入门模式会等你按对再继续。需要休息时点击左侧暂停，继续前会再次倒数三秒。完成引导后会先询问是否开始。',
+        'Beginner mode waits for the correct key. Pause on the left whenever needed; resuming has a three-second count-in. After this guide, confirm when you are ready to start.',
+      ),
+      advanceOnTap: false,
+    ),
+  ];
   AppController get c => widget.c;
   int get tempo => widget.tempo.clamp(30, widget.piece.tempo);
   int? get highlightedKey {
@@ -139,7 +171,12 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
       return;
     }
     autoStartAttempted = true;
-    unawaited(confirmStart());
+    if (c.settings['spotlight_guides_enabled'] == true &&
+        c.settings['spotlight_play_v1'] != true) {
+      setState(() => showGuide = true);
+    } else {
+      unawaited(confirmStart());
+    }
   }
 
   Future<void> confirmStart() async {
@@ -365,210 +402,222 @@ class _PianoPerformancePageState extends State<PianoPerformancePage>
         player.mode == ScrollPieceMode.running &&
         player.elapsedUs >= -PieceTiming.onsetToleranceUs &&
         !starting;
-    return Scaffold(
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, size) {
-            final keyboardHeight = (size.maxHeight * .44).clamp(90.0, 164.0);
-            return Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                SizedBox(
-                  width: 68,
-                  child: Column(
-                    children: [
-                      QinIconButton(
-                        key: const ValueKey('performance-back'),
-                        tooltip: c.text('返回', 'Back'),
-                        onPressed: () => Navigator.of(context).pop(),
-                        icon: const Icon(Icons.arrow_back),
-                      ),
-                      CaptureIndicator(capture: widget.capture),
-                      const Spacer(),
-                      if (player.mode == ScrollPieceMode.running ||
-                          player.mode == ScrollPieceMode.paused)
-                        QinIconButton(
-                          key: const ValueKey('performance-pause'),
-                          tooltip: c.text(
-                            player.mode == ScrollPieceMode.paused ? '继续' : '暂停',
-                            player.mode == ScrollPieceMode.paused
-                                ? 'Continue'
-                                : 'Pause',
-                          ),
-                          onPressed: starting
-                              ? null
-                              : player.mode == ScrollPieceMode.paused
-                              ? resume
-                              : pause,
-                          icon: Icon(
-                            player.mode == ScrollPieceMode.paused
-                                ? Icons.play_arrow
-                                : Icons.pause,
-                          ),
-                        ),
-                      const SizedBox(height: 8),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(0, 8, 12, 12),
-                    child: Stack(
+    return SpotlightTour(
+      c: c,
+      preferenceKey: 'spotlight_play_v1',
+      enabled: showGuide,
+      steps: guideSteps,
+      onFinish: confirmStart,
+      child: Scaffold(
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, size) {
+              final keyboardHeight = (size.maxHeight * .44).clamp(90.0, 164.0);
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SizedBox(
+                    width: 68,
+                    child: Column(
                       children: [
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: keyboardHeight,
-                          child: WaterfallKeyBases(
-                            count: widget.piece.keyCount,
-                            player: player,
-                            frames: frames,
-                            showCues: resumeSecondsRemaining == 0,
-                          ),
+                        QinIconButton(
+                          key: const ValueKey('performance-back'),
+                          tooltip: c.text('返回', 'Back'),
+                          onPressed: () => Navigator.of(context).pop(),
+                          icon: const Icon(Icons.arrow_back),
                         ),
-                        Positioned.fill(
-                          bottom: keyboardHeight / 2,
-                          child: Stack(
-                            children: [
-                              Positioned.fill(
-                                child: WaterfallScore(
-                                  player: player,
-                                  frames: frames,
-                                  chinese: c.chinese,
-                                  keyOverlap: keyboardHeight / 2,
-                                  showCues: resumeSecondsRemaining == 0,
-                                ),
-                              ),
-                              Positioned.fill(
-                                child: IgnorePointer(
-                                  child: ValueListenableBuilder<int>(
-                                    valueListenable: frames,
-                                    builder: (context, _, _) {
-                                      final text = player.waitingForKey
-                                          ? c.text(
-                                              '请按下亮起的琴键',
-                                              'Press the highlighted key',
-                                            )
-                                          : player.elapsedUs >=
-                                                    player.totalUs &&
-                                                player.pointers.isNotEmpty
-                                          ? c.text(
-                                              '请松开琴键以完成训练',
-                                              'Release the keys to finish',
-                                            )
-                                          : '';
-                                      if (text.isEmpty) {
-                                        return const SizedBox.shrink();
-                                      }
-                                      return Align(
-                                        alignment: Alignment.topCenter,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(8),
-                                          child: Text(
-                                            text,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .headlineMedium,
-                                          ),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                              if (resumeSecondsRemaining > 0)
-                                Positioned.fill(
-                                  child: Center(
-                                    child: Semantics(
-                                      liveRegion: true,
-                                      child: Text(
-                                        c.text(
-                                          '准备继续 · $resumeSecondsRemaining',
-                                          'Get ready · $resumeSecondsRemaining',
-                                        ),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .headlineMedium,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              if (error != null)
-                                Positioned.fill(
-                                  child: ColoredBox(
-                                    color: context.qin.background,
-                                    child: Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Text(
-                                          error!,
-                                          textAlign: TextAlign.center,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                            ],
+                        CaptureIndicator(capture: widget.capture),
+                        const Spacer(),
+                        if (player.mode == ScrollPieceMode.running ||
+                            player.mode == ScrollPieceMode.paused)
+                          QinIconButton(
+                            key: const ValueKey('performance-pause'),
+                            tooltip: c.text(
+                              player.mode == ScrollPieceMode.paused
+                                  ? '继续'
+                                  : '暂停',
+                              player.mode == ScrollPieceMode.paused
+                                  ? 'Continue'
+                                  : 'Pause',
+                            ),
+                            onPressed: starting
+                                ? null
+                                : player.mode == ScrollPieceMode.paused
+                                ? resume
+                                : pause,
+                            icon: Icon(
+                              player.mode == ScrollPieceMode.paused
+                                  ? Icons.play_arrow
+                                  : Icons.pause,
+                            ),
                           ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: keyboardHeight,
-                          child: PianoKeyboard(
-                            count: widget.piece.keyCount,
-                            splitZones: false,
-                            externalKeyBases: true,
-                            labels: widget.piece.keyLabels,
-                            showKeyMarks: false,
-                            feedbackParticles: false,
-                            noteDegrees: [
-                              for (var i = 0; i < widget.piece.keyCount; i++)
-                                widget.piece.keyStep(i) % 7,
-                            ],
-                            active: {
-                              for (var i = 0; i < widget.piece.keyCount; i++) i,
-                            },
-                            highlighted: highlightedKey,
-                            highlightWhileLocked: true,
-                            locked: !playing,
-                            textScale:
-                                (musicTextScalerOf(context).scale(1) * 1000)
-                                    .round(),
-                            interruptions: keyboardInterruptions,
-                            onDown: (pointer, key, disabled, coordinates) {
-                              if (key == null) return;
-                              if (!player.down(pointer, key)) return;
-                              autoStopped.remove(pointer);
-                              audio.note(key, true, pointer);
-                              backing.sync(player);
-                              if (!player.waitingForKey && !ticker.isActive) {
-                                ticker.start();
-                              }
-                              frames.value++;
-                              setState(() {});
-                            },
-                            onUp: (pointer, key, cancel, coordinates) {
-                              if (cancel) {
-                                pause();
-                                return;
-                              }
-                              player.up(pointer);
-                              audio.note(key ?? 0, false, pointer);
-                              autoStopped.remove(pointer);
-                              frames.value++;
-                            },
-                          ),
-                        ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 12, 12),
+                      child: Stack(
+                        children: [
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: keyboardHeight,
+                            child: WaterfallKeyBases(
+                              count: widget.piece.keyCount,
+                              player: player,
+                              frames: frames,
+                              showCues: resumeSecondsRemaining == 0,
+                            ),
+                          ),
+                          Positioned.fill(
+                            bottom: keyboardHeight / 2,
+                            child: Stack(
+                              children: [
+                                Positioned.fill(
+                                  child: WaterfallScore(
+                                    key: guideFall,
+                                    player: player,
+                                    frames: frames,
+                                    chinese: c.chinese,
+                                    keyOverlap: keyboardHeight / 2,
+                                    showCues: resumeSecondsRemaining == 0,
+                                  ),
+                                ),
+                                Positioned.fill(
+                                  child: IgnorePointer(
+                                    child: ValueListenableBuilder<int>(
+                                      valueListenable: frames,
+                                      builder: (context, _, _) {
+                                        final text = player.waitingForKey
+                                            ? c.text(
+                                                '请按下亮起的琴键',
+                                                'Press the highlighted key',
+                                              )
+                                            : player.elapsedUs >=
+                                                      player.totalUs &&
+                                                  player.pointers.isNotEmpty
+                                            ? c.text(
+                                                '请松开琴键以完成训练',
+                                                'Release the keys to finish',
+                                              )
+                                            : '';
+                                        if (text.isEmpty) {
+                                          return const SizedBox.shrink();
+                                        }
+                                        return Align(
+                                          alignment: Alignment.topCenter,
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(8),
+                                            child: Text(
+                                              text,
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .headlineMedium,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                                if (resumeSecondsRemaining > 0)
+                                  Positioned.fill(
+                                    child: Center(
+                                      child: Semantics(
+                                        liveRegion: true,
+                                        child: Text(
+                                          c.text(
+                                            '准备继续 · $resumeSecondsRemaining',
+                                            'Get ready · $resumeSecondsRemaining',
+                                          ),
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .headlineMedium,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                if (error != null)
+                                  Positioned.fill(
+                                    child: ColoredBox(
+                                      color: context.qin.background,
+                                      child: Center(
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16),
+                                          child: Text(
+                                            error!,
+                                            textAlign: TextAlign.center,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            height: keyboardHeight,
+                            child: PianoKeyboard(
+                              key: guideKeys,
+                              count: widget.piece.keyCount,
+                              splitZones: false,
+                              externalKeyBases: true,
+                              labels: widget.piece.keyLabels,
+                              showKeyMarks: false,
+                              feedbackParticles: false,
+                              noteDegrees: [
+                                for (var i = 0; i < widget.piece.keyCount; i++)
+                                  widget.piece.keyStep(i) % 7,
+                              ],
+                              active: {
+                                for (var i = 0; i < widget.piece.keyCount; i++)
+                                  i,
+                              },
+                              highlighted: highlightedKey,
+                              highlightWhileLocked: true,
+                              locked: !playing,
+                              textScale:
+                                  (musicTextScalerOf(context).scale(1) * 1000)
+                                      .round(),
+                              interruptions: keyboardInterruptions,
+                              onDown: (pointer, key, disabled, coordinates) {
+                                if (key == null) return;
+                                if (!player.down(pointer, key)) return;
+                                autoStopped.remove(pointer);
+                                audio.note(key, true, pointer);
+                                backing.sync(player);
+                                if (!player.waitingForKey && !ticker.isActive) {
+                                  ticker.start();
+                                }
+                                frames.value++;
+                                setState(() {});
+                              },
+                              onUp: (pointer, key, cancel, coordinates) {
+                                if (cancel) {
+                                  pause();
+                                  return;
+                                }
+                                player.up(pointer);
+                                audio.note(key ?? 0, false, pointer);
+                                autoStopped.remove(pointer);
+                                frames.value++;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import '../ui/spotlight_tour.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
@@ -38,6 +39,72 @@ class PianoPiecePage extends StatefulWidget {
 }
 
 class _PianoPiecePageState extends State<PianoPiecePage> {
+  final guideSong = GlobalKey(),
+      guideMode = GlobalKey(),
+      guideTempo = GlobalKey(),
+      guideCapture = GlobalKey(),
+      guideStart = GlobalKey();
+  List<SpotlightStep> get guideSteps => [
+    SpotlightStep(
+      target: guideSong,
+      title: c.text('选择曲目', 'Choose a piece'),
+      message: c.text(
+        '点击箭头打开曲目抽屉，可以选曲，也可以导入 MP3。',
+        'Open the song drawer to choose a piece or import an MP3.',
+      ),
+    ),
+    SpotlightStep(
+      target: guideMode,
+      shape: SpotlightShape.roundedRectangle,
+      borderRadius: 32,
+      title: c.text('选择模式', 'Choose a mode'),
+      message: c.text(
+        '入门练习会等你按对后再继续；正常训练会按节奏持续播放。',
+        'Beginner mode waits for the correct key. Normal mode keeps the rhythm moving.',
+      ),
+    ),
+    SpotlightStep(
+      target: guideTempo,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('调整速度', 'Set the tempo'),
+      message: c.text(
+        '拖动滑轨调整速度，靠近整十会吸附。左右按钮每次微调一拍，初次可以从慢速开始。',
+        'Drag to change tempo, with snapping near tens. The buttons adjust one BPM at a time. Start slowly.',
+      ),
+    ),
+    SpotlightStep(
+      target: previewKey,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('先看一次示范', 'Watch a preview'),
+      message: c.text(
+        '点击播放，看提示符落到琴键，以及正确按住、松开的演示。预览琴键不用手动按。',
+        'Play the preview to watch falling cues and the correct hold and release. The preview keys are automatic.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideCapture,
+      shape: SpotlightShape.roundedRectangle,
+      prepare: () async {
+        await previewKey.currentState?.stop();
+      },
+      title: c.text('可选面部采集', 'Optional face capture'),
+      message: c.text(
+        '面部采集是可选项。开启前会单独请求授权，可以保持关闭进行训练。',
+        'Face capture is optional and asks for separate permission. You can practise with it switched off.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideStart,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('准备开始', 'Ready to practise'),
+      message: c.text(
+        '点击开始后确认，倒数三秒。提示符随后提前下落，准备好再跟随节奏按键。',
+        'Start, confirm, and count down from three. Cues then approach the keys before the music begins.',
+      ),
+    ),
+  ];
   AppController get c => widget.c;
   late PianoPiece piece = widget.piece;
   late int tempo = c.pieceTempo(piece.id, piece.tempo).clamp(30, piece.tempo);
@@ -155,6 +222,7 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
                       alignment: Alignment.centerRight,
                       child: Icon(
                         Icons.expand_more,
+                        key: guideSong,
                         color: context.qin.primary,
                       ),
                     ),
@@ -288,136 +356,154 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
   @override
   Widget build(BuildContext context) {
     final enabled = !busy && (c.audioReady || !c.soundEnabled);
-    return Scaffold(
-      appBar: AppBar(
-        leading: Navigator.canPop(context) ? const QinBackButton() : null,
-        title: PageTitle(c.text('弹奏训练', 'Piano training')),
-      ),
-      body: QinActionPage(
-        actions: [
-          QinFilledButton.icon(
-            key: const ValueKey('enter-performance'),
-            onPressed: enabled ? perform : null,
-            icon: const Icon(Icons.play_arrow),
-            label: Text(c.text('开始训练', 'Start training')),
-          ),
-        ],
-        children: [
-          section(c.text('选择曲目', 'Choose a piece'), [
-            songCard(piece, busy ? null : choosePiece, selected: true),
-          ]),
-          section(c.text('训练配置', 'Training settings'), [
-            Text(
-              c.text('训练模式', 'Practice mode'),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<PiecePracticeMode>(
-              segments: [
-                ButtonSegment(
-                  value: PiecePracticeMode.beginner,
-                  label: Text(c.text('入门练习', 'Beginner')),
-                ),
-                ButtonSegment(
-                  value: PiecePracticeMode.continuous,
-                  label: Text(c.text('正常训练', 'Normal')),
-                ),
-              ],
-              selected: {practiceMode},
-              onSelectionChanged: busy
-                  ? null
-                  : (value) => setState(() => practiceMode = value.single),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              practiceMode == PiecePracticeMode.beginner
-                  ? c.text(
-                      '音符到达时等待你按对琴键，再继续前进。',
-                      'Notes wait for the correct key before moving on.',
-                    )
-                  : c.text(
-                      '音乐持续播放，跟随节奏完成弹奏。',
-                      'Follow the rhythm while the music plays continuously.',
-                    ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              c.text('训练速度', 'Practice tempo'),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            Text(
-              c.text('$tempo 拍/分钟', '$tempo BPM'),
-              key: const ValueKey('piece-tempo-label'),
-            ),
-            Row(
-              children: [
-                QinIconButton(
-                  key: const ValueKey('tempo-minus'),
-                  tooltip: c.text('减慢 1 拍/分钟', 'Decrease by 1 BPM'),
-                  onPressed: busy || tempo <= 30 ? null : () => stepTempo(-1),
-                  icon: const Icon(Icons.remove_circle_outline),
-                ),
-                Expanded(
-                  child: Slider(
-                    key: const ValueKey('piece-tempo'),
-                    semanticFormatterCallback: (value) =>
-                        c.text('${value.round()} 拍/分钟', '${value.round()} BPM'),
-                    value: tempo.toDouble(),
-                    min: 30,
-                    max: piece.tempo.toDouble(),
-                    divisions: piece.tempo > 30 ? piece.tempo - 30 : null,
-                    onChanged: busy
-                        ? null
-                        : (value) => setState(
-                            () => tempo = PieceTiming.snapTempo(
-                              value,
-                              piece.tempo,
-                            ),
-                          ),
-                    onChangeEnd: busy
-                        ? null
-                        : (value) => rememberTempo(
-                            PieceTiming.snapTempo(value, piece.tempo),
-                          ),
-                  ),
-                ),
-                QinIconButton(
-                  key: const ValueKey('tempo-plus'),
-                  tooltip: c.text('加快 1 拍/分钟', 'Increase by 1 BPM'),
-                  onPressed: busy || tempo >= piece.tempo
-                      ? null
-                      : () => stepTempo(1),
-                  icon: const Icon(Icons.add_circle_outline),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              c.text('训练预览', 'Training preview'),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const SizedBox(height: 12),
-            PieceSheetPreview(
-              key: previewKey,
-              c: c,
-              piece: piece,
-              tempo: tempo,
-              waterfall: true,
-            ),
-          ]),
-          section(c.text('面部采集授权', 'Face capture permission'), [
-            CapturePreparation(key: captureKey, c: c),
-          ]),
-          if (!c.audioReady && c.soundEnabled) ...[
-            const SizedBox(height: 16),
-            Text(
-              c.text(
-                '琴音尚未准备好，请返回重试。',
-                'Piano audio is not ready. Go back and retry.',
+    return SpotlightTour(
+      c: c,
+      preferenceKey: 'spotlight_piano_v1',
+      steps: guideSteps,
+      onFinish: () async {
+        await previewKey.currentState?.stop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: Navigator.canPop(context) ? const QinBackButton() : null,
+          title: PageTitle(c.text('弹奏训练', 'Piano training')),
+        ),
+        body: QinActionPage(
+          actions: [
+            KeyedSubtree(
+              key: guideStart,
+              child: QinFilledButton.icon(
+                key: const ValueKey('enter-performance'),
+                onPressed: enabled ? perform : null,
+                icon: const Icon(Icons.play_arrow),
+                label: Text(c.text('开始训练', 'Start training')),
               ),
             ),
           ],
-        ],
+          children: [
+            section(c.text('选择曲目', 'Choose a piece'), [
+              songCard(piece, busy ? null : choosePiece, selected: true),
+            ]),
+            section(c.text('训练配置', 'Training settings'), [
+              Text(
+                c.text('训练模式', 'Practice mode'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<PiecePracticeMode>(
+                key: guideMode,
+                segments: [
+                  ButtonSegment(
+                    value: PiecePracticeMode.beginner,
+                    label: Text(c.text('入门练习', 'Beginner')),
+                  ),
+                  ButtonSegment(
+                    value: PiecePracticeMode.continuous,
+                    label: Text(c.text('正常训练', 'Normal')),
+                  ),
+                ],
+                selected: {practiceMode},
+                onSelectionChanged: busy
+                    ? null
+                    : (value) => setState(() => practiceMode = value.single),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                practiceMode == PiecePracticeMode.beginner
+                    ? c.text(
+                        '音符到达时等待你按对琴键，再继续前进。',
+                        'Notes wait for the correct key before moving on.',
+                      )
+                    : c.text(
+                        '音乐持续播放，跟随节奏完成弹奏。',
+                        'Follow the rhythm while the music plays continuously.',
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                c.text('训练速度', 'Practice tempo'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(
+                c.text('$tempo 拍/分钟', '$tempo BPM'),
+                key: const ValueKey('piece-tempo-label'),
+              ),
+              Row(
+                key: guideTempo,
+                children: [
+                  QinIconButton(
+                    key: const ValueKey('tempo-minus'),
+                    tooltip: c.text('减慢 1 拍/分钟', 'Decrease by 1 BPM'),
+                    onPressed: busy || tempo <= 30 ? null : () => stepTempo(-1),
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                  Expanded(
+                    child: Slider(
+                      key: const ValueKey('piece-tempo'),
+                      semanticFormatterCallback: (value) => c.text(
+                        '${value.round()} 拍/分钟',
+                        '${value.round()} BPM',
+                      ),
+                      value: tempo.toDouble(),
+                      min: 30,
+                      max: piece.tempo.toDouble(),
+                      divisions: piece.tempo > 30 ? piece.tempo - 30 : null,
+                      onChanged: busy
+                          ? null
+                          : (value) => setState(
+                              () => tempo = PieceTiming.snapTempo(
+                                value,
+                                piece.tempo,
+                              ),
+                            ),
+                      onChangeEnd: busy
+                          ? null
+                          : (value) => rememberTempo(
+                              PieceTiming.snapTempo(value, piece.tempo),
+                            ),
+                    ),
+                  ),
+                  QinIconButton(
+                    key: const ValueKey('tempo-plus'),
+                    tooltip: c.text('加快 1 拍/分钟', 'Increase by 1 BPM'),
+                    onPressed: busy || tempo >= piece.tempo
+                        ? null
+                        : () => stepTempo(1),
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                c.text('训练预览', 'Training preview'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 12),
+              PieceSheetPreview(
+                key: previewKey,
+                c: c,
+                piece: piece,
+                tempo: tempo,
+                waterfall: true,
+              ),
+            ]),
+            section(c.text('面部采集授权', 'Face capture permission'), [
+              KeyedSubtree(
+                key: guideCapture,
+                child: CapturePreparation(key: captureKey, c: c),
+              ),
+            ]),
+            if (!c.audioReady && c.soundEnabled) ...[
+              const SizedBox(height: 16),
+              Text(
+                c.text(
+                  '琴音尚未准备好，请返回重试。',
+                  'Piano audio is not ready. Go back and retry.',
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
