@@ -1,5 +1,6 @@
 import 'contracts.dart';
 import 'piano_piece.dart';
+import 'piece_timing.dart';
 
 /// Actual input intervals plus pause spans; independent of score matching.
 class PieceTraceRecorder {
@@ -35,7 +36,7 @@ class PieceTraceRecorder {
   }
 
   int position(int scoreUs) {
-    lastScore = scoreUs.clamp(lastScore, 3600000000);
+    lastScore = scoreUs.clamp(lastScore, 86400000000);
     return lastScore;
   }
 
@@ -217,7 +218,12 @@ class PieceReviewData {
         {
           'key': n.key,
           'start_us': tickUs(n.startTick),
-          'duration_us': tickUs(n.endTick) - tickUs(n.startTick),
+          'duration_us':
+              tickUs(n.endTick) -
+              tickUs(n.startTick) -
+              (record['judgement_version'] == PieceTiming.version
+                  ? PieceTiming.gapUs(record['tempo_bpm'] as int)
+                  : 0),
         },
   ];
 }

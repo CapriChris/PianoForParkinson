@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'contracts.dart';
 import 'scrolling_piece.dart';
 import 'piano_piece.dart';
+import 'piece_timing.dart';
 
 class PiecePerformance {
   static Json completed(ScrollingPiecePlayer player, DateTime started) {
@@ -33,6 +34,13 @@ class PiecePerformance {
       'wrong_presses': player.wrongPresses,
       'score_snapshot': jsonDecode(canonical(piece.data)),
       'performance_trace': player.trace.complete(player.totalUs),
+      if (player.training) ...{
+        'judgement_version': PieceTiming.version,
+        'practice_mode': player.practiceMode.name,
+        'onset_tolerance_us': PieceTiming.onsetToleranceUs,
+        'release_tolerance_us': PieceTiming.releaseToleranceUs,
+        'note_gap_us': PieceTiming.gapUs(player.tempo),
+      },
     };
   }
 
@@ -61,20 +69,44 @@ class PiecePerformance {
     ]) {
       require(record[field] is int);
     }
-    require([40, 50, 60, 70, 80].contains(record['tempo_bpm']));
+    final precise = record['judgement_version'] == PieceTiming.version;
+    require(!record.containsKey('judgement_version') || precise);
+    if (precise) {
+      require(
+        record['score_snapshot'] is Map && record['performance_trace'] is Map,
+      );
+    }
+    require(
+      precise
+          ? record['tempo_bpm'] >= 30 && record['tempo_bpm'] <= 240
+          : [40, 50, 60, 70, 80].contains(record['tempo_bpm']),
+    );
+    if (precise) {
+      require(
+        PiecePracticeMode.values.any(
+          (mode) => mode.name == record['practice_mode'],
+        ),
+      );
+      require(
+        record['onset_tolerance_us'] == PieceTiming.onsetToleranceUs &&
+            record['release_tolerance_us'] == PieceTiming.releaseToleranceUs &&
+            record['note_gap_us'] ==
+                PieceTiming.gapUs(record['tempo_bpm'] as int),
+      );
+    }
     require(
       record['started_utc_ms'] >= 0 &&
           record['ended_utc_ms'] >= record['started_utc_ms'],
     );
     require((record['session_utc_offset_minutes'] as int).abs() <= 840);
-    require(record['total_notes'] > 0 && record['total_notes'] <= 512);
+    require(record['total_notes'] > 0 && record['total_notes'] <= 4096);
     final eventCount = record['total_events'] ?? record['total_notes'];
     final beatsPerBar = record['beats_per_bar'] ?? 4;
     final pickup = record['pickup_ticks'] ?? 0;
     require(
       eventCount is int &&
           eventCount >= record['total_notes'] &&
-          eventCount <= 512,
+          eventCount <= 4096,
     );
     require([3, 4].contains(beatsPerBar));
     final resolution = record['ticks_per_beat'] ?? 2;
@@ -83,7 +115,7 @@ class PiecePerformance {
     require(pickup is int && pickup >= 0 && pickup < barTicks);
     require(
       record['total_ticks'] >= eventCount &&
-          record['total_ticks'] <= eventCount * resolution * 16 &&
+          record['total_ticks'] <= eventCount * resolution * 2400 &&
           (record['total_ticks'] % barTicks == 0 ||
               (record['total_ticks'] - pickup) % barTicks == 0),
     );
@@ -118,6 +150,7 @@ class PiecePerformance {
         piece.noteCount == record['total_notes'] &&
             piece.ticks == record['total_ticks'],
       );
+      if (precise) require(record['tempo_bpm'] <= piece.tempo);
       final trace = record['performance_trace'] as Map;
       require(trace['version'] == 1 && trace['truncated'] is bool);
       require(
@@ -132,6 +165,7 @@ class PiecePerformance {
         trace['pauses'] is List && (trace['pauses'] as List).length <= 1024,
       );
       var previousStart = 0, previousWall = 0;
+      final successful = <int>{};
       for (final n in trace['notes'] as List) {
         require(n is Map);
         for (final field in [
@@ -150,7 +184,8 @@ class PiecePerformance {
           n['start_us'] >= previousStart &&
               n['start_us'] <= n['end_us'] &&
               n['end_us'] <= n['touch_end_us'] &&
-              n['touch_end_us'] <= record['duration_us'],
+              n['touch_end_us'] <=
+                  (precise ? trace['duration_us'] : record['duration_us']),
         );
         require(
           n['wall_start_us'] >= previousWall &&
@@ -164,8 +199,55 @@ class PiecePerformance {
                   n['matched_note'] >= 0 &&
                   n['matched_note'] < piece.noteCount,
         );
+        if (precise) {
+          require(
+            n['success'] is bool &&
+                n['judgement'] is String &&
+                n['hold_duration_us'] is int &&
+                n['hold_duration_us'] >= 0 &&
+                n['waiting_us'] is int &&
+                n['waiting_us'] >= 0,
+          );
+          require(n['onset_offset_us'] == null || n['onset_offset_us'] is int);
+          require(
+            n['release_offset_us'] == null || n['release_offset_us'] is int,
+          );
+          require(
+            const {
+              'success',
+              'early_release',
+              'late_release',
+              'interrupted',
+              'wrong_key_or_timing',
+            }.contains(n['judgement']),
+          );
+          require(n['success'] == (n['judgement'] == 'success'));
+          require(
+            n['expected_note'] == null ||
+                n['expected_note'] is int &&
+                    n['expected_note'] >= 0 &&
+                    n['expected_note'] < piece.notes.length,
+          );
+          if (n['success'] == true) {
+            require(
+              n['judgement'] == 'success' &&
+                  n['matched_note'] is int &&
+                  (n['onset_offset_us'] as int).abs() <=
+                      PieceTiming.onsetToleranceUs &&
+                  (n['release_offset_us'] as int).abs() <=
+                      PieceTiming.releaseToleranceUs,
+            );
+            require(successful.add(n['matched_note'] as int));
+          }
+        }
         previousStart = n['start_us'];
         previousWall = n['wall_start_us'];
+      }
+      if (precise) {
+        require(
+          successful.length == matched.length &&
+              successful.containsAll(matched),
+        );
       }
       var pauseEnd = 0, pauseScore = 0;
       for (final p in trace['pauses'] as List) {
@@ -176,7 +258,9 @@ class PiecePerformance {
               p['end_us'] is int,
         );
         require(
-          p['score_us'] >= pauseScore && p['score_us'] <= record['duration_us'],
+          p['score_us'] >= pauseScore &&
+              p['score_us'] <=
+                  (precise ? trace['duration_us'] : record['duration_us']),
         );
         require(
           p['start_us'] >= pauseEnd &&

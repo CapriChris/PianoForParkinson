@@ -419,7 +419,7 @@ void main() {
   );
 
   testWidgets(
-    'completing all lessons removes task links, keeps the practice entry and survives progress reload',
+    'completing all lessons moves the practice entry to settings and survives progress reload',
     (tester) async {
       await c.completeIntroLesson('T1');
       await c.completeIntroLesson('T2');
@@ -467,14 +467,13 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      expect(find.text('入门教学'), findsNothing);
+      await show(tester, SettingsPage(c: c));
       final entry = find.text('入门教学');
       await tester.scrollUntilVisible(
         entry,
-        150,
-        scrollable: find.descendant(
-          of: find.byKey(const ValueKey(1)),
-          matching: find.byType(Scrollable),
-        ),
+        100,
+        scrollable: find.byType(Scrollable).last,
       );
       expect(entry.hitTestable(), findsOneWidget);
       await show(tester, IntroLessonsPage(c: c));

@@ -38,13 +38,14 @@ class PianoPiece {
         ![3, 4].contains(json['beats_per_bar']) ||
         json['content_hash'] != digest(hashData) ||
         json['tempo_bpm'] is! int ||
-        ![40, 50, 60, 70, 80].contains(json['tempo_bpm']) ||
+        json['tempo_bpm'] < 30 ||
+        json['tempo_bpm'] > 240 ||
         canonical(normalizeRecordText(json)) != canonical(json)) {
       throw const FormatException('Invalid piano piece');
     }
     final steps = json['key_steps'] ?? [0, 1, 2, 3, 4];
     if (steps is! List ||
-        steps.length < 2 ||
+        steps.length < (json['key_midis'] == null ? 2 : 1) ||
         steps.length > 16 ||
         steps.any((s) => s is! int || s < -14 || s > 21) ||
         (json['key_midis'] == null && steps.toSet().length != steps.length) ||
@@ -86,7 +87,7 @@ class PianoPiece {
     if (json['content_id'] is! String ||
         json['notes'] is! List ||
         (json['notes'] as List).isEmpty ||
-        (json['notes'] as List).length > 512) {
+        (json['notes'] as List).length > 4096) {
       throw const FormatException('Invalid piece notes');
     }
     var start = 0;
@@ -98,7 +99,7 @@ class PianoPiece {
           note['note_index'] >= keyCount ||
           note['duration_ticks'] is! int ||
           note['duration_ticks'] < 1 ||
-          note['duration_ticks'] > ticksPerBeat * 16) {
+          note['duration_ticks'] > ticksPerBeat * 2400) {
         throw const FormatException('Invalid piece note');
       }
       parsed.add(
@@ -117,6 +118,20 @@ class PianoPiece {
     }
     notes = List.unmodifiable(parsed);
     final backing = json['accompaniment'];
+    if (backing is Map && backing['kind'] == 'local_mp3') {
+      if (backing['path'] is! String ||
+          !RegExp(r'^imports/[a-f0-9]{64}\.mp3$').hasMatch(backing['path']) ||
+          backing['sha256'] is! String ||
+          backing['path'] != 'imports/${backing['sha256']}.mp3' ||
+          backing['base_tempo_bpm'] != tempo ||
+          backing['duration_ms'] is! int ||
+          backing['duration_ms'] <= 0 ||
+          backing['duration_ms'] > 600000 ||
+          backing['total_ticks'] != start) {
+        throw const FormatException('Invalid imported audio');
+      }
+      return;
+    }
     if (backing != null &&
         (backing is! Map ||
             backing['path'] is! String ||
@@ -161,9 +176,15 @@ class PianoPiece {
     final backing = accompaniment;
     if (backing == null) return null;
     final variants = backing['variants'];
-    return variants is Map
-        ? Map<String, dynamic>.from(variants['$tempo'] as Map)
-        : backing;
+    if (variants is! Map) return backing;
+    final available =
+        variants.keys.map((key) => int.parse(key as String)).toList()
+          ..sort((a, b) => (a - tempo).abs().compareTo((b - tempo).abs()));
+    final source = available.first;
+    return {
+      ...Map<String, dynamic>.from(variants['$source'] as Map),
+      'source_tempo_bpm': source,
+    };
   }
 
   late final List<PieceNote> notes;

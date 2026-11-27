@@ -129,14 +129,26 @@ void main() {
             ),
           );
           await tester.pumpAndSettle();
+          final special = find.byKey(const ValueKey('special-practices'));
+          await tester.scrollUntilVisible(
+            special,
+            150,
+            scrollable: find.byType(Scrollable).last,
+          );
+          await tester.pumpAndSettle();
+          final specialTitle = find.text(c.text('特色练习', 'Special exercises'));
+          await tester.ensureVisible(specialTitle);
+          await tester.pumpAndSettle();
+          await tester.tap(specialTitle);
+          for (var frame = 0; frame < 18; frame++) {
+            await tester.pump(const Duration(milliseconds: 16));
+          }
+          await tester.pumpAndSettle();
           final entry = find.text(c.text('双区配合', 'Two-zone coordination'));
           await tester.scrollUntilVisible(
             entry,
             150,
-            scrollable: find.descendant(
-              of: find.byKey(const ValueKey(1)),
-              matching: find.byType(Scrollable),
-            ),
+            scrollable: find.byType(Scrollable).last,
           );
           expect(
             find.text(c.text('双区配合', 'Two-zone coordination')),

@@ -1,3 +1,4 @@
+import '../ui/spotlight_tour.dart';
 import 'capture_widgets.dart';
 import '../ui/qin_press.dart';
 
@@ -8,114 +9,24 @@ import 'package:flutter/material.dart';
 import '../app/app_controller.dart';
 import '../app/page_title.dart';
 import '../domain/piano_piece.dart';
+import '../domain/piece_timing.dart';
 import '../ui/qin_components.dart';
 import '../ui/qin_music_art.dart';
 import '../ui/qin_theme.dart';
 import 'piece_sheet_preview.dart';
 import 'piano_performance_page.dart';
+import 'music_import_page.dart';
 
 class PianoPiecesPage extends StatelessWidget {
   const PianoPiecesPage({super.key, required this.c});
   final AppController c;
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      leading: Navigator.canPop(context) ? const QinBackButton() : null,
-      title: PageTitle(c.text('钢琴曲目', 'Piano pieces')),
-    ),
-    body: QinPageList(
-      children: [
-        QinSectionTitle(c.text('选择想弹的曲目', 'Choose a piece')),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            const cardGap = 12.0;
-            const cardPadding = 12.0;
-            final titleSize =
-                Theme.of(context).textTheme.titleSmall?.fontSize ?? 20;
-            final scaledTitleSize = MediaQuery.textScalerOf(context)
-                .scale(titleSize)
-                .clamp(titleSize, double.infinity);
-            // Leave enough room for a short title line inside each card.
-            final minCardWidth = 2 * cardPadding + 6 * scaledTitleSize;
-            final twoColumnWidth = (constraints.maxWidth - cardGap) / 2;
-            final columns =
-                twoColumnWidth >= minCardWidth && !context.qin.highContrast
-                ? 2
-                : 1;
-            final width = columns == 2 ? twoColumnWidth : constraints.maxWidth;
-            return Wrap(
-              spacing: cardGap,
-              runSpacing: cardGap,
-              children: [
-                for (final piece in c.content.pieces)
-                  SizedBox(
-                    width: width,
-                    child: columns == 1
-                        ? QinEntryCard(
-                            icon: Icons.piano_outlined,
-                            title: piece.title(c.locale),
-                            subtitle: piece.composer(c.locale),
-                            leadingVisual: QinPieceArtwork(id: piece.id),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    PianoPiecePage(c: c, piece: piece),
-                              ),
-                            ),
-                          )
-                        : QinInkWell(
-                            surfaceBuilder: (surface) => Card(child: surface),
-                            borderRadius: BorderRadius.circular(18),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) =>
-                                    PianoPiecePage(c: c, piece: piece),
-                              ),
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                QinArtwork(
-                                  asset:
-                                      qinPieceImage(piece.id) ??
-                                      '13-open-score.png',
-                                  height: 140,
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.all(cardPadding),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        piece.title(c.locale),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        piece.composer(c.locale),
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                  ),
-              ],
-            );
-          },
-        ),
-        if (c.content.pieces.isEmpty)
-          Text(c.text('暂无可选曲目。', 'No pieces available.')),
-      ],
-    ),
-  );
+  Widget build(BuildContext context) => c.content.pieces.isEmpty
+      ? Scaffold(
+          appBar: AppBar(title: Text(c.text('弹奏训练', 'Piano training'))),
+          body: Center(child: Text(c.text('暂无可选曲目', 'No pieces available'))),
+        )
+      : PianoPiecePage(c: c, piece: c.content.pieces.first);
 }
 
 /// Preparation and audition only. The performance page has no tempo controls.
@@ -128,15 +39,83 @@ class PianoPiecePage extends StatefulWidget {
 }
 
 class _PianoPiecePageState extends State<PianoPiecePage> {
+  final guideSong = GlobalKey(),
+      guideMode = GlobalKey(),
+      guideTempo = GlobalKey(),
+      guideCapture = GlobalKey(),
+      guideStart = GlobalKey();
+  List<SpotlightStep> get guideSteps => [
+    SpotlightStep(
+      target: guideSong,
+      title: c.text('选择曲目', 'Choose a piece'),
+      message: c.text(
+        '点击箭头打开曲目抽屉，可以选曲，也可以导入 MP3。',
+        'Open the song drawer to choose a piece or import an MP3.',
+      ),
+    ),
+    SpotlightStep(
+      target: guideMode,
+      shape: SpotlightShape.roundedRectangle,
+      borderRadius: 32,
+      title: c.text('选择模式', 'Choose a mode'),
+      message: c.text(
+        '入门练习会等你按对后再继续；正常训练会按节奏持续播放。',
+        'Beginner mode waits for the correct key. Normal mode keeps the rhythm moving.',
+      ),
+    ),
+    SpotlightStep(
+      target: guideTempo,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('调整速度', 'Set the tempo'),
+      message: c.text(
+        '拖动滑轨调整速度，靠近整十会吸附。左右按钮每次微调一拍，初次可以从慢速开始。',
+        'Drag to change tempo, with snapping near tens. The buttons adjust one BPM at a time. Start slowly.',
+      ),
+    ),
+    SpotlightStep(
+      target: previewKey,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('先看一次示范', 'Watch a preview'),
+      message: c.text(
+        '点击播放，看提示符落到琴键，以及正确按住、松开的演示。预览琴键不用手动按。',
+        'Play the preview to watch falling cues and the correct hold and release. The preview keys are automatic.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideCapture,
+      shape: SpotlightShape.roundedRectangle,
+      prepare: () async {
+        await previewKey.currentState?.stop();
+      },
+      title: c.text('可选面部采集', 'Optional face capture'),
+      message: c.text(
+        '面部采集是可选项。开启前会单独请求授权，可以保持关闭进行训练。',
+        'Face capture is optional and asks for separate permission. You can practise with it switched off.',
+      ),
+      advanceOnTap: false,
+    ),
+    SpotlightStep(
+      target: guideStart,
+      shape: SpotlightShape.roundedRectangle,
+      title: c.text('准备开始', 'Ready to practise'),
+      message: c.text(
+        '点击开始后确认，倒数三秒。提示符随后提前下落，准备好再跟随节奏按键。',
+        'Start, confirm, and count down from three. Cues then approach the keys before the music begins.',
+      ),
+    ),
+  ];
   AppController get c => widget.c;
-  late int tempo = c.pieceTempo(widget.piece.id, widget.piece.tempo);
+  late PianoPiece piece = widget.piece;
+  late int tempo = c.pieceTempo(piece.id, piece.tempo).clamp(30, piece.tempo);
   final previewKey = GlobalKey<PieceSheetPreviewState>();
   final captureKey = GlobalKey<CapturePreparationState>();
   bool busy = false;
+  PiecePracticeMode practiceMode = PiecePracticeMode.continuous;
 
   Future<void> rememberTempo(int value) async {
     try {
-      await c.savePieceTempo(widget.piece.id, value);
+      await c.savePieceTempo(piece.id, value);
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -154,12 +133,13 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
   void didUpdateWidget(PianoPiecePage oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.piece.id != widget.piece.id || oldWidget.c != widget.c) {
-      tempo = c.pieceTempo(widget.piece.id, widget.piece.tempo);
+      piece = widget.piece;
+      tempo = c.pieceTempo(piece.id, piece.tempo).clamp(30, piece.tempo);
     }
   }
 
-  String pieceIntroduction() {
-    final id = widget.piece.id;
+  String pieceIntroduction([PianoPiece? value]) {
+    final id = (value ?? piece).id;
     if (id.contains('ode-to-joy')) {
       return c.text(
         '贝多芬第九交响曲中广为传唱的主题，旋律明朗而有力。',
@@ -199,50 +179,157 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
     return c.text('跟随旋律，以自己的节奏弹奏。', 'Follow the melody at your own pace.');
   }
 
-  Widget pieceIntroductionCard() => LayoutBuilder(
-    builder: (context, constraints) {
-      final showImage = !context.qin.highContrast;
-      final stacked =
-          constraints.maxWidth < 300 ||
-          MediaQuery.textScalerOf(context).scale(1) > 1.5;
-      final size = (constraints.maxWidth * .37).clamp(90.0, 170.0);
-      final copy = Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            widget.piece.title(c.locale),
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 6),
-          Text(
-            widget.piece.composer(c.locale),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            pieceIntroduction(),
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      );
-      if (!showImage) return copy;
-      final artwork = QinPieceArtwork(id: widget.piece.id, size: size);
-      if (stacked) {
-        return Column(
+  Widget songCard(
+    PianoPiece value,
+    VoidCallback? onTap, {
+    bool selected = false,
+  }) => Card(
+    margin: EdgeInsets.zero,
+    color: context.qin.surface,
+    child: QinInkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
-          children: [artwork, const SizedBox(height: 12), copy],
-        );
-      }
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          artwork,
-          const SizedBox(width: 16),
-          Expanded(child: copy),
-        ],
-      );
-    },
+          children: [
+            QinPieceArtwork(
+              id: value.id,
+              size: MediaQuery.sizeOf(context).width < 350 ? 68 : 88,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    value.title(c.locale),
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    value.composer(c.locale),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    pieceIntroduction(value),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  if (selected)
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: Icon(
+                        Icons.expand_more,
+                        key: guideSong,
+                        color: context.qin.primary,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
   );
+
+  Widget section(String title, List<Widget> children) => Padding(
+    padding: const EdgeInsets.only(bottom: 20),
+    child: QinPanel(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [QinSectionTitle(title), ...children],
+      ),
+    ),
+  );
+
+  Future<void> choosePiece() async {
+    await previewKey.currentState?.stop();
+    if (!mounted) return;
+    final chosen = await showModalBottomSheet<PianoPiece>(
+      context: context,
+      isScrollControlled: true,
+      enableDrag: true,
+      showDragHandle: true,
+      useSafeArea: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (sheetContext) => SizedBox(
+        height: MediaQuery.sizeOf(context).height * .75,
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    c.text('选择曲目', 'Choose a piece'),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                ),
+                QinIconButton(
+                  tooltip: c.text('关闭', 'Close'),
+                  onPressed: () => Navigator.pop(sheetContext),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  for (final option in c.content.pieces)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: songCard(
+                        option,
+                        () => Navigator.pop(sheetContext, option),
+                      ),
+                    ),
+                  QinEntryCard(
+                    icon: Icons.audio_file_outlined,
+                    title: c.text('导入 MP3 自制曲目', 'Create a piece from MP3'),
+                    subtitle: c.text(
+                      '本地提取旋律，试听校对后保存',
+                      'Extract, listen and review locally',
+                    ),
+                    onTap: () async {
+                      Navigator.pop(sheetContext);
+                      final saved = await Navigator.of(context).push<bool>(
+                        MaterialPageRoute(
+                          builder: (_) => MusicImportPage(c: c),
+                        ),
+                      );
+                      if (saved == true &&
+                          mounted &&
+                          c.content.pieces.isNotEmpty) {
+                        selectPiece(c.content.pieces.last);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (chosen != null && mounted) selectPiece(chosen);
+  }
+
+  void selectPiece(PianoPiece value) => setState(() {
+    piece = value;
+    tempo = c.pieceTempo(piece.id, piece.tempo).clamp(30, piece.tempo);
+  });
+
+  void stepTempo(int delta) {
+    setState(() => tempo = (tempo + delta).clamp(30, piece.tempo));
+    unawaited(rememberTempo(tempo));
+  }
 
   Future<void> perform() async {
     if (busy) return;
@@ -254,9 +341,10 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
         MaterialPageRoute<void>(
           builder: (_) => PianoPerformancePage(
             c: c,
-            piece: widget.piece,
+            piece: piece,
             tempo: tempo,
             capture: captureKey.currentState?.claim(),
+            practiceMode: practiceMode,
           ),
         ),
       );
@@ -268,83 +356,154 @@ class _PianoPiecePageState extends State<PianoPiecePage> {
   @override
   Widget build(BuildContext context) {
     final enabled = !busy && (c.audioReady || !c.soundEnabled);
-    return Scaffold(
-      appBar: AppBar(
-        leading: Navigator.canPop(context) ? const QinBackButton() : null,
-        title: PageTitle(c.text('准备弹奏', 'Prepare to play')),
-      ),
-      body: QinActionPage(
-        actions: [
-          QinFilledButton.icon(
-            key: const ValueKey('enter-performance'),
-            onPressed: enabled ? perform : null,
-            icon: const Icon(Icons.play_arrow),
-            label: Text(c.text('进入弹奏', 'Start playing')),
-          ),
-        ],
-        children: [
-          pieceIntroductionCard(),
-          CapturePreparation(key: captureKey, c: c),
-          const SizedBox(height: 20),
-          const Divider(),
-          const SizedBox(height: 16),
-          QinSectionTitle(c.text('选择弹奏速度', 'Choose your tempo')),
-          Row(
-            children: [
-              Flexible(
-                flex: 4,
-                child: Text(
-                  c.text('$tempo 拍/分钟', '$tempo BPM'),
-                  key: const ValueKey('piece-tempo-label'),
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
+    return SpotlightTour(
+      c: c,
+      preferenceKey: 'spotlight_piano_v1',
+      steps: guideSteps,
+      onFinish: () async {
+        await previewKey.currentState?.stop();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: Navigator.canPop(context) ? const QinBackButton() : null,
+          title: PageTitle(c.text('弹奏训练', 'Piano training')),
+        ),
+        body: QinActionPage(
+          actions: [
+            KeyedSubtree(
+              key: guideStart,
+              child: QinFilledButton.icon(
+                key: const ValueKey('enter-performance'),
+                onPressed: enabled ? perform : null,
+                icon: const Icon(Icons.play_arrow),
+                label: Text(c.text('开始训练', 'Start training')),
               ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 6,
-                child: SizedBox(
-                  height: 60,
-                  child: Center(
+            ),
+          ],
+          children: [
+            section(c.text('选择曲目', 'Choose a piece'), [
+              songCard(piece, busy ? null : choosePiece, selected: true),
+            ]),
+            section(c.text('训练配置', 'Training settings'), [
+              Text(
+                c.text('训练模式', 'Practice mode'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 8),
+              SegmentedButton<PiecePracticeMode>(
+                key: guideMode,
+                segments: [
+                  ButtonSegment(
+                    value: PiecePracticeMode.beginner,
+                    label: Text(c.text('入门练习', 'Beginner')),
+                  ),
+                  ButtonSegment(
+                    value: PiecePracticeMode.continuous,
+                    label: Text(c.text('正常训练', 'Normal')),
+                  ),
+                ],
+                selected: {practiceMode},
+                onSelectionChanged: busy
+                    ? null
+                    : (value) => setState(() => practiceMode = value.single),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                practiceMode == PiecePracticeMode.beginner
+                    ? c.text(
+                        '音符到达时等待你按对琴键，再继续前进。',
+                        'Notes wait for the correct key before moving on.',
+                      )
+                    : c.text(
+                        '音乐持续播放，跟随节奏完成弹奏。',
+                        'Follow the rhythm while the music plays continuously.',
+                      ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                c.text('训练速度', 'Practice tempo'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              Text(
+                c.text('$tempo 拍/分钟', '$tempo BPM'),
+                key: const ValueKey('piece-tempo-label'),
+              ),
+              Row(
+                key: guideTempo,
+                children: [
+                  QinIconButton(
+                    key: const ValueKey('tempo-minus'),
+                    tooltip: c.text('减慢 1 拍/分钟', 'Decrease by 1 BPM'),
+                    onPressed: busy || tempo <= 30 ? null : () => stepTempo(-1),
+                    icon: const Icon(Icons.remove_circle_outline),
+                  ),
+                  Expanded(
                     child: Slider(
                       key: const ValueKey('piece-tempo'),
-                      value: tempo.toDouble(),
-                      min: 40,
-                      max: 80,
-                      divisions: 4,
-                      label: c.text('$tempo 拍/分钟', '$tempo BPM'),
                       semanticFormatterCallback: (value) => c.text(
                         '${value.round()} 拍/分钟',
                         '${value.round()} BPM',
                       ),
+                      value: tempo.toDouble(),
+                      min: 30,
+                      max: piece.tempo.toDouble(),
+                      divisions: piece.tempo > 30 ? piece.tempo - 30 : null,
                       onChanged: busy
                           ? null
-                          : (value) => setState(() => tempo = value.round()),
+                          : (value) => setState(
+                              () => tempo = PieceTiming.snapTempo(
+                                value,
+                                piece.tempo,
+                              ),
+                            ),
                       onChangeEnd: busy
                           ? null
-                          : (value) => rememberTempo(value.round()),
+                          : (value) => rememberTempo(
+                              PieceTiming.snapTempo(value, piece.tempo),
+                            ),
                     ),
                   ),
+                  QinIconButton(
+                    key: const ValueKey('tempo-plus'),
+                    tooltip: c.text('加快 1 拍/分钟', 'Increase by 1 BPM'),
+                    onPressed: busy || tempo >= piece.tempo
+                        ? null
+                        : () => stepTempo(1),
+                    icon: const Icon(Icons.add_circle_outline),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Text(
+                c.text('训练预览', 'Training preview'),
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              const SizedBox(height: 12),
+              PieceSheetPreview(
+                key: previewKey,
+                c: c,
+                piece: piece,
+                tempo: tempo,
+                waterfall: true,
+              ),
+            ]),
+            section(c.text('面部采集授权', 'Face capture permission'), [
+              KeyedSubtree(
+                key: guideCapture,
+                child: CapturePreparation(key: captureKey, c: c),
+              ),
+            ]),
+            if (!c.audioReady && c.soundEnabled) ...[
+              const SizedBox(height: 16),
+              Text(
+                c.text(
+                  '琴音尚未准备好，请返回重试。',
+                  'Piano audio is not ready. Go back and retry.',
                 ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          PieceSheetPreview(
-            key: previewKey,
-            c: c,
-            piece: widget.piece,
-            tempo: tempo,
-          ),
-          if (!c.audioReady && c.soundEnabled) ...[
-            const SizedBox(height: 16),
-            Text(
-              c.text(
-                '琴音尚未准备好，请返回重试。',
-                'Piano audio is not ready. Go back and retry.',
-              ),
-            ),
           ],
-        ],
+        ),
       ),
     );
   }

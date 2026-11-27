@@ -769,7 +769,7 @@ void main() {
         );
         expect(tester.takeException(), isNull);
       });
-      testWidgets('practice categories filter entries $locale $scale', (
+      testWidgets('practice groups open special exercises $locale $scale', (
         tester,
       ) async {
         final c = AppController();
@@ -785,70 +785,37 @@ void main() {
         await tester.pumpAndSettle();
         await tester.tap(find.text(c.text('练习', 'Practice')).last);
         await tester.pumpAndSettle();
-        final dance = find.text(c.text('舞蹈跟练', 'Dance practice'));
-        final pieces = find.text(c.text('钢琴曲目', 'Piano pieces'));
         final list = find
             .byWidgetPredicate(
               (w) => w is Scrollable && w.axisDirection == AxisDirection.down,
             )
             .last;
-        Future<void> reveal(Finder entry) async {
-          await tester.scrollUntilVisible(entry, 100, scrollable: list);
-          await tester.pumpAndSettle();
-        }
-
-        Future<void> choose(String value) async {
-          tester.state<ScrollableState>(list).position.jumpTo(0);
-          await tester.pumpAndSettle();
-          final chip = find.byKey(ValueKey('practice-category-$value'));
-          await tester.ensureVisible(chip);
-          await tester.pumpAndSettle();
-          await tester.tap(chip);
-          await tester.pumpAndSettle();
-          expect(tester.widget<ChoiceChip>(chip).selected, isTrue);
-          final categories = [
-            'all',
-            'piano',
-            'dance',
-          ].map((id) => find.byKey(ValueKey('practice-category-$id'))).toList();
-          final width = tester.getRect(categories.first).width;
-          for (final category in categories) {
-            expect(tester.getRect(category).width, closeTo(width, 1));
-            expect(
-              tester
-                  .getRect(
-                    find
-                        .descendant(
-                          of: category,
-                          matching: find.byType(Material),
-                        )
-                        .first,
-                  )
-                  .width,
-              closeTo(width, 1),
-            );
-          }
-          await tester.pumpAndSettle();
-          expect(tester.takeException(), isNull);
-        }
-
-        await choose('dance');
-        await reveal(dance);
-        expect(dance, findsOneWidget);
-        expect(find.byType(PracticeCard), findsOneWidget);
         expect(
-          tester.widget<PracticeCard>(find.byType(PracticeCard)).title,
-          c.text('舞蹈跟练', 'Dance practice'),
+          find.text(c.text('入门教学', 'Introductory lessons')),
+          findsOneWidget,
         );
-        await choose('piano');
-        await reveal(pieces);
-        expect(dance, findsNothing);
-        expect(pieces, findsOneWidget);
-        await choose('all');
-        await reveal(pieces);
-        expect(pieces, findsOneWidget);
-        await reveal(dance);
+        final dance = find.text(c.text('舞蹈教学', 'Dance lessons'));
+        await tester.scrollUntilVisible(dance, 100, scrollable: list);
+        await tester.pumpAndSettle();
         expect(dance, findsOneWidget);
+        final special = find.byKey(const ValueKey('special-practices'));
+        await tester.scrollUntilVisible(special, 100, scrollable: list);
+        await tester.pumpAndSettle();
+        final specialTitle = find.text(c.text('特色练习', 'Special exercises'));
+        await Scrollable.ensureVisible(
+          tester.element(specialTitle),
+          alignment: .5,
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(specialTitle);
+        for (var frame = 0; frame < 18; frame++) {
+          await tester.pump(const Duration(milliseconds: 16));
+        }
+        await tester.pumpAndSettle();
+        expect(find.byType(PracticeCard), findsNWidgets(7));
+        expect(find.text(c.text('弹奏训练', 'Piano training')), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
       });
       testWidgets('four navigation entries fit 320dp $locale $scale', (
         tester,

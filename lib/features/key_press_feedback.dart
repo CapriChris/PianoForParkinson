@@ -106,8 +106,10 @@ class KeyPressFeedback extends StatefulWidget {
     this.resetToken,
     this.enabled = true,
     this.pressed = false,
+    this.externalBase = false,
   });
   final Widget child;
+  final bool externalBase;
   final Color color;
   final Object? pulse, resetToken;
   final bool enabled, pressed;
@@ -214,14 +216,15 @@ class KeyPressFeedbackState extends State<KeyPressFeedback>
       fit: StackFit.passthrough,
       clipBehavior: Clip.none,
       children: [
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: Color.lerp(palette.disabled, palette.edge, .42),
-              borderRadius: BorderRadius.circular(12),
+        if (!widget.externalBase)
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                color: Color.lerp(palette.disabled, palette.edge, .42),
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
           ),
-        ),
         AnimatedBuilder(
           animation: depression,
           child: Padding(
@@ -237,13 +240,17 @@ class KeyPressFeedbackState extends State<KeyPressFeedback>
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
-                  boxShadow: [
-                    BoxShadow(
-                      color: palette.ink.withValues(alpha: .14 - .08 * depth),
-                      offset: Offset(0, 3 * (1 - depth)),
-                      blurRadius: 4 * (1 - depth),
-                    ),
-                  ],
+                  boxShadow: widget.externalBase
+                      ? const []
+                      : [
+                          BoxShadow(
+                            color: palette.ink.withValues(
+                              alpha: .14 - .08 * depth,
+                            ),
+                            offset: Offset(0, 3 * (1 - depth)),
+                            blurRadius: 4 * (1 - depth),
+                          ),
+                        ],
                 ),
                 child: child,
               ),

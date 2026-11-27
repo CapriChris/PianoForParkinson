@@ -20,6 +20,26 @@ class ContentRepository {
   late Json song, soundPack;
   List<Json> songs = [];
   List<PianoPiece> pieces = [];
+  int invalidImports = 0;
+  void loadImported(Object? records) {
+    invalidImports = 0;
+    if (records is! List) return;
+    for (final record in records) {
+      try {
+        final piece = PianoPiece.fromJson(
+          Map<String, dynamic>.from(record as Map),
+        );
+        if (piece.accompaniment?['kind'] != 'local_mp3' ||
+            pieces.any((p) => p.id == piece.id)) {
+          throw const FormatException('Invalid imported piece');
+        }
+        pieces.add(piece);
+      } catch (_) {
+        invalidImports++;
+      }
+    }
+  }
+
   PianoPiece? pieceFor(String? id) {
     if (id == null) return null;
     for (final piece in pieces) {

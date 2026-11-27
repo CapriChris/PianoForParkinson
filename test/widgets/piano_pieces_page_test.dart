@@ -13,12 +13,11 @@ import 'package:piano_practice/features/piece_sheet_preview.dart';
 import 'package:piano_practice/features/piece_continuous_score.dart';
 import 'package:piano_practice/features/piece_playback_keys.dart';
 import 'package:piano_practice/features/key_press_feedback.dart';
-import 'package:piano_practice/features/scrolling_score.dart';
+import 'package:piano_practice/features/waterfall_score.dart';
 import 'package:piano_practice/features/song_library_page.dart';
 import 'package:piano_practice/features/key_duration_guide.dart';
 import 'package:piano_practice/features/keyboard.dart';
 import 'package:piano_practice/ui/qin_theme.dart';
-import 'package:piano_practice/ui/text_scale.dart';
 
 import 'cognitive_pages_test.dart' show mocks;
 import 'rhythm_pages_test.dart' show MemoryPreferences;
@@ -31,6 +30,22 @@ Future<void> frames(WidgetTester tester) async {
   }
 }
 
+Future<void> confirmPerformanceStart(WidgetTester tester) async {
+  await frames(tester);
+  final confirm = find.byKey(const ValueKey('confirm-performance-start'));
+  expect(confirm, findsOneWidget);
+  await tester.ensureVisible(confirm);
+  await frames(tester);
+  await tester.tap(confirm);
+  await frames(tester);
+  await frames(tester);
+  expect(confirm, findsNothing);
+  for (var i = 0; i < 3; i++) {
+    await tester.pump(const Duration(seconds: 1));
+  }
+  await frames(tester);
+}
+
 Future<void> remove(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pumpAndSettle();
@@ -38,7 +53,7 @@ Future<void> remove(WidgetTester tester) async {
 
 Future<void> slideTempo(WidgetTester tester, {required bool toMaximum}) async {
   final finder = find.byKey(const ValueKey('piece-tempo'));
-  await scrollTo(tester, finder, -120);
+  await scrollTo(tester, finder, 120);
   final rect = tester.getRect(finder);
   await tester.tapAt(
     Offset(toMaximum ? rect.right - 24 : rect.left + 24, rect.center.dy),
@@ -61,58 +76,39 @@ Future<void> scrollTo(WidgetTester tester, Finder target, double delta) async {
 }
 
 void main() {
-  testWidgets('piece picker uses two columns at 360dp when titles fit', (
+  testWidgets('training opens directly and song drawer selects and dismisses', (
     tester,
   ) async {
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-        .setMockMethodCallHandler(
-          const MethodChannel('piano_training/platform_events/v1'),
-          (_) async => null,
-        );
     final c = AppController(repository: MemoryPreferences());
     addTearDown(c.dispose);
-    mocks(tester, const Size(360, 760), 'zh-Hans', 1, c);
+    mocks(tester, const Size(412, 900), 'zh-Hans', 1, c);
     await tester.runAsync(c.content.load);
-    final titles = c.content.pieces
-        .take(2)
-        .map((p) => p.title(c.locale))
-        .toList();
-    for (final (width, scale, highContrast, twoColumns) in [
-      (360.0, 1.0, false, true),
-      (412.0, 1.0, false, true),
-      (320.0, 1.0, false, false),
-      (360.0, 1.5, false, false),
-      (360.0, 1.0, true, false),
-    ]) {
-      tester.view.physicalSize = Size(width, 760);
-      tester.platformDispatcher.textScaleFactorTestValue = scale;
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: qinTheme(highContrast: highContrast),
-          builder: (context, child) {
-            final media = MediaQuery.of(context);
-            return MediaQuery(
-              data: media.copyWith(
-                textScaler: AppTextScaler(media.textScaler, 100),
-              ),
-              child: child!,
-            );
-          },
-          home: PianoPiecesPage(c: c),
-        ),
-      );
-      await tester.pumpAndSettle();
-      final first = tester.getTopLeft(find.text(titles.first));
-      final second = tester.getTopLeft(find.text(titles.last));
-      if (twoColumns) {
-        expect(second.dx, greaterThan(first.dx));
-        expect(second.dy, closeTo(first.dy, 1));
-      } else {
-        expect(second.dx, closeTo(first.dx, 1));
-        expect(second.dy, greaterThan(first.dy));
-      }
-      expect(tester.takeException(), isNull);
-    }
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: qinTheme(highContrast: false),
+        home: PianoPiecesPage(c: c),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(PianoPiecePage), findsOneWidget);
+    expect(find.text('弹奏判定与提示'), findsNothing);
+    await tester.tap(find.text(c.content.pieces.first.title(c.locale)));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('关闭'), findsOneWidget);
+    final cards = find.byType(Card);
+    expect(cards, findsWidgets);
+    await tester.tap(find.text(c.content.pieces[1].title(c.locale)));
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('关闭'), findsNothing);
+    expect(find.text(c.content.pieces[1].title(c.locale)), findsOneWidget);
+    await tester.tap(find.text(c.content.pieces[1].title(c.locale)));
+    await tester.pumpAndSettle();
+    await tester.dragFrom(
+      tester.getCenter(find.byTooltip('关闭')) - const Offset(100, 0),
+      const Offset(0, 700),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byTooltip('关闭'), findsNothing);
     await remove(tester);
   });
 
@@ -204,10 +200,8 @@ void main() {
             final title = locale == 'zh-Hans' ? '欢乐颂' : 'Ode to Joy';
             await scrollTo(tester, find.text(title), 150);
             await tester.pumpAndSettle();
-            await tester.tap(find.text(title));
-            await tester.pumpAndSettle();
+
             expect(find.byType(PianoPiecePage), findsOneWidget);
-            expect(find.byType(PianoKeyboard), findsNothing);
             await scrollTo(
               tester,
               find.byKey(const ValueKey('piece-tempo')),
@@ -228,8 +222,10 @@ void main() {
               findsNothing,
             );
             expect(find.textContaining('音符从右向左移动'), findsNothing);
+            await scrollTo(tester, find.byType(PieceSheetPreview), 120);
+            await tester.pumpAndSettle();
             expect(find.byType(PieceSheetPreview), findsOneWidget);
-            expect(find.byType(PieceContinuousScore), findsOneWidget);
+            expect(find.byType(WaterfallScore), findsOneWidget);
             await scrollTo(
               tester,
               find.byKey(const ValueKey('piece-audition')),
@@ -282,11 +278,11 @@ void main() {
               ),
             ),
           );
-          await frames(tester);
+          await confirmPerformanceStart(tester);
           expect(find.byType(AppBar), findsNothing);
           expect(find.byType(DropdownButton<int>), findsNothing);
           expect(find.byType(KeyDurationGuide), findsNothing);
-          expect(find.byType(ScrollingScore), findsOneWidget);
+          expect(find.byType(WaterfallScore), findsOneWidget);
           expect(
             tester
                 .widgetList<Text>(find.byType(Text))
@@ -295,7 +291,7 @@ void main() {
           );
           final keyboard = tester.getRect(find.byType(PianoKeyboard));
           final p = tester
-              .widget<ScrollingScore>(find.byType(ScrollingScore))
+              .widget<WaterfallScore>(find.byType(WaterfallScore))
               .player;
           expect(p.mode, ScrollPieceMode.running);
           clock.now = 4500000;
@@ -341,9 +337,9 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(other);
       await tester.pumpAndSettle();
-      await scrollTo(tester, find.text('钢琴曲目'), 150);
+      await scrollTo(tester, find.text('弹奏训练'), 150);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('钢琴曲目'));
+      await tester.tap(find.text('弹奏训练'));
       await tester.pumpAndSettle();
       expect(find.byType(PianoPiecesPage), findsOneWidget);
       await remove(tester);
@@ -404,7 +400,10 @@ void main() {
       );
       await tester.pumpAndSettle();
       await slideTempo(tester, toMaximum: true);
-      expect(find.text('80 拍/分钟'), findsOneWidget);
+      expect(
+        tester.widget<Slider>(find.byKey(const ValueKey('piece-tempo'))).value,
+        60,
+      );
       await scrollTo(tester, find.byKey(const ValueKey('piece-audition')), 120);
       await Scrollable.ensureVisible(
         tester.element(find.byKey(const ValueKey('piece-audition'))),
@@ -422,11 +421,11 @@ void main() {
           .pumpAndSettle(); // Portrait cannot start the moving timeline.
       expect(find.byType(PianoPerformancePage), findsOneWidget);
       tester.view.physicalSize = const Size(800, 360);
-      await frames(tester);
+      await confirmPerformanceStart(tester);
       final p = tester
-          .widget<ScrollingScore>(find.byType(ScrollingScore))
+          .widget<WaterfallScore>(find.byType(WaterfallScore))
           .player;
-      expect(p.tempo, 80);
+      expect(p.tempo, 60);
       expect(p.mode, ScrollPieceMode.running);
       expect(
         orientations,
@@ -438,6 +437,7 @@ void main() {
         ),
       );
       await tester.tap(find.byKey(const ValueKey('performance-back')));
+      await frames(tester);
       await tester.pumpAndSettle();
       expect(find.byType(PianoPiecePage), findsOneWidget);
       expect(find.byTooltip('播放试听'), findsOneWidget);
@@ -458,7 +458,15 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: qinTheme(highContrast: false),
-        home: PianoPiecePage(c: c, piece: c.content.pieces.first),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PieceSheetPreview(
+              c: c,
+              piece: c.content.pieces.first,
+              tempo: 60,
+            ),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -538,7 +546,15 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: qinTheme(highContrast: false),
-          home: PianoPiecePage(c: c, piece: c.content.pieces.first),
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: PieceSheetPreview(
+                c: c,
+                piece: c.content.pieces.first,
+                tempo: 60,
+              ),
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -645,7 +661,15 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: qinTheme(highContrast: false),
-        home: PianoPiecePage(c: c, piece: c.content.pieces.first),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PieceSheetPreview(
+              c: c,
+              piece: c.content.pieces.first,
+              tempo: 60,
+            ),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -721,7 +745,15 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: qinTheme(highContrast: false),
-        home: PianoPiecePage(c: c, piece: c.content.pieces.first),
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: PieceSheetPreview(
+              c: c,
+              piece: c.content.pieces.first,
+              tempo: 60,
+            ),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -881,10 +913,10 @@ void main() {
         ),
       ),
     );
-    await frames(tester);
-    clock.now = 16000000; // Four-beat lead in plus first twelve quarter notes.
+    await confirmPerformanceStart(tester);
+    clock.now = 16000000; // Three-beat lead-in plus twelve quarter notes.
     await tester.pump(const Duration(milliseconds: 16));
-    final p = tester.widget<ScrollingScore>(find.byType(ScrollingScore)).player;
+    final p = tester.widget<WaterfallScore>(find.byType(WaterfallScore)).player;
     expect(p.currentIndex, 12);
     expect(calls.where((call) => call.name == 'syncPieceBacking'), isNotEmpty);
     final rect = tester.getRect(find.byType(PianoKeyboard));

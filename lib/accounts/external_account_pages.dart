@@ -472,6 +472,7 @@ class _AccountLoginMethodsState extends State<AccountLoginMethods> {
         const SizedBox(height: 16),
         Text('登录方式', style: Theme.of(context).textTheme.titleMedium),
         if (phone != null) Text('手机号：${phone['label']}'),
+        const SizedBox(height: 12),
         QinOutlinedButton(
           onPressed: working || widget.disabled || !loaded || phone != null
               ? null

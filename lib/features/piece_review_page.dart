@@ -255,6 +255,7 @@ class _PieceReviewPageState extends State<PieceReviewPage>
         .pieceFor(widget.piece.id)
         ?.accompanimentFor(widget.record['tempo_bpm'] as int);
     return now != null &&
+        now['kind'] != 'local_mp3' &&
         now['sha256'] ==
             widget.piece.accompanimentFor(
               widget.record['tempo_bpm'] as int,

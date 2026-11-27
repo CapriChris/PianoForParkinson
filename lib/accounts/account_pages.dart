@@ -750,11 +750,13 @@ class _AccountPageState extends State<AccountPage> {
               c.text('姓名：', 'Name: ') + (session?.name ?? ''),
               style: Theme.of(context).textTheme.headlineSmall,
             ),
+            const SizedBox(height: 12),
             QinOutlinedButton(
               key: const ValueKey('edit-patient-name'),
               onPressed: busy ? null : editName,
               child: Text(c.text('修改姓名', 'Edit name')),
             ),
+            const SizedBox(height: 12),
             Text('档案编号：${session?.patient['hospital_number'] ?? ''}'),
             const SizedBox(height: 24),
             const ListTile(
@@ -780,6 +782,7 @@ class _AccountPageState extends State<AccountPage> {
                 if (mounted) setState(() => busy = value);
               },
             ),
+            const SizedBox(height: 12),
             QinOutlinedButton(
               onPressed: busy
                   ? null
@@ -799,6 +802,7 @@ class _AccountPageState extends State<AccountPage> {
                     },
               child: const Text('立即同步'),
             ),
+            const SizedBox(height: 12),
             QinOutlinedButton(
               onPressed: busy ? null : changePassword,
               child: const Text('修改密码'),

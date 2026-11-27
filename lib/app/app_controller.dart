@@ -11,6 +11,7 @@ import '../platform/plan_reminders.dart';
 import '../integration/training_capture.dart';
 import '../platform/assistant_gateway.dart';
 import '../domain/contracts.dart';
+import '../domain/piano_piece.dart';
 import '../domain/cognitive_tasks.dart';
 import '../domain/intro_lessons.dart';
 import '../domain/task_engine.dart';
@@ -215,6 +216,7 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
       _repositoryOpened = true;
       await assistantConversations.open(databasePath);
       await content.load().timeout(const Duration(seconds: 10));
+      content.loadImported(settings['imported_pieces']);
       content.select(settings['selected_song_id'] as String?);
       await refreshIntroLessonProgress();
       await platform.activate(++_generation);
@@ -382,13 +384,34 @@ class AppController extends ChangeNotifier with WidgetsBindingObserver {
     if (pending != null) return pending.$1;
     final values = settings['piece_tempos'];
     final saved = values is Map ? values[pieceId] : null;
-    return saved is int && const {40, 50, 60, 70, 80}.contains(saved)
-        ? saved
-        : defaultTempo;
+    return saved is int && saved >= 30 && saved <= 240 ? saved : defaultTempo;
+  }
+
+  Future<void> saveImportedPiece(PianoPiece piece) async {
+    if (_disposed) throw StateError('Account is closed');
+    final next = _settingsWrites.catchError((_) {}).then((_) async {
+      if (_disposed) throw StateError('Account is closed');
+      final current = settings;
+      final records = [
+        if (current['imported_pieces'] is List)
+          for (final record in current['imported_pieces'] as List)
+            if (record is! Map || record['content_id'] != piece.id) record,
+        piece.data,
+      ];
+      await repository.settingsUpdate(
+        settings: {...current, 'imported_pieces': records},
+      );
+      if (_disposed) return;
+      content.pieces.removeWhere((existing) => existing.id == piece.id);
+      content.pieces.add(piece);
+      notifyListeners();
+    });
+    _settingsWrites = next;
+    await next;
   }
 
   Future<void> savePieceTempo(String pieceId, int tempo) async {
-    if (pieceId.isEmpty || !const {40, 50, 60, 70, 80}.contains(tempo)) {
+    if (pieceId.isEmpty || tempo < 30 || tempo > 240) {
       throw ArgumentError('Invalid piece tempo');
     }
     final serial = (_pieceTempoSerial ?? 0) + 1;

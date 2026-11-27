@@ -54,6 +54,8 @@ class MainActivity : FlutterActivity() {
     private val piano = NativePiano()
     private var pieceBackingOwner: String? = null
     private var pieceBackingStarted = false
+    private var importedTrack: ImportedTrackPlayer? = null
+    private var musicImports: MusicImportBridge? = null
     private var voiceToken = 0
     private var gain = 850
     @Volatile private var ready = false
@@ -76,6 +78,7 @@ class MainActivity : FlutterActivity() {
                 AudioManager.AUDIOFOCUS_GAIN -> {
                     focusGranted = true
                     piano.setOutputGain(1f)
+                        importedTrack?.setVolume(1f)
                     publish("AUDIO_FOCUS_GAIN") // Restore volume, never resume playback.
                 }
                 AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
@@ -83,6 +86,7 @@ class MainActivity : FlutterActivity() {
                     // Android 8+ normally ducks automatically; this also covers older devices.
                     if (focusGranted) {
                         piano.setOutputGain(.25f)
+                        importedTrack?.setVolume(.25f)
                         publish("AUDIO_FOCUS_DUCK")
                     }
                 }
@@ -131,6 +135,7 @@ class MainActivity : FlutterActivity() {
     }
     @Volatile private var pianoOutputDevice = 0
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
+        musicImports = MusicImportBridge(this, flutterEngine.dartExecutor.binaryMessenger)
         super.configureFlutterEngine(flutterEngine)
         ReminderSettingsBridge(this).register(flutterEngine.dartExecutor.binaryMessenger)
         WechatLoginBridge.register(applicationContext, flutterEngine.dartExecutor.binaryMessenger)
@@ -265,15 +270,36 @@ class MainActivity : FlutterActivity() {
                     val path = call.argument<String>("path") ?: ""
                     val owner = call.argument<String>("owner") ?: ""
                     val tempo = call.argument<Number>("tempo_bpm")?.toInt() ?: 0
+                    val sourceTempo = call.argument<Number>("source_tempo_bpm")?.toInt() ?: tempo
                     val replayUs = call.argument<Number>("replay_duration_us")?.toLong()
                     val solo = replayUs != null && call.argument<Boolean>("solo") == true
-                    require(owner.isNotBlank() && tempo in setOf(40,50,60,70,80))
-                    if (replayUs != null) require(replayUs in 1L..600000000L)
+                    require(owner.isNotBlank() && tempo in 30..240 && sourceTempo in 30..240)
+                    if (replayUs != null) require(replayUs in 1L..if (path.startsWith("imports/")) 86400000000L else 600000000L)
                     releasePieceBacking()
+                    if (path.matches(Regex("^imports/[a-f0-9]{64}\\.mp3$")) && !solo) {
+                        val file = java.io.File(noBackupFilesDir, path).canonicalFile
+                        require(file.parentFile == java.io.File(noBackupFilesDir, "imports").canonicalFile)
+                        val hash = file.inputStream().use { stream ->
+                            val digest = MessageDigest.getInstance("SHA-256")
+                            val buffer = ByteArray(32768)
+                            var count = stream.read(buffer)
+                            while (count >= 0) {
+                                if (count > 0) digest.update(buffer, 0, count)
+                                count = stream.read(buffer)
+                            }
+                            digest.digest().joinToString("") { "%02x".format(it) }
+                        }
+                        require(hash == call.argument<String>("sha256"))
+                        importedTrack = ImportedTrackPlayer(audioHandler, file, sourceTempo, tempo)
+                        pieceBackingOwner = owner
+                        pieceBackingStarted = false
+                        answer(mapOf("prepared" to true, "engine" to "ANDROID_MEDIA", "streamed" to true))
+                        return
+                    }
                     val decodeAt = SystemClock.elapsedRealtime()
                     var decoded: NativePiano.Pcm? = null
                     if (!solo) {
-                        require(path.matches(Regex("^assets/audio/backing_[a-z_]+_(40|50|60|70|80)\\.ogg$")) && path.endsWith("_${tempo}.ogg"))
+                        require(path.matches(Regex("^assets/audio/backing_[a-z_]+_(40|50|60|70|80)\\.ogg$")) && path.endsWith("_${sourceTempo}.ogg"))
                         val lookup = engine.dartExecutor.flutterLoaderLookup(path)
                         val hash = assets.open(lookup).use { stream ->
                             val digest = MessageDigest.getInstance("SHA-256")
@@ -288,6 +314,14 @@ class MainActivity : FlutterActivity() {
                         if (hash != call.argument<String>("sha256")) { answer(error = "E_ASSET_HASH"); return }
                         decoded = piano.decode(assets, lookup)
                         require(decoded.data.size == call.argument<Number>("sample_frames")?.toInt())
+                        if (sourceTempo != tempo) {
+                            decoded = NativePiano.Pcm(AudioTimeStretch.stretch(decoded.data, tempo.toDouble() / sourceTempo), decoded.rate)
+                        }
+                        val duration = call.argument<Number>("score_duration_us")?.toLong()
+                        if (duration != null) {
+                            require(duration in 1L..600000000L)
+                            decoded = NativePiano.Pcm(decoded.data.copyOf(((duration * decoded.rate + 999999) / 1000000).toInt()), decoded.rate)
+                        }
                     }
                     val pcm = if (replayUs == null) decoded!! else {
                         val rate = 22050
@@ -320,7 +354,7 @@ class MainActivity : FlutterActivity() {
                     }
                     val mixedAt = SystemClock.elapsedRealtime()
                     val melody = call.argument<List<Map<String, Any>>>("melody") ?: emptyList()
-                    require(melody.size <= if (replayUs == null) 512 else 8192)
+                    require(melody.size <= if (replayUs == null) 4096 else 8192)
                     var totalGate = 0L
                     for (note in melody) {
                         val start = (note["start_us"] as Number).toLong()
@@ -356,7 +390,8 @@ class MainActivity : FlutterActivity() {
                     if (!acquireFocus()) { releasePieceBacking(); answer(error = "E_AUDIO_FOCUS"); return }
                     val position = call.argument<Number>("position_us")?.toLong() ?: 0L
                     if (!pieceBackingStarted || call.argument<Boolean>("seek") == true) {
-                        check(piano.command(4, position = position))
+                        if (importedTrack != null) importedTrack!!.play(position)
+                        else check(piano.command(4, position = position))
                         pianoOutputDevice = piano.outputDeviceId()
                         pieceBackingStarted = true
                     }
@@ -365,6 +400,10 @@ class MainActivity : FlutterActivity() {
                 "getPieceClock" -> {
                     if (requestGeneration != generation || call.argument<String>("owner") != pieceBackingOwner) {
                         answer(mapOf("accepted" to false)); return
+                    }
+                    importedTrack?.let {
+                        answer(mapOf("accepted" to true, "position_us" to it.position(), "running" to pieceBackingStarted))
+                        return
                     }
                     val state = piano.state()
                     if (state[3] != 0L) { releasePieceBacking(); publish("PIECE_BACKING_ERROR"); answer(error = "E_AUDIO_STREAM"); return }
@@ -375,7 +414,7 @@ class MainActivity : FlutterActivity() {
                     if (requestGeneration != generation || call.argument<String>("owner") != pieceBackingOwner) {
                         answer(mapOf("accepted" to false)); return
                     }
-                    piano.command(5)
+                    if (importedTrack != null) importedTrack!!.pause() else piano.command(5)
                     pieceBackingStarted = false
                     answer(mapOf("accepted" to true))
                 }
@@ -402,8 +441,10 @@ class MainActivity : FlutterActivity() {
                 "allNotesOff" -> { allOff(); answer() }
                 "getAudioState" -> {
                     val state = piano.state()
-                    answer(mapOf("active_voice_count" to state[2], "piece_backing_playing" to (state[1] != 0L && state[0] >= 0),
-                        "piece_position_us" to state[0],
+                    val importedPosition = importedTrack?.let { if (pieceBackingStarted) it.position() else -1L }
+                    answer(mapOf("active_voice_count" to state[2], "piece_backing_playing" to
+                        (if (importedPosition != null) importedTrack?.audible == true else state[1] != 0L && state[0] >= 0),
+                        "piece_position_us" to (importedPosition ?: state[0]),
                         "engine" to "OBOE", "underruns" to state[4], "sample_rate" to state[5],
                         "foreground" to foreground, "focus_granted" to focusGranted,
                         "speech_epoch" to speechEpoch, "speech_active" to (tts?.isSpeaking == true)))
@@ -482,11 +523,13 @@ class MainActivity : FlutterActivity() {
         }
     }
     private fun releasePieceBacking() {
+        importedTrack?.close(); importedTrack = null
         piano.command(5)
         pieceBackingOwner = null
         pieceBackingStarted = false
     }
     private fun allOff() {
+        importedTrack?.close(); importedTrack = null
         piano.command(3)
         pieceBackingOwner = null
         pieceBackingStarted = false
@@ -531,7 +574,13 @@ class MainActivity : FlutterActivity() {
         audioHandler.post { stopForInterruption("INTERRUPTED_BACKGROUND", false) }
         super.onPause()
     }
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (musicImports?.onActivityResult(requestCode, resultCode, data) == true) return
+        super.onActivityResult(requestCode, resultCode, data)
+    }
+
     override fun onDestroy() {
+        musicImports?.close(); musicImports = null
         handler.removeCallbacks(routeCheck)
         runCatching { unregisterReceiver(noisyReceiver) }
         AccountBackgroundSync.uiEngine = null

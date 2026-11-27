@@ -1,3 +1,4 @@
+import '../ui/spotlight_tour.dart';
 import '../ui/qin_dialog.dart';
 import '../features/capture_widgets.dart';
 import '../ui/qin_press.dart';
@@ -364,7 +365,13 @@ class _OnboardingState extends State<Onboarding> {
                         if (step < 2) {
                           setState(() => step++);
                         } else {
-                          await c.updateSettings(onboard: true);
+                          await c.updateSettings(
+                            onboard: true,
+                            values: {
+                              ...c.settings,
+                              'spotlight_guides_enabled': true,
+                            },
+                          );
                         }
                       },
                       child: Text(
@@ -491,15 +498,65 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
+  final guideTabs = List.generate(4, (_) => GlobalKey());
+  final guideSettings = GlobalKey();
+  List<SpotlightStep> get guideSteps => [
+    for (var i = 0; i < 4; i++)
+      SpotlightStep(
+        target: guideTabs[i],
+        title: [
+          c.text('首页', 'Home'),
+          c.text('练习', 'Practice'),
+          c.text('计划', 'Plans'),
+          c.text('记录', 'History'),
+        ][i],
+        message: [
+          c.text(
+            '首页可以向 AI 训练助手提问、查看今日推荐，也可以进入更多训练。',
+            'Ask the AI assistant, see today’s recommendation, or explore more training.',
+          ),
+          c.text(
+            '这里选择弹奏训练、舞蹈教学和特色练习。入门教学完成后可在设置中复习。',
+            'Choose piano, dance or special exercises. Completed introductory lessons remain available in Settings.',
+          ),
+          c.text(
+            '在这里安排训练日期和提醒，帮助自己按计划练习。',
+            'Schedule training dates and reminders to build a routine.',
+          ),
+          c.text(
+            '这里回顾训练记录、弹奏结果和练习趋势。',
+            'Review training records, performance results and progress here.',
+          ),
+        ][i],
+        prepare: () async {
+          selectTab(i);
+        },
+      ),
+    SpotlightStep(
+      target: guideSettings,
+      title: c.text('设置', 'Settings'),
+      message: c.text(
+        '点击这里调整声音、显示和账号设置。以后也能从设置重新查看这套引导。',
+        'Adjust sound, display and account settings here. You can replay this guide from Settings.',
+      ),
+      prepare: () async {
+        selectTab(0);
+      },
+    ),
+  ];
   int tab = 0;
-  String practiceCategory = 'all';
   bool openingRecommendation = false;
   AppController get c => widget.c;
   void showHome() => selectTab(0);
+  void refreshHome() {
+    if (mounted) setState(() {});
+  }
+
   @override
   void initState() {
     super.initState();
     c.homeNavigationRequests.addListener(showHome);
+    c.addListener(refreshHome);
     WidgetsBinding.instance.addObserver(this);
     PlanReminders.instance.onOpen = () {
       if (mounted) selectTab(2);
@@ -525,6 +582,8 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.c != c) {
       oldWidget.c.homeNavigationRequests.removeListener(showHome);
+      oldWidget.c.removeListener(refreshHome);
+      c.addListener(refreshHome);
       c.homeNavigationRequests.addListener(showHome);
     }
   }
@@ -532,6 +591,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   @override
   void dispose() {
     c.homeNavigationRequests.removeListener(showHome);
+    c.removeListener(refreshHome);
     WidgetsBinding.instance.removeObserver(this);
     PlanReminders.instance.onOpen = null;
     super.dispose();
@@ -661,7 +721,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   Widget danceEntry() => PracticeCard(
     icon: Icons.accessibility_new,
     artwork: '36-practice-dance.png',
-    title: c.text('舞蹈跟练', 'Dance practice'),
+    title: c.text('舞蹈教学', 'Dance lessons'),
     subtitle: c.text('跟随视频，按自己的节奏活动', 'Move with a video at your own pace'),
     onTap: () => Navigator.push(
       context,
@@ -671,7 +731,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
 
   Widget piecesEntry() => PracticeCard(
     icon: Icons.piano_outlined,
-    title: c.text('钢琴曲目', 'Piano pieces'),
+    title: c.text('弹奏训练', 'Piano training'),
     artwork: '13-open-score.png',
     subtitle: c.text('选择喜欢的乐曲弹奏', 'Choose a piece and start playing'),
     onTap: () => Navigator.push(
@@ -782,24 +842,6 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       const SizedBox(height: 24),
-                      recommendationCard(),
-                      const SizedBox(height: 12),
-                      QinOutlinedButton.icon(
-                        key: const ValueKey('home-other-practices'),
-                        onPressed: () => selectTab(1),
-                        icon: const Icon(Icons.tune),
-                        label: Text(c.text('其他训练', 'Other practices')),
-                        style: OutlinedButton.styleFrom(
-                          backgroundColor: contrast
-                              ? context.qin.surface
-                              : const Color(0xfff2e5d3).withValues(alpha: .88),
-                          minimumSize: const Size.fromHeight(68),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(28),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
                       PracticeCard(
                         key: const ValueKey('home-assistant'),
                         icon: Icons.auto_awesome_outlined,
@@ -816,6 +858,25 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 16),
+                      recommendationCard(),
+                      const SizedBox(height: 16),
+                      QinOutlinedButton.icon(
+                        key: const ValueKey('home-other-practices'),
+                        onPressed: () => selectTab(1),
+                        icon: const Icon(Icons.tune),
+                        label: Text(c.text('更多训练', 'More training')),
+                        style: OutlinedButton.styleFrom(
+                          backgroundColor: contrast
+                              ? context.qin.surface
+                              : const Color(0xfff2e5d3).withValues(alpha: .88),
+                          minimumSize: const Size.fromHeight(68),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
                     ],
                   ),
                 ],
@@ -827,15 +888,21 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
     },
   );
 
-  Widget practiceCategories() => QinCategoryBar(
-    keyPrefix: 'practice-category',
-    selected: practiceCategory,
-    onSelected: (value) => setState(() => practiceCategory = value),
-    entries: [
-      ('all', c.text('全部', 'All'), c.text('全部', 'All')),
-      ('piano', c.text('钢琴训练', 'Piano training'), c.text('钢琴', 'Piano')),
-      ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
-    ],
+  Widget specialEntry() => PracticeCard(
+    key: const ValueKey('special-practices'),
+    icon: Icons.auto_awesome_outlined,
+    title: c.text('特色练习', 'Special exercises'),
+    subtitle: c.text('探索旋律、节奏与双手协作', 'Explore melody, rhythm and coordination'),
+    artwork: '21-practice-intro.png',
+    onTap: () => Navigator.push(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: Text(c.text('特色练习', 'Special exercises'))),
+          body: QinPageList(maxWidth: 1120, children: [directory()]),
+        ),
+      ),
+    ),
   );
 
   Widget directory() {
@@ -882,7 +949,7 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
         final width = (size.maxWidth - (columns - 1) * 16) / columns;
         return Wrap(
           spacing: 16,
-          runSpacing: 12,
+          runSpacing: 16,
           children: [
             for (final entry in entries)
               SizedBox(
@@ -902,222 +969,223 @@ class _HomePageState extends State<HomePage> with WidgetsBindingObserver {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: QinPageSurface(
-      opacity: tab == 2 ? 1 : .88,
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          QinPageBackground(
-            asset: tab == 0
-                ? 'assets/ui_images/01-home-piano.webp'
-                : tab == 1
-                ? 'assets/ui_images/11-practice-piano.webp'
-                : tab == 2
-                ? 'assets/ui_images/39-plan-page-header.webp'
-                : 'assets/ui_images/30-records-piano-flowers-clear.webp',
-            aspectRatio: tab == 0 ? 507 / 900 : 3 / 2,
-            fill: tab == 0,
-            treatment: tab == 0
-                ? QinBackgroundTreatment.clear
-                : tab == 2
-                ? QinBackgroundTreatment.softened
-                : QinBackgroundTreatment.softenedWithTextGradient,
-            textRegionHeight:
-                MediaQuery.paddingOf(context).top +
-                (tab == 1
-                    ? practiceHeaderBaseHeight
-                    : historyHeaderBaseHeight) +
-                (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
-                      0.0,
-                      2.0,
-                    ) *
-                    100,
-          ),
-          SafeArea(
-            child: Stack(
-              children: [
-                Positioned.fill(
-                  child: tab == 0
-                      ? homeContent()
-                      : tab == 3
-                      ? HistoryList(c: c, onPractice: () => selectTab(1))
-                      : tab == 2
-                      ? PlansPage(
-                          c: c,
-                          onStart: (kind) async {
-                            if (kind.startsWith('exercise:')) {
-                              await open(kind.substring('exercise:'.length));
-                              return;
-                            }
-                            if (kind.startsWith('piece:')) {
-                              final piece = c.content.pieceFor(
-                                kind.substring('piece:'.length),
-                              );
-                              if (piece != null) {
+  Widget build(BuildContext context) => SpotlightTour(
+    c: c,
+    preferenceKey: 'spotlight_home_v1',
+    steps: guideSteps,
+    onFinish: () async {
+      selectTab(0);
+    },
+    child: Scaffold(
+      body: QinPageSurface(
+        opacity: tab == 2 ? 1 : .88,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            QinPageBackground(
+              asset: tab == 0
+                  ? 'assets/ui_images/01-home-piano.webp'
+                  : tab == 1
+                  ? 'assets/ui_images/11-practice-piano.webp'
+                  : tab == 2
+                  ? 'assets/ui_images/39-plan-page-header.webp'
+                  : 'assets/ui_images/30-records-piano-flowers-clear.webp',
+              aspectRatio: tab == 0 ? 507 / 900 : 3 / 2,
+              fill: tab == 0,
+              treatment: tab == 0
+                  ? QinBackgroundTreatment.clear
+                  : tab == 2
+                  ? QinBackgroundTreatment.softened
+                  : QinBackgroundTreatment.softenedWithTextGradient,
+              textRegionHeight:
+                  MediaQuery.paddingOf(context).top +
+                  (tab == 1
+                      ? practiceHeaderBaseHeight
+                      : historyHeaderBaseHeight) +
+                  (MediaQuery.textScalerOf(context).scale(1) - 1).clamp(
+                        0.0,
+                        2.0,
+                      ) *
+                      100,
+            ),
+            SafeArea(
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: tab == 0
+                        ? homeContent()
+                        : tab == 3
+                        ? HistoryList(c: c, onPractice: () => selectTab(1))
+                        : tab == 2
+                        ? PlansPage(
+                            c: c,
+                            onStart: (kind) async {
+                              if (kind.startsWith('exercise:')) {
+                                await open(kind.substring('exercise:'.length));
+                                return;
+                              }
+                              if (kind.startsWith('piece:')) {
+                                final piece = c.content.pieceFor(
+                                  kind.substring('piece:'.length),
+                                );
+                                if (piece != null) {
+                                  await Navigator.push(
+                                    context,
+                                    MaterialPageRoute<void>(
+                                      builder: (_) =>
+                                          PianoPiecePage(c: c, piece: piece),
+                                    ),
+                                  );
+                                }
+                                return;
+                              }
+                              if (kind == 'dance') {
                                 await Navigator.push(
                                   context,
                                   MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        PianoPiecePage(c: c, piece: piece),
+                                    builder: (_) => DancePage(c: c),
                                   ),
                                 );
-                              }
-                              return;
-                            }
-                            if (kind == 'dance') {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) => DancePage(c: c),
-                                ),
-                              );
-                            } else if (kind == 'piece') {
-                              await Navigator.push(
-                                context,
-                                MaterialPageRoute<void>(
-                                  builder: (_) => PianoPiecesPage(c: c),
-                                ),
-                              );
-                            } else {
-                              final task = await showDialog<String>(
-                                context: context,
-                                builder: (context) => SimpleDialog(
-                                  title: Text(
-                                    c.text('选择练习', 'Choose an exercise'),
+                              } else if (kind == 'piece') {
+                                await Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PianoPiecesPage(c: c),
                                   ),
-                                  children: [
-                                    for (final id in [
-                                      ...exerciseIds.where(
-                                        (id) => !isCognitiveTask(id),
-                                      ),
-                                      ...exerciseIds.where(isCognitiveTask),
-                                    ])
-                                      SimpleDialogOption(
-                                        onPressed: () =>
-                                            Navigator.pop(context, id),
-                                        child: Text(taskTitle(id, c.chinese)),
-                                      ),
-                                  ],
-                                ),
-                              );
-                              if (task != null && mounted) await open(task);
-                            }
-                          },
-                        )
-                      : LayoutBuilder(
-                          builder: (context, bounds) {
-                            final scale = MediaQuery.textScalerOf(context)
-                                .scale(1);
-                            final desired =
-                                practiceHeaderBaseHeight +
-                                (scale - 1).clamp(0.0, 2.0) * 100;
-                            final available = bounds.maxHeight * .55;
-                            final height = desired.clamp(0.0, available);
-                            return Column(
-                              children: [
-                                SizedBox(
-                                  height: height,
-                                  child: practiceHeader(),
-                                ),
-                                Expanded(
-                                  child: QinPageList(
-                                    key: ValueKey(tab),
-                                    maxWidth: 1120,
+                                );
+                              } else {
+                                final task = await showDialog<String>(
+                                  context: context,
+                                  builder: (context) => SimpleDialog(
+                                    title: Text(
+                                      c.text('选择练习', 'Choose an exercise'),
+                                    ),
                                     children: [
-                                      if (c.hasPendingSave) ...[
-                                        saveNotice(),
-                                        const SizedBox(height: 16),
-                                      ],
-                                      practiceCategories(),
-                                      const SizedBox(height: 16),
-                                      if (practiceCategory != 'dance') ...[
-                                        if (!c.allIntroLessonsCompleted) ...[
-                                          lessonsEntry(),
-                                          const SizedBox(height: 12),
-                                        ],
-                                        piecesEntry(),
-                                        const SizedBox(height: 12),
-                                      ],
-                                      if (practiceCategory != 'piano') ...[
-                                        danceEntry(),
-                                        const SizedBox(height: 12),
-                                      ],
-                                      if (practiceCategory != 'dance') ...[
-                                        directory(),
-                                        if (c.allIntroLessonsCompleted) ...[
-                                          const SizedBox(height: 12),
-                                          lessonsEntry(),
-                                        ],
-                                      ],
+                                      for (final id in [
+                                        ...exerciseIds.where(
+                                          (id) => !isCognitiveTask(id),
+                                        ),
+                                        ...exerciseIds.where(isCognitiveTask),
+                                      ])
+                                        SimpleDialogOption(
+                                          onPressed: () =>
+                                              Navigator.pop(context, id),
+                                          child: Text(taskTitle(id, c.chinese)),
+                                        ),
                                     ],
                                   ),
+                                );
+                                if (task != null && mounted) await open(task);
+                              }
+                            },
+                          )
+                        : LayoutBuilder(
+                            builder: (context, bounds) {
+                              final scale = MediaQuery.textScalerOf(context)
+                                  .scale(1);
+                              final desired =
+                                  practiceHeaderBaseHeight +
+                                  (scale - 1).clamp(0.0, 2.0) * 100;
+                              final available = bounds.maxHeight * .55;
+                              final height = desired.clamp(0.0, available);
+                              return Column(
+                                children: [
+                                  SizedBox(
+                                    height: height,
+                                    child: practiceHeader(),
+                                  ),
+                                  Expanded(
+                                    child: QinPageList(
+                                      key: ValueKey(tab),
+                                      maxWidth: 1120,
+                                      children: [
+                                        if (c.hasPendingSave) ...[
+                                          saveNotice(),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        if (!c.allIntroLessonsCompleted) ...[
+                                          lessonsEntry(),
+                                          const SizedBox(height: 16),
+                                        ],
+                                        piecesEntry(),
+                                        const SizedBox(height: 16),
+                                        danceEntry(),
+                                        const SizedBox(height: 16),
+                                        specialEntry(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
+                          ),
+                  ),
+                  Positioned(
+                    top: 6,
+                    right: 8,
+                    child: SizedBox(
+                      width: 48,
+                      height: 48,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          ClipOval(
+                            child: SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: BackdropFilter(
+                                filter: ui.ImageFilter.blur(
+                                  sigmaX: 8,
+                                  sigmaY: 8,
                                 ),
-                              ],
-                            );
-                          },
-                        ),
-                ),
-                Positioned(
-                  top: 6,
-                  right: 8,
-                  child: SizedBox(
-                    width: 48,
-                    height: 48,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        ClipOval(
-                          child: SizedBox(
-                            width: 40,
-                            height: 40,
-                            child: BackdropFilter(
-                              filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  color: context.qin.highContrast
-                                      ? context.qin.surface
-                                      : const Color(0xb3fffaf0),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
+                                child: DecoratedBox(
+                                  decoration: BoxDecoration(
                                     color: context.qin.highContrast
-                                        ? context.qin.ink
-                                        : const Color(0x80ffffff),
+                                        ? context.qin.surface
+                                        : const Color(0xb3fffaf0),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color: context.qin.highContrast
+                                          ? context.qin.ink
+                                          : const Color(0x80ffffff),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                        QinIconButton(
-                          tooltip: c.text('设置', 'Settings'),
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SettingsPage(c: c),
+                          QinIconButton(
+                            key: guideSettings,
+                            tooltip: c.text('设置', 'Settings'),
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => SettingsPage(c: c),
+                              ),
                             ),
+                            icon: const Icon(Icons.settings_outlined),
                           ),
-                          icon: const Icon(Icons.settings_outlined),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-    bottomNavigationBar: QinNavigationBar(
-      selected: tab,
-      labels: [
-        c.text('首页', 'Home'),
-        c.text('练习', 'Practice'),
-        c.text('计划', 'Plan'),
-        c.text('记录', 'History'),
-      ],
-      onSelected: selectTab,
+      bottomNavigationBar: QinNavigationBar(
+        itemKeys: guideTabs,
+        selected: tab,
+        labels: [
+          c.text('首页', 'Home'),
+          c.text('练习', 'Practice'),
+          c.text('计划', 'Plan'),
+          c.text('记录', 'History'),
+        ],
+        onSelected: selectTab,
+      ),
     ),
   );
 }
@@ -1675,7 +1743,7 @@ class _HistoryListState extends State<HistoryList> {
     entries: [
       ('recent', c.text('全部', 'All'), c.text('全部', 'All')),
       ('exercises', c.text('钢琴练习', 'Piano exercises'), c.text('练习', 'Piano')),
-      ('pieces', c.text('钢琴曲目', 'Piano pieces'), c.text('曲目', 'Pieces')),
+      ('pieces', c.text('弹奏训练', 'Piano training'), c.text('曲目', 'Pieces')),
       ('dance', c.text('舞蹈训练', 'Dance training'), c.text('舞蹈', 'Dance')),
     ],
   );
@@ -2792,6 +2860,54 @@ class SettingsPage extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
+                                  QinEntryCard(
+                                    icon: Icons.explore_outlined,
+                                    title: c.text(
+                                      '重新查看新手引导',
+                                      'Replay the welcome guide',
+                                    ),
+                                    subtitle: c.text(
+                                      '了解主要页面和弹奏训练方法',
+                                      'Explore pages and learn how piano practice works',
+                                    ),
+                                    onTap: () async {
+                                      await c.updateSettings(
+                                        values: {
+                                          ...c.settings,
+                                          'spotlight_guides_enabled': true,
+                                          'spotlight_home_v1': false,
+                                          'spotlight_piano_v1': false,
+                                          'spotlight_play_v1': false,
+                                        },
+                                      );
+                                      if (context.mounted) {
+                                        Navigator.of(context)
+                                            .popUntil((route) => route.isFirst);
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(height: 16),
+                                  if (c.allIntroLessonsCompleted) ...[
+                                    QinEntryCard(
+                                      icon: Icons.school_outlined,
+                                      title: c.text(
+                                        '入门教学',
+                                        'Introductory lessons',
+                                      ),
+                                      subtitle: c.text(
+                                        '回顾按键、音高和节拍',
+                                        'Review keys, pitch and beat',
+                                      ),
+                                      onTap: () => Navigator.push(
+                                        context,
+                                        MaterialPageRoute<void>(
+                                          builder: (_) =>
+                                              IntroLessonsPage(c: c),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                  ],
                                   QinSectionTitle(
                                     c.text('语言与练习', 'Language and practice'),
                                   ),

@@ -38,8 +38,12 @@ class PianoKeyboard extends StatefulWidget {
     this.demonstratingKeys = const {},
     this.demonstrationPulse,
     this.handTaskId,
+    this.feedbackParticles = true,
+    this.externalKeyBases = false,
   });
   final int count, textScale;
+  final bool feedbackParticles;
+  final bool externalKeyBases;
   final List<String>? labels;
   final List<int>? markShapes;
   final bool? splitZones;
@@ -293,11 +297,14 @@ class _PianoKeyboardState extends State<PianoKeyboard> {
                           : null,
                       child: KeyPressFeedback(
                         key: ValueKey('key-feedback-$i'),
+                        externalBase: widget.externalKeyBases,
                         enabled:
                             !widget.locked ||
                             widget.demonstratingKeys.contains(i),
                         resetToken: feedbackEpoch,
-                        pulse: widget.demonstratingKeys.contains(i)
+                        pulse: !widget.feedbackParticles
+                            ? null
+                            : widget.demonstratingKeys.contains(i)
                             ? (widget.demonstrationPulse, i)
                             : pressPulses[i],
                         pressed:
